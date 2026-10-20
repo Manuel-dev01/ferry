@@ -65,11 +65,16 @@ const envSchema = z
 
 export type Env = z.infer<typeof envSchema>
 
+const DEFAULT_POLYGON_RPC_URLS = 'https://polygon-bor-rpc.publicnode.com,https://polygon.drpc.org'
+
 export function loadEnv(source: Record<string, string | undefined> = process.env): Env {
+  // `KEY=` in a .env file means "not set", not "set to an empty string".
+  const present = Object.fromEntries(
+    Object.entries(source).filter(([, v]) => v !== undefined && v.trim() !== ''),
+  )
   const parsed = envSchema.safeParse({
-    ...source,
-    POLYGON_RPC_URLS:
-      source.POLYGON_RPC_URLS ?? 'https://polygon-bor-rpc.publicnode.com,https://polygon.drpc.org',
+    ...present,
+    POLYGON_RPC_URLS: present.POLYGON_RPC_URLS ?? DEFAULT_POLYGON_RPC_URLS,
   })
   if (!parsed.success) {
     // Names only: values may be secrets.

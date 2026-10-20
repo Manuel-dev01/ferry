@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [vue(), UnoCSS()],
   server: {
     port: 5173,
+    strictPort: true, // the phone URL and CORS expect this exact port
     host: true, // reachable from a phone on the same Wi-Fi
   },
   build: {

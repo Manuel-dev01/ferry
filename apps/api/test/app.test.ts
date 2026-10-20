@@ -113,6 +113,13 @@ describe('env', () => {
     expect(() => loadEnv({ NODE_ENV: 'production' })).toThrow(/DATABASE_URL/)
   })
 
+  it('treats empty values as unset, like a fresh copy of .env.example', () => {
+    const env = loadEnv({ RELAYER_PRIVATE_KEY: '', SPIKE_ALLOWED_RECIPIENT: '', DATABASE_URL: ' ' })
+    expect(env.RELAYER_PRIVATE_KEY).toBeUndefined()
+    expect(env.DATABASE_URL).toBeUndefined()
+    expect(env.POLYGON_RPC_URLS.length).toBeGreaterThan(0)
+  })
+
   it('never echoes secret values in errors', () => {
     expect(() => loadEnv({ RELAYER_PRIVATE_KEY: 'super-secret-value' })).toThrow(
       /^(?!.*super-secret-value)/s,
