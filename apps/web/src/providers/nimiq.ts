@@ -8,6 +8,11 @@ let pending: Promise<NimiqProvider> | null = null
 
 /** Waits for Nimiq Pay to inject its provider. Rejects with a plain Error outside Nimiq Pay. */
 export function initNimiq(): Promise<NimiqProvider> {
+  // Inline env check (not MOCK_WALLET) so production builds drop the mock entirely.
+  if (import.meta.env.DEV && import.meta.env.VITE_MOCK_WALLET === 'true') {
+    pending ??= import('../dev/mockWallet').then((m) => m.installMockWallet())
+    return pending
+  }
   pending ??= init({ timeout: INIT_TIMEOUT_MS }).catch((err: unknown) => {
     pending = null
     throw err

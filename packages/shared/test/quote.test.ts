@@ -63,3 +63,14 @@ describe('computeQuote', () => {
     expect(q.youSendUnits).toBe(q.amountUnits + q.ferryFeeUnits)
   })
 })
+
+describe('maxAmountForBalance', () => {
+  it('leaves room for the fee and never exceeds the balance', async () => {
+    const { maxAmountForBalance } = await import('../src/quote')
+    for (const balance of [0n, 1n, 2n, 1_000_000n, 125_500_000n, 200_000_001n]) {
+      const amount = maxAmountForBalance(balance, 50)
+      expect(amount + ferryFeeUnits(amount, 50)).toBeLessThanOrEqual(balance)
+      expect(amount + 1n + ferryFeeUnits(amount + 1n, 50)).toBeGreaterThan(balance)
+    }
+  })
+})

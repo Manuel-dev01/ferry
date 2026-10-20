@@ -20,17 +20,23 @@ export class ApiRequestError extends Error {
 
 export async function api<T>(
   path: string,
-  init?: { method?: 'GET' | 'POST'; body?: unknown },
+  init?: { method?: 'GET' | 'POST'; body?: unknown; headers?: Record<string, string> },
 ): Promise<T> {
+  const headers: Record<string, string> = { ...init?.headers }
+  if (init?.body !== undefined) headers['Content-Type'] = 'application/json'
   let res: Response
   try {
     res = await fetch(`${API_URL}${path}`, {
       method: init?.method ?? 'GET',
-      headers: init?.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      headers,
       body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
     })
   } catch {
-    throw new ApiRequestError(0, 'OFFLINE', 'Network request failed')
+    throw new ApiRequestError(
+      0,
+      navigator.onLine === false ? 'OFFLINE' : 'NETWORK',
+      'Network request failed',
+    )
   }
   const json: unknown = await res.json().catch(() => null)
   if (!res.ok) {
@@ -43,3 +49,6 @@ export async function api<T>(
   }
   return json as T
 }
+
+export const errorRef = (err: unknown) => (err instanceof ApiRequestError ? err.ref : undefined)
+export const errorCode = (err: unknown) => (err instanceof ApiRequestError ? err.code : undefined)

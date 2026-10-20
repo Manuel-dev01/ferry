@@ -84,3 +84,11 @@ export function computeQuote(input: QuoteInput): QuoteAmounts {
 export function percentToBps(percent: string): number {
   return Number(parseUnits(percent, 2))
 }
+
+/** The largest amount whose amount + Ferry fee fits in `balanceUnits` ("Use max"). */
+export function maxAmountForBalance(balanceUnits: bigint, bps: number): bigint {
+  if (balanceUnits <= 0n) return 0n
+  let amount = (balanceUnits * 10_000n) / (10_000n + BigInt(bps))
+  while (amount > 0n && amount + ferryFeeUnits(amount, bps) > balanceUnits) amount -= 1n
+  return amount
+}

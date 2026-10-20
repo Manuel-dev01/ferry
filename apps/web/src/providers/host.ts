@@ -1,4 +1,5 @@
 import { getHostFiat, getHostLanguage, getHostNetwork } from '@nimiq/mini-app-sdk'
+import { MOCK_WALLET } from '../config'
 
 // Nimiq Pay injects these before page scripts run, so they are safe to read at module load.
 export interface HostContext {
@@ -10,6 +11,11 @@ export interface HostContext {
 }
 
 export function readHostContext(): HostContext {
+  if (MOCK_WALLET) {
+    // ?fiat=KES lets you preview another corridor's defaults in the browser.
+    const fiat = new URLSearchParams(window.location.search).get('fiat') ?? 'NGN'
+    return { language: 'en', fiat, network: 'mainnet', inHost: true }
+  }
   const hostLanguage = getHostLanguage()
   return {
     language: hostLanguage ?? navigator.language.split('-')[0] ?? 'en',

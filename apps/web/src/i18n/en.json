@@ -3,41 +3,191 @@
     "name": "Ferry",
     "tagline": "Move money in and out of Nimiq Pay"
   },
+  "common": {
+    "back": "Back",
+    "continue": "Continue",
+    "step": "Step {step} of {steps}",
+    "tryAgain": "Try again",
+    "done": "Done",
+    "edit": "Edit",
+    "copy": "Copy",
+    "copied": "Copied",
+    "mockBadge": "Mock wallet: no real money moves"
+  },
   "outside": {
     "title": "Ferry runs inside Nimiq Pay",
-    "body": "Open Ferry from the Mini Apps tab in Nimiq Pay to cash out or top up.",
+    "body": "Open Ferry from the Mini Apps tab in Nimiq Pay to cash out to a bank or mobile money.",
     "open": "Open in Nimiq Pay",
     "waiting": "Looking for Nimiq Pay…"
   },
+  "home": {
+    "balanceTitle": "Your balance",
+    "connectHint": "Connect to see your balances.",
+    "cashOut": "Cash out",
+    "cashOutHint": "To your bank or mobile money",
+    "send": "Send to someone",
+    "sendHint": "Pay a bank or mobile money account",
+    "history": "History",
+    "historyHint": "Your payouts on this device",
+    "countries": "Nigeria · Kenya · Uganda · Tanzania",
+    "promise": "You see who you're paying before money moves. No gas token needed. Ferry never holds your money."
+  },
   "host": {
-    "title": "Your Nimiq Pay",
-    "language": "Language",
-    "fiat": "Currency",
-    "network": "Network",
-    "unknown": "Not set",
-    "testnetBanner": "Nimiq Pay is on testnet: NIM features use test coins. USDT still uses real money."
+    "testnetBanner": "Nimiq Pay is on testnet: NIM features use test coins. USDT payouts still use real money."
   },
   "evm": {
-    "title": "USDT on Polygon",
-    "connectHint": "Connect to see your balances.",
     "connect": "Connect wallet",
     "connecting": "Waiting for Nimiq Pay…",
-    "address": "Address",
-    "usdt": "USDT",
-    "pol": "POL (gas)",
     "rejected": "No problem. Connect when you're ready.",
     "unavailable": "This version of Nimiq Pay doesn't share an Ethereum wallet. Update Nimiq Pay and try again.",
     "balanceFailed": "We couldn't load your balance. Check your connection and try again.",
-    "retry": "Try again"
+    "usdt": "USDT",
+    "pol": "POL (gas)"
   },
   "nim": {
     "title": "NIM",
-    "hint": "See your Nimiq address and balance.",
     "show": "Show my NIM",
     "rejected": "No problem. You can share your NIM address any time.",
     "noBalanceApi": "Update Nimiq Pay to see your NIM balance here.",
-    "balanceFailed": "We couldn't read your NIM balance right now.",
-    "balance": "Balance"
+    "balanceFailed": "We couldn't read your NIM balance right now."
+  },
+  "country": {
+    "title": "Where should the money go?",
+    "titleOther": "Where do they get paid?",
+    "paused": "Paused right now",
+    "methods": {
+      "NGN": "Banks and fintechs like OPay, PalmPay, Kuda",
+      "KES": "M-Pesa, Airtel Money and banks",
+      "UGX": "MTN and Airtel Money",
+      "TZS": "Banks and mobile money"
+    }
+  },
+  "institution": {
+    "title": "Choose a bank or wallet",
+    "search": "Search banks and wallets",
+    "recent": "Recently used",
+    "all": "All",
+    "banks": "Banks",
+    "mobile": "Mobile money",
+    "empty": "No matches. Try another name.",
+    "loadFailed": "We couldn't load the list of banks."
+  },
+  "account": {
+    "title": "Account details",
+    "titleOther": "Their account details",
+    "nuban": "10-digit account number",
+    "phone": "Mobile number",
+    "account": "Account number",
+    "nubanHint": "The NUBAN on your bank app or card",
+    "phoneHint": "For example {example}",
+    "invalidNuban": "Account numbers have exactly 10 digits.",
+    "invalidPhone": "That doesn't look like a mobile number for this country.",
+    "invalidAccount": "That account number looks too short.",
+    "check": "Check account",
+    "checking": "Checking the name…",
+    "notFound": "We couldn't find that account at {institution}. Check the number.",
+    "unavailable": "We can't check names right now. Try again in a minute.",
+    "devHint": "Mock: numbers ending 0000 = not found, 9999 = name check down, 4040 = payout refunded."
+  },
+  "confirm": {
+    "title": "Is this the right person?",
+    "body": "Money goes to the account holder shown here. Check the name before you continue.",
+    "yes": "Yes, that's them",
+    "no": "No, change details",
+    "verified": "Name confirmed by their bank"
+  },
+  "amount": {
+    "title": "How much?",
+    "theyReceive": "They receive",
+    "youSend": "You send",
+    "toggleFiat": "Enter in {currency}",
+    "toggleUsdt": "Enter in USDT",
+    "balance": "Balance: {amount} USDT",
+    "useMax": "Use max",
+    "limits": "Between ${min} and ${max} per payout (${daily} a day).",
+    "outsideLimits": "Payouts are between ${min} and ${max}.",
+    "notEnough": "You have {balance} USDT. Lower the amount or top up.",
+    "connectToContinue": "Connect your wallet to see your balance and continue.",
+    "rate": "Rate",
+    "fee": "Ferry fee",
+    "quoteFailed": "We couldn't get a rate. Check your connection.",
+    "paused": "Payouts to {country} are paused right now.",
+    "approx": "≈ {value}"
+  },
+  "review": {
+    "title": "Review",
+    "theyReceive": "They receive",
+    "to": "To",
+    "youSend": "You send",
+    "includesFee": "Includes Ferry fee of {fee} USDT",
+    "rate": "Rate",
+    "networkFee": "Network fee",
+    "networkFeeCovered": "Covered by Ferry",
+    "arrives": "Arrives",
+    "arrivesValue": "Usually under a minute",
+    "refunds": "Refunds go to your wallet",
+    "validFor": "Quote valid for {seconds} s",
+    "refreshing": "Getting a fresh rate…",
+    "rateChanged": "The rate changed: they now get {amount}. Continue?",
+    "acceptNewRate": "Yes, continue",
+    "confirm": "Confirm and sign",
+    "signing": "Waiting for your signature…",
+    "creating": "Preparing your payout…",
+    "signRejected": "Nothing was sent. Your quote is still valid for {seconds} s.",
+    "signFailed": "Nothing was sent. Something went wrong while signing.",
+    "orderFailed": "Nothing was sent. We couldn't prepare this payout.",
+    "expired": "This quote expired. Nothing left your wallet.",
+    "signNote": "Nimiq Pay will ask you to sign once. That signature sends exactly {amount} USDT to the payout partner."
+  },
+  "tracker": {
+    "title": "Payout",
+    "steps": {
+      "sent": "Sent",
+      "received": "Received by payout partner",
+      "paying": "Paying out…",
+      "paid": "Paid"
+    },
+    "eta": "Usually under a minute",
+    "slow": "Taking longer than usual. We're on it, and your money is safe.",
+    "hold": "Our payout partner is reviewing this payout (up to 24 h). It'll either arrive or be refunded to your wallet.",
+    "unknown": "Checking the network… don't send again.",
+    "refunded": "This payout couldn't complete. {amount} USDT went back to your wallet.",
+    "expired": "This order expired before anything was sent. Nothing left your wallet.",
+    "failed": "This payout failed before anything was sent. Nothing left your wallet.",
+    "offline": "You're offline. We'll update when you're back.",
+    "notFound": "We can't find this payout on this device.",
+    "startAgain": "Start again",
+    "mockNote": "Simulated payout: the mock wallet signed for real, but nothing was broadcast."
+  },
+  "receipt": {
+    "title": "Paid",
+    "sentTo": "Sent to {name}",
+    "took": "Took {duration}",
+    "orderId": "Order ID",
+    "tx": "Polygon transaction",
+    "viewTx": "View on Polygonscan",
+    "share": "Share receipt",
+    "shareText": "I just sent {amount} with Ferry in {duration}, straight from Nimiq Pay.",
+    "sentWith": "Sent with Ferry"
+  },
+  "history": {
+    "title": "History",
+    "empty": "No payouts yet. Your payouts on this device will show up here.",
+    "cashOut": "Cash out",
+    "status": {
+      "created": "Waiting for signature",
+      "signed": "Signed",
+      "submitted": "Sent",
+      "unknown": "Checking",
+      "deposited": "Received",
+      "pending": "Paying out",
+      "compliance_hold": "Under review",
+      "validated": "Paying out",
+      "settled": "Paid",
+      "refunded": "Refunded",
+      "expired": "Expired",
+      "failed": "Failed"
+    }
   },
   "errors": {
     "generic": "Something went wrong. Nothing was sent.",
