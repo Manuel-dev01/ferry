@@ -1,0 +1,47 @@
+{
+  "app": {
+    "name": "Ferry",
+    "tagline": "Move money in and out of Nimiq Pay"
+  },
+  "outside": {
+    "title": "Ferry runs inside Nimiq Pay",
+    "body": "Open Ferry from the Mini Apps tab in Nimiq Pay to cash out or top up.",
+    "open": "Open in Nimiq Pay",
+    "waiting": "Looking for Nimiq Pay…"
+  },
+  "host": {
+    "title": "Your Nimiq Pay",
+    "language": "Language",
+    "fiat": "Currency",
+    "network": "Network",
+    "unknown": "Not set",
+    "testnetBanner": "Nimiq Pay is on testnet: NIM features use test coins. USDT still uses real money."
+  },
+  "evm": {
+    "title": "USDT on Polygon",
+    "connectHint": "Connect to see your balances.",
+    "connect": "Connect wallet",
+    "connecting": "Waiting for Nimiq Pay…",
+    "address": "Address",
+    "usdt": "USDT",
+    "pol": "POL (gas)",
+    "rejected": "No problem. Connect when you're ready.",
+    "unavailable": "This version of Nimiq Pay doesn't share an Ethereum wallet. Update Nimiq Pay and try again.",
+    "balanceFailed": "We couldn't load your balance. Check your connection and try again.",
+    "retry": "Try again"
+  },
+  "nim": {
+    "title": "NIM",
+    "hint": "See your Nimiq address and balance.",
+    "show": "Show my NIM",
+    "rejected": "No problem. You can share your NIM address any time.",
+    "noBalanceApi": "Update Nimiq Pay to see your NIM balance here.",
+    "balanceFailed": "We couldn't read your NIM balance right now.",
+    "balance": "Balance"
+  },
+  "errors": {
+    "generic": "Something went wrong. Nothing was sent.",
+    "offline": "You're offline. Check your connection and try again.",
+    "ref": "Ref {ref}"
+  }
+}
