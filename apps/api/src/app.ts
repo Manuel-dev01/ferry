@@ -6,10 +6,13 @@ import type { Env } from './env'
 import { HttpError, supportRef } from './errors'
 import type { FetchLike } from './lightning'
 import type { Logger } from './logger'
+import type { MockOrderEngine } from './orders/mock-engine'
+import type { PaycrestKeyed, PaycrestPublic } from './paycrest'
 import type { RelayerWallet } from './polygon'
 import { balancesRoutes } from './routes/balances'
 import { healthRoutes } from './routes/health'
 import { spikeRoutes } from './routes/spikes'
+import { v1Routes } from './routes/v1'
 
 export interface Deps {
   env: Env
@@ -18,6 +21,8 @@ export interface Deps {
   relayer: RelayerWallet | null
   db: Db | null
   fetch: FetchLike
+  paycrest: { public: PaycrestPublic; keyed: PaycrestKeyed }
+  orders: MockOrderEngine
 }
 
 export type AppEnv = { Variables: { requestId: string; log: Logger } }
@@ -81,6 +86,7 @@ export function createApp(deps: Deps) {
 
   app.route('/', healthRoutes(deps))
   app.route('/v1', balancesRoutes(deps))
+  app.route('/v1', v1Routes(deps))
   if (deps.env.SPIKES_ENABLED) app.route('/spike', spikeRoutes(deps))
 
   return app

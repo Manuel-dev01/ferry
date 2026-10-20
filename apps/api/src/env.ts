@@ -1,4 +1,4 @@
-import { parseUnits, POL_DECIMALS, USDT0_ADDRESS, USDT_DECIMALS } from '@ferry/shared'
+import { parseUnits, percentToBps, POL_DECIMALS, USDT0_ADDRESS, USDT_DECIMALS } from '@ferry/shared'
 import { z } from 'zod'
 
 const bool = (fallback: 'true' | 'false') =>
@@ -36,6 +36,31 @@ const envSchema = z
     USDT0_ADDRESS: address.default(USDT0_ADDRESS),
     RELAYER_PRIVATE_KEY: privateKey.optional(),
 
+    PAYCREST_MODE: z.enum(['mock', 'live']).default('mock'),
+    PAYCREST_BASE_URL: z.string().url().default('https://api.paycrest.io'),
+    PAYCREST_API_KEY: z.string().optional(),
+    PAYCREST_API_SECRET: z.string().optional(),
+    FERRY_FEE_PERCENT: z
+      .string()
+      .regex(/^\d+(\.\d{1,2})?$/)
+      .default('0.5'),
+    LIMIT_MIN_USD: z
+      .string()
+      .regex(/^\d+(\.\d+)?$/)
+      .default('1'),
+    LIMIT_MAX_USD: z
+      .string()
+      .regex(/^\d+(\.\d+)?$/)
+      .default('200'),
+    LIMIT_DAILY_USD: z
+      .string()
+      .regex(/^\d+(\.\d+)?$/)
+      .default('500'),
+    /** Comma-separated corridor currencies that accept new orders. */
+    CORRIDORS_ENABLED: csv
+      .pipe(z.array(z.enum(['NGN', 'KES', 'UGX', 'TZS'])))
+      .default(['NGN', 'KES', 'UGX', 'TZS']),
+
     SPIKES_ENABLED: bool('false'),
     SPIKE_ALLOWED_RECIPIENT: address.optional(),
     SPIKE_MAX_USDT: z.string().default('1'),
@@ -49,6 +74,20 @@ const envSchema = z
     if (env.NODE_ENV === 'production' && !env.DATABASE_URL) {
       ctx.addIssue({ code: 'custom', path: ['DATABASE_URL'], message: 'Required in production' })
     }
+    if (env.PAYCREST_MODE === 'live' && (!env.PAYCREST_API_KEY || !env.PAYCREST_API_SECRET)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PAYCREST_API_KEY'],
+        message: 'PAYCREST_API_KEY and PAYCREST_API_SECRET are required when PAYCREST_MODE=live',
+      })
+    }
+    if (env.NODE_ENV === 'production' && env.PAYCREST_MODE === 'mock') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PAYCREST_MODE'],
+        message: 'mock is not allowed in production',
+      })
+    }
     if (env.SPIKES_ENABLED && !env.SPIKE_ALLOWED_RECIPIENT) {
       ctx.addIssue({
         code: 'custom',
@@ -61,6 +100,13 @@ const envSchema = z
     ...env,
     spikeMaxUsdtUnits: parseUnits(env.SPIKE_MAX_USDT, USDT_DECIMALS),
     gasDripWei: parseUnits(env.GAS_DRIP_AMOUNT_POL, POL_DECIMALS),
+    ferryFeeBps: percentToBps(env.FERRY_FEE_PERCENT),
+    // USDT is treated as 1:1 with USD for limits.
+    limits: {
+      minUnits: parseUnits(env.LIMIT_MIN_USD, USDT_DECIMALS),
+      maxUnits: parseUnits(env.LIMIT_MAX_USD, USDT_DECIMALS),
+      dailyUnits: parseUnits(env.LIMIT_DAILY_USD, USDT_DECIMALS),
+    },
   }))
 
 export type Env = z.infer<typeof envSchema>

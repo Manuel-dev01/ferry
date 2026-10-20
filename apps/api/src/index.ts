@@ -3,6 +3,8 @@ import { createApp } from './app'
 import { createDb } from './db/client'
 import { loadEnv } from './env'
 import { createLogger } from './logger'
+import { MockOrderEngine } from './orders/mock-engine'
+import { PaycrestMock, PaycrestPublic } from './paycrest'
 import { createPolygonClient, createRelayerWallet } from './polygon'
 
 const env = loadEnv()
@@ -13,7 +15,26 @@ const relayer = env.RELAYER_PRIVATE_KEY
   : null
 const db = env.DATABASE_URL ? createDb(env.DATABASE_URL) : null
 
-const app = createApp({ env, logger, polygon, relayer, db, fetch: globalThis.fetch })
+if (env.PAYCREST_MODE === 'live') {
+  // The live keyed client and order engine arrive with the Paycrest key (milestone M1).
+  throw new Error('PAYCREST_MODE=live is not implemented yet')
+}
+const paycrest = {
+  public: new PaycrestPublic(globalThis.fetch, env.PAYCREST_BASE_URL),
+  keyed: new PaycrestMock(),
+}
+const orders = new MockOrderEngine(polygon, env.USDT0_ADDRESS as `0x${string}`)
+
+const app = createApp({
+  env,
+  logger,
+  polygon,
+  relayer,
+  db,
+  fetch: globalThis.fetch,
+  paycrest,
+  orders,
+})
 
 serve({ fetch: app.fetch, port: env.PORT, hostname: env.HOST }, (info) => {
   logger.info(
@@ -22,6 +43,7 @@ serve({ fetch: app.fetch, port: env.PORT, hostname: env.HOST }, (info) => {
       spikes: env.SPIKES_ENABLED,
       relayer: relayer?.account.address ?? null,
       db: Boolean(db),
+      paycrest: paycrest.keyed.mode,
     },
     'ferry api listening',
   )

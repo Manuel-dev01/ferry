@@ -125,3 +125,107 @@ export const spikeNimVerifyResponseSchema = z.object({
   address: z.string().nullable(),
 })
 export type SpikeNimVerifyResponse = z.infer<typeof spikeNimVerifyResponseSchema>
+
+// ---- v1: cash-out ----
+
+export const corridorCurrencySchema = z.enum(['NGN', 'KES', 'UGX', 'TZS'])
+export const institutionTypeSchema = z.enum(['bank', 'mobile_money'])
+
+export const metaResponseSchema = z.object({
+  corridors: z.array(
+    z.object({
+      currency: corridorCurrencySchema,
+      country: z.string(),
+      name: z.string(),
+      enabled: z.boolean(),
+    }),
+  ),
+  limits: z.object({ minUsd: z.string(), maxUsd: z.string(), dailyUsd: z.string() }),
+  fees: z.object({ ferryFeeBps: z.number().int(), firstOrderFree: z.boolean() }),
+  features: z.object({ lightning: z.boolean(), onramp: z.boolean(), testDrive: z.boolean() }),
+  paycrestMode: z.enum(['mock', 'live']),
+  relayer: evmAddressSchema.nullable(),
+})
+export type MetaResponse = z.infer<typeof metaResponseSchema>
+
+export const institutionSchema = z.object({
+  code: z.string(),
+  name: z.string(),
+  type: institutionTypeSchema,
+})
+export type Institution = z.infer<typeof institutionSchema>
+
+export const quoteResponseSchema = z.object({
+  currency: corridorCurrencySchema,
+  rate: z.string(),
+  amountUnits: unitsSchema,
+  ferryFeeUnits: unitsSchema,
+  youSendUnits: unitsSchema,
+  theyReceiveMinor: unitsSchema,
+  validForSeconds: z.number().int(),
+  fetchedAt: z.number().int(),
+})
+export type QuoteResponse = z.infer<typeof quoteResponseSchema>
+
+export const verifyAccountRequestSchema = z.object({
+  currency: corridorCurrencySchema,
+  institution: z.string().min(1).max(32),
+  accountIdentifier: z.string().min(5).max(32),
+})
+
+export const verifyAccountResponseSchema = z.object({
+  accountName: z.string(),
+  masked: z.string(),
+})
+export type VerifyAccountResponse = z.infer<typeof verifyAccountResponseSchema>
+
+export const createOfframpRequestSchema = z.object({
+  currency: corridorCurrencySchema,
+  institution: z.string().min(1).max(32),
+  accountIdentifier: z.string().min(5).max(32),
+  accountName: z.string().min(1).max(120),
+  amount: z.string().regex(/^\d+(\.\d+)?$/),
+  amountIn: z.enum(['usdt', 'fiat']),
+  evmAddress: evmAddressSchema,
+  recipientKind: z.enum(['self', 'other']),
+})
+export type CreateOfframpRequest = z.input<typeof createOfframpRequestSchema>
+
+export const orderTimelineEntrySchema = z.object({ status: z.string(), at: z.number().int() })
+
+export const orderViewSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['usdt_offramp', 'test_drive']),
+  status: z.string(),
+  currency: corridorCurrencySchema,
+  institutionName: z.string(),
+  recipientMasked: z.string(),
+  amountUnits: unitsSchema,
+  ferryFeeUnits: unitsSchema,
+  amountToTransferUnits: unitsSchema,
+  theyReceiveMinor: unitsSchema,
+  rate: z.string(),
+  receiveAddress: evmAddressSchema,
+  refundAddress: evmAddressSchema,
+  validUntil: z.number().int(),
+  polygonTxHash: z.string().nullable(),
+  createdAt: z.number().int(),
+  settledAt: z.number().int().nullable(),
+  timeline: z.array(orderTimelineEntrySchema),
+  mock: z.boolean(),
+})
+export type OrderView = z.infer<typeof orderViewSchema>
+
+export const createOfframpResponseSchema = z.object({
+  orderId: z.string(),
+  clientSecret: z.string(),
+  order: orderViewSchema,
+  signing: z.object({
+    mode: z.literal('metatx'),
+    typedData: z.unknown(),
+    message: z.object({ nonce: unitsSchema, from: evmAddressSchema, functionSignature: hexSchema }),
+  }),
+})
+export type CreateOfframpResponse = z.infer<typeof createOfframpResponseSchema>
+
+export const submitSignatureRequestSchema = z.object({ signature: hexSchema })

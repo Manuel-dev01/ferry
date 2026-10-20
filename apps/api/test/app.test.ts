@@ -1,24 +1,10 @@
 import { Writable } from 'node:stream'
 import pino from 'pino'
-import type { PublicClient } from 'viem'
 import { describe, expect, it, vi } from 'vitest'
-import { createApp, isAllowedOrigin } from '../src/app'
+import { isAllowedOrigin } from '../src/app'
 import { loadEnv } from '../src/env'
 import { REDACT_PATHS } from '../src/logger'
-
-const silent = pino({ level: 'silent' })
-
-function makeApp(envOverrides: Record<string, string> = {}, polygon: Partial<PublicClient> = {}) {
-  const env = loadEnv({ NODE_ENV: 'test', CORS_ORIGINS: 'https://ferry.example', ...envOverrides })
-  return createApp({
-    env,
-    logger: silent,
-    polygon: polygon as PublicClient,
-    relayer: null,
-    db: null,
-    fetch: vi.fn().mockResolvedValue(new Response('[]')),
-  })
-}
+import { makeApp } from './helpers'
 
 describe('health', () => {
   it('answers /health', async () => {
