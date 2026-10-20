@@ -2,7 +2,8 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import { fileURLToPath } from 'node:url'
 import { createDb } from './client'
 
-const url = process.env.DATABASE_URL
+// Migrations prefer a direct (unpooled) connection; the app itself uses the pooled one.
+const url = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL
 if (!url) {
   console.error('DATABASE_URL is not set')
   process.exit(1)
