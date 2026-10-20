@@ -1,0 +1,14 @@
+# Local Postgres for development only. Production uses a managed Postgres (Neon).
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ferry
+      POSTGRES_PASSWORD: ferry
+      POSTGRES_DB: ferry
+    ports:
+      - '5432:5432'
+    volumes:
+      - ferry-db:/var/lib/postgresql/data
+volumes:
+  ferry-db:

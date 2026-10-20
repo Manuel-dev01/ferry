@@ -1,0 +1,9 @@
+packages:
+  - apps/*
+  - packages/*
+allowBuilds:
+  esbuild: true
+# Generous network settings: installs must survive slow connections.
+fetchTimeout: 600000
+fetchRetries: 10
+networkConcurrency: 6
