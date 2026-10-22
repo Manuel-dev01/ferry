@@ -5,7 +5,7 @@ import { ref } from 'vue'
 const STORAGE_KEY = 'ferry.orders.v1'
 const MAX_ENTRIES = 50
 
-/** What this device remembers about an order. No full account numbers or names. */
+/** What this device remembers about an order. Stays on the device; never full account numbers. */
 export interface HistoryEntry {
   id: string
   clientSecret: string
@@ -13,7 +13,7 @@ export interface HistoryEntry {
   currency: string
   institutionName: string
   recipientMasked: string
-  recipientName: string | null // masked, e.g. "A** O**"
+  recipientName: string | null // verified account name, kept on this device only
   theyReceiveMinor: string
   status: string
   mock: boolean

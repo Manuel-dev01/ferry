@@ -5,21 +5,38 @@ import { pendingApproval } from './mockApproval'
 <template>
   <div v-if="pendingApproval" class="sheet-backdrop" role="presentation">
     <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="mock-sheet-title">
-      <p class="text-xs font-semibold uppercase tracking-wide text-gold-1100 mb-1">
+      <div
+        style="
+          width: 40px;
+          height: 5px;
+          border-radius: 3px;
+          background: var(--fy-line);
+          margin: -8px auto 14px;
+        "
+      />
+      <p class="fy-eyebrow" style="color: var(--fy-warning); margin: 0 0 6px">
         Nimiq Pay · mock wallet
       </p>
-      <h2 id="mock-sheet-title" class="text-lg font-bold mb-3">{{ pendingApproval.title }}</h2>
-      <dl v-if="pendingApproval.lines.length" class="mb-4">
-        <div v-for="line in pendingApproval.lines" :key="line.label" class="row">
-          <dt class="row-label">{{ line.label }}</dt>
-          <dd class="row-value font-mono text-sm">{{ line.value }}</dd>
+      <h2 id="mock-sheet-title" class="fy-title" style="margin-bottom: 12px">
+        {{ pendingApproval.title }}
+      </h2>
+      <dl v-if="pendingApproval.lines.length" class="fy-panel" style="margin-bottom: 16px">
+        <div v-for="line in pendingApproval.lines" :key="line.label" class="fy-row">
+          <dt class="fy-row__k">{{ line.label }}</dt>
+          <dd class="fy-row__v" style="font-weight: 600; word-break: break-all">
+            {{ line.value }}
+          </dd>
         </div>
       </dl>
-      <div class="flex gap-3">
-        <button type="button" class="btn-secondary flex-1" @click="pendingApproval.resolve(false)">
+      <div class="fy-bottom--split" style="display: grid">
+        <button
+          type="button"
+          class="fy-btn fy-btn--secondary"
+          @click="pendingApproval.resolve(false)"
+        >
           Reject
         </button>
-        <button type="button" class="btn-primary flex-1" @click="pendingApproval.resolve(true)">
+        <button type="button" class="fy-btn fy-btn--primary" @click="pendingApproval.resolve(true)">
           Approve
         </button>
       </div>

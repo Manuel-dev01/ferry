@@ -1,63 +1,61 @@
 <script setup lang="ts">
-import { shortAddress } from '@ferry/shared'
-import { ref } from 'vue'
+import { isCorridorCurrency, type QuoteResponse } from '@ferry/shared'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import SkeletonBlock from '../components/SkeletonBlock.vue'
-import StatusMessage from '../components/StatusMessage.vue'
-import { SPIKES_ENABLED } from '../config'
-import { nimDisplay, polDisplay, usdtDisplay } from '../lib/format'
-import { openInNimiqPayUrl } from '../providers/host'
-import { classifyNimiqError } from '../providers/nimiq'
+import Banner from '../components/Banner.vue'
+import FerryLogo from '../components/FerryLogo.vue'
+import Icon from '../components/Icon.vue'
+import Monogram from '../components/Monogram.vue'
+import StatusChip from '../components/StatusChip.vue'
+import { formatUsdt } from '@ferry/shared'
+import { ferryApi } from '../lib/ferryApi'
+import { fiatDisplay, shortTimeDisplay, usdtDisplay } from '../lib/format'
+import { tinyAddress, titleCase } from '../lib/names'
 import { useCashoutStore } from '../stores/cashout'
+import { useHistoryStore } from '../stores/history'
 import { useSessionStore } from '../stores/session'
 
 const { t } = useI18n()
 const router = useRouter()
 const session = useSessionStore()
 const draft = useCashoutStore()
+const history = useHistoryStore()
 
-type Msg = { tone: 'info' | 'warn' | 'error'; text: string } | null
-const evmBusy = ref(false)
-const evmMsg = ref<Msg>(null)
-const nimBusy = ref(false)
-const nimMsg = ref<Msg>(null)
+const busy = ref(false)
+const msg = ref<{ tone: 'brand' | 'warning' | 'danger'; text: string } | null>(null)
 
 async function connect() {
-  evmMsg.value = null
-  evmBusy.value = true
+  msg.value = null
+  busy.value = true
   const result = await session.connectEvm()
-  evmBusy.value = false
-  if (result === 'rejected') evmMsg.value = { tone: 'info', text: t('evm.rejected') }
-  else if (result === 'unavailable') evmMsg.value = { tone: 'warn', text: t('evm.unavailable') }
-  else if (result !== 'ok') evmMsg.value = { tone: 'error', text: t('errors.generic') }
+  busy.value = false
+  if (result === 'rejected') msg.value = { tone: 'brand', text: t('evm.rejected') }
+  else if (result === 'unavailable') msg.value = { tone: 'warning', text: t('evm.unavailable') }
+  else if (result !== 'ok') msg.value = { tone: 'danger', text: t('errors.generic') }
 }
 
-async function retryBalances() {
-  await session.loadBalances().catch(() => undefined)
-}
+// "≈ ₦336,233 at today's rate" in the host's currency, when it's one of ours.
+const approx = ref<QuoteResponse | null>(null)
+const approxCurrency = computed(() =>
+  isCorridorCurrency(session.host.fiat) ? session.host.fiat : 'NGN',
+)
+watch(
+  () => session.balances?.usdt,
+  async (usdt) => {
+    approx.value = null
+    if (!usdt || usdt <= 0n) return
+    try {
+      approx.value = await ferryApi.quote(approxCurrency.value, formatUsdt(usdt), 'usdt')
+    } catch {
+      approx.value = null // the estimate is a nice-to-have
+    }
+  },
+  { immediate: true },
+)
 
-async function showNim() {
-  nimMsg.value = null
-  const nimiq = session.nimiq
-  if (!nimiq) return
-  nimBusy.value = true
-  try {
-    session.nimAddress = (await nimiq.listAccounts())[0] ?? null
-    if (!session.canReadNimBalance()) nimMsg.value = { tone: 'info', text: t('nim.noBalanceApi') }
-    else
-      await session
-        .loadNimBalance()
-        .catch(() => (nimMsg.value = { tone: 'warn', text: t('nim.balanceFailed') }))
-  } catch (err) {
-    nimMsg.value =
-      classifyNimiqError(err).kind === 'rejected'
-        ? { tone: 'info', text: t('nim.rejected') }
-        : { tone: 'error', text: t('errors.generic') }
-  } finally {
-    nimBusy.value = false
-  }
-}
+const recent = computed(() => history.entries.slice(0, 3))
+const timeText = (at: number) => shortTimeDisplay(at)
 
 function startCashout(kind: 'self' | 'other') {
   draft.start(kind, session.host.fiat)
@@ -66,124 +64,159 @@ function startCashout(kind: 'self' | 'other') {
 </script>
 
 <template>
-  <main class="page">
-    <header class="mb-5 pt-2">
-      <p class="text-sm font-semibold text-blue">{{ t('app.name') }}</p>
-      <h1 class="text-2xl font-bold leading-tight">{{ t('app.tagline') }}</h1>
+  <main class="fy-screen">
+    <header class="fy-header" style="padding: 0 12px 0 20px">
+      <FerryLogo />
+      <RouterLink
+        to="/settings"
+        class="fy-iconbtn fy-iconbtn--filled"
+        :aria-label="t('home.settings')"
+      >
+        <Icon name="settings" />
+      </RouterLink>
     </header>
 
-    <template v-if="session.status === 'loading'">
-      <p class="sr-only">{{ t('outside.waiting') }}</p>
-      <SkeletonBlock :lines="2" />
-      <SkeletonBlock :lines="3" />
-    </template>
-
-    <section v-else-if="session.status === 'outside'" class="card text-center">
-      <span
-        class="i-nimiq:logos-nimiq-pay-vertical text-6xl mb-3 inline-block"
-        aria-hidden="true"
-      />
-      <h2 class="card-title">{{ t('outside.title') }}</h2>
-      <p class="muted mb-4">{{ t('outside.body') }}</p>
-      <a class="btn-primary" :href="openInNimiqPayUrl()">{{ t('outside.open') }}</a>
-    </section>
-
-    <template v-else>
-      <StatusMessage
-        v-if="session.host.network === 'testnet'"
-        tone="warn"
-        :text="t('host.testnetBanner')"
-      />
-
-      <section class="card" aria-labelledby="balance-title">
-        <h2 id="balance-title" class="text-sm font-semibold text-neutral-800 mb-2">
-          {{ t('home.balanceTitle') }}
-        </h2>
-        <template v-if="session.evmAddress">
-          <p class="text-3xl font-bold">
-            {{ session.balances ? usdtDisplay(session.balances.usdt) : '…' }}
-            <span class="text-lg text-neutral-700">USDT</span>
-          </p>
-          <p class="text-sm text-neutral-700 font-mono mt-1">
-            {{ shortAddress(session.evmAddress) }}
-            <template v-if="session.balances">
-              · {{ polDisplay(session.balances.pol) }} {{ t('evm.pol') }}
-            </template>
-          </p>
-          <template v-if="session.balancesError">
-            <StatusMessage class="mt-3" tone="error" :text="t('evm.balanceFailed')" />
-            <button type="button" class="btn-secondary" @click="retryBalances">
-              {{ t('common.tryAgain') }}
-            </button>
-          </template>
-        </template>
-        <template v-else>
-          <p class="muted mb-3">{{ t('home.connectHint') }}</p>
-          <button type="button" class="btn-secondary" :disabled="evmBusy" @click="connect">
-            {{ evmBusy ? t('evm.connecting') : t('evm.connect') }}
-          </button>
-        </template>
-        <StatusMessage v-if="evmMsg" class="mt-3" :tone="evmMsg.tone" :text="evmMsg.text" />
-
-        <div class="mt-4 pt-3 border-t border-neutral-300">
-          <p v-if="session.nimAddress" class="text-sm">
-            <span class="font-semibold">{{ t('nim.title') }}</span>
-            <span v-if="session.nimBalance !== null">
-              · {{ nimDisplay(session.nimBalance) }} NIM</span
-            >
-            <span class="block font-mono text-xs text-neutral-700 mt-1">{{
-              session.nimAddress
-            }}</span>
-          </p>
-          <button v-else type="button" class="btn-ghost" :disabled="nimBusy" @click="showNim">
-            {{ nimBusy ? t('evm.connecting') : t('nim.show') }}
-          </button>
-          <StatusMessage v-if="nimMsg" class="mt-2" :tone="nimMsg.tone" :text="nimMsg.text" />
+    <div class="fy-content" style="gap: 18px">
+      <!-- Loading -->
+      <template v-if="session.status === 'loading'">
+        <div class="fy-balance" aria-busy="true">
+          <span
+            class="fy-skel"
+            style="width: 90px; height: 12px; background: rgba(255, 255, 255, 0.22)"
+          />
+          <span
+            class="fy-skel fy-skel--shimmer"
+            style="width: 200px; height: 40px; opacity: 0.35"
+          />
+          <span
+            class="fy-skel"
+            style="width: 150px; height: 14px; background: rgba(255, 255, 255, 0.22)"
+          />
         </div>
-      </section>
+        <div class="flex flex-col gap-3 pt-2">
+          <span class="fy-skel" style="width: 80px; height: 14px" />
+          <div v-for="i in 2" :key="i" class="flex items-center gap-3">
+            <span class="fy-skel" style="width: 44px; height: 44px; border-radius: 12px" />
+            <span class="flex-1 flex flex-col gap-2">
+              <span class="fy-skel fy-skel--shimmer" style="width: 60%; height: 13px" />
+              <span class="fy-skel" style="width: 40%; height: 11px" />
+            </span>
+          </div>
+        </div>
+      </template>
 
-      <nav class="flex flex-col gap-3 mb-4" :aria-label="t('app.name')">
-        <button type="button" class="tile tile-primary" @click="startCashout('self')">
-          <span class="tile-icon bg-white/20"
-            ><span class="i-nimiq:arrow-from-bottom-right" aria-hidden="true"
-          /></span>
-          <span class="flex-1 text-left">
-            <span class="block font-bold text-lg">{{ t('home.cashOut') }}</span>
-            <span class="block text-sm opacity-90">{{ t('home.cashOutHint') }}</span>
-          </span>
-          <span class="i-nimiq:chevron-right" aria-hidden="true" />
-        </button>
-        <button type="button" class="tile" @click="startCashout('other')">
-          <span class="tile-icon bg-green-400 text-green-1100"
-            ><span class="i-nimiq:globe" aria-hidden="true"
-          /></span>
-          <span class="flex-1 text-left">
-            <span class="block font-bold">{{ t('home.send') }}</span>
-            <span class="block text-sm text-neutral-800">{{ t('home.sendHint') }}</span>
-          </span>
-          <span class="i-nimiq:chevron-right text-neutral-700" aria-hidden="true" />
-        </button>
-        <RouterLink to="/history" class="tile">
-          <span class="tile-icon bg-neutral-300 text-neutral-1100"
-            ><span class="i-nimiq:sand-clock" aria-hidden="true"
-          /></span>
-          <span class="flex-1 text-left">
-            <span class="block font-bold">{{ t('home.history') }}</span>
-            <span class="block text-sm text-neutral-800">{{ t('home.historyHint') }}</span>
-          </span>
-          <span class="i-nimiq:chevron-right text-neutral-700" aria-hidden="true" />
-        </RouterLink>
-      </nav>
+      <template v-else>
+        <h1 v-if="!session.evmAddress" class="fy-display fy-display--l">{{ t('home.title') }}</h1>
 
-      <p class="text-sm text-neutral-800 text-center px-2">{{ t('home.countries') }}</p>
-      <p class="text-sm text-neutral-800 text-center px-2 mt-1">{{ t('home.promise') }}</p>
+        <!-- Balance: hidden until the user connects -->
+        <section class="fy-balance" aria-labelledby="balance-label">
+          <template v-if="!session.evmAddress">
+            <span id="balance-label" class="fy-eyebrow fy-balance__label">{{
+              t('home.balance')
+            }}</span>
+            <span
+              style="
+                font: 800 36px/1 var(--fy-font-display);
+                letter-spacing: 0.06em;
+                color: rgba(255, 255, 255, 0.5);
+              "
+              aria-hidden="true"
+              >•••• <span style="font-size: 18px; letter-spacing: 0">USDT</span></span
+            >
+            <button
+              type="button"
+              class="fy-btn fy-btn--cream"
+              style="min-height: 48px; font-size: 15.5px; font-weight: 700"
+              :disabled="busy"
+              @click="connect"
+            >
+              {{ busy ? t('home.connecting') : t('home.connect') }}
+            </button>
+            <span class="text-center" style="font-size: 13px; color: #dce1ff">{{
+              t('home.connectNote')
+            }}</span>
+          </template>
+          <template v-else>
+            <span id="balance-label" class="fy-eyebrow fy-balance__label">
+              {{ t('home.balanceAt', { address: tinyAddress(session.evmAddress) }) }}
+            </span>
+            <span
+              v-if="session.balances"
+              style="font: 800 44px/1 var(--fy-font-display); letter-spacing: -0.045em"
+            >
+              {{ usdtDisplay(session.balances.usdt)
+              }}<span style="font-size: 20px; letter-spacing: 0"> USDT</span>
+            </span>
+            <span
+              v-else
+              class="fy-skel fy-skel--shimmer"
+              style="width: 200px; height: 40px; opacity: 0.35"
+            />
+            <span v-if="approx" style="font-size: 15px; color: #e4e8ff">
+              {{
+                t('home.approx', { amount: fiatDisplay(approx.theyReceiveMinor, approxCurrency) })
+              }}
+            </span>
+          </template>
+        </section>
 
-      <nav v-if="SPIKES_ENABLED" class="card mt-6" aria-label="Spikes">
-        <h2 class="card-title">Phase 0 spikes</h2>
-        <RouterLink class="btn-secondary mb-2" to="/spike/s2">S2 · Gasless $1</RouterLink>
-        <RouterLink class="btn-secondary mb-2" to="/spike/s3">S3 · Lightning</RouterLink>
-        <RouterLink class="btn-secondary" to="/spike/s4">S4 · Nimiq sign-in</RouterLink>
-      </nav>
-    </template>
+        <Banner v-if="msg" :tone="msg.tone" :body="msg.text" />
+        <Banner
+          v-if="session.balancesError"
+          tone="danger"
+          :body="t('evm.balanceFailed')"
+          :action="t('common.tryAgain')"
+          @action="session.loadBalances().catch(() => {})"
+        />
+
+        <section v-if="recent.length" aria-labelledby="home-history" class="flex flex-col">
+          <div class="flex items-center justify-between" style="min-height: 32px">
+            <h2 id="home-history" style="font: 700 17px var(--fy-font-body); margin: 0">
+              {{ t('home.history') }}
+            </h2>
+            <RouterLink
+              to="/history"
+              class="fy-btn fy-btn--text fy-btn--sm"
+              style="min-height: 40px; padding: 0 4px"
+            >
+              {{ t('common.seeAll') }}
+            </RouterLink>
+          </div>
+          <RouterLink v-for="e in recent" :key="e.id" :to="`/orders/${e.id}`" class="fy-list-row">
+            <Monogram :name="e.institutionName" />
+            <span class="fy-list-row__main">
+              <span class="fy-list-row__name">{{
+                e.recipientName ? titleCase(e.recipientName) : e.institutionName
+              }}</span>
+              <span class="fy-list-row__meta"
+                >{{ e.institutionName }} · {{ timeText(e.createdAt) }}</span
+              >
+            </span>
+            <span class="fy-list-row__end">
+              <span>{{ fiatDisplay(e.theyReceiveMinor, e.currency) }}</span>
+              <StatusChip :status="e.status" />
+            </span>
+          </RouterLink>
+        </section>
+
+        <p v-if="!session.evmAddress || !recent.length" class="fy-note">
+          <Icon name="shield" :size="18" />{{ t('home.reach') }}
+        </p>
+      </template>
+    </div>
+
+    <div class="fy-bottom" style="gap: 4px">
+      <button
+        type="button"
+        class="fy-btn fy-btn--text"
+        style="min-height: 44px"
+        @click="startCashout('other')"
+      >
+        {{ t('home.send') }}
+      </button>
+      <button type="button" class="fy-btn fy-btn--primary" @click="startCashout('self')">
+        {{ t('home.cashOut') }}
+      </button>
+    </div>
   </main>
 </template>

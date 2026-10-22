@@ -6,6 +6,7 @@ import type { Address } from 'viem'
 import { api } from '../lib/api'
 import {
   classifyEvmError,
+  currentAccount,
   hasEvmProvider,
   requestAccount,
   type EvmErrorKind,
@@ -14,9 +15,6 @@ import { readHostContext } from '../providers/host'
 import { initNimiq, type NimiqProvider } from '../providers/nimiq'
 
 export type ProviderStatus = 'loading' | 'ready' | 'outside'
-
-/** If Nimiq Pay hasn't shown up by now, show the "open in Nimiq Pay" state while init keeps waiting. */
-const OUTSIDE_HINT_MS = 1_500
 
 export const useSessionStore = defineStore('session', () => {
   const host = readHostContext()
@@ -31,19 +29,33 @@ export const useSessionStore = defineStore('session', () => {
   const nimAddress = ref<string | null>(null)
   const nimBalance = ref<bigint | null>(null)
 
-  /** Never opens an approval dialog: init only waits for the provider to be injected. */
+  /**
+   * Never opens an approval dialog: init only waits for the provider to be injected.
+   * Without Nimiq Pay's host context we're in a normal browser, so the landing page shows
+   * straight away; if a provider still turns up (older hosts), the app takes over.
+   */
   async function start() {
-    const hint = setTimeout(() => {
-      if (status.value === 'loading' && !host.inHost) status.value = 'outside'
-    }, OUTSIDE_HINT_MS)
+    if (!host.inHost) status.value = 'outside'
     void loadMeta()
     try {
       nimiq.value = await initNimiq()
       status.value = 'ready'
+      void restoreEvm()
     } catch {
       status.value = 'outside'
-    } finally {
-      clearTimeout(hint)
+    }
+  }
+
+  /** Picks up an account the user already connected, without asking again. */
+  async function restoreEvm() {
+    if (!hasEvmProvider() || evmAddress.value) return
+    try {
+      const address = await currentAccount()
+      if (!address) return
+      evmAddress.value = address
+      await loadBalances().catch(() => undefined)
+    } catch {
+      // not connected yet: Home shows the connect button
     }
   }
 
@@ -84,6 +96,13 @@ export const useSessionStore = defineStore('session', () => {
     return 'ok'
   }
 
+  /** Forget the EVM address on this device. Nimiq Pay keeps its own permission. */
+  function disconnectEvm() {
+    evmAddress.value = null
+    balances.value = null
+    balancesError.value = false
+  }
+
   async function loadNimBalance() {
     const provider = nimiq.value
     if (!provider || !nimAddress.value) return
@@ -105,6 +124,7 @@ export const useSessionStore = defineStore('session', () => {
     start,
     loadBalances,
     connectEvm,
+    disconnectEvm,
     loadNimBalance,
     canReadNimBalance,
   }

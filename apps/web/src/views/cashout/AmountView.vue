@@ -4,16 +4,20 @@ import {
   formatUsdt,
   maxAmountForBalance,
   parseUnits,
+  usdtToFiatMinor,
   USDT_DECIMALS,
 } from '@ferry/shared'
 import { computed, ref, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import BottomAction from '../../components/BottomAction.vue'
-import StatusMessage from '../../components/StatusMessage.vue'
-import TopBar from '../../components/TopBar.vue'
+import AppHeader from '../../components/AppHeader.vue'
+import Banner from '../../components/Banner.vue'
+import Icon from '../../components/Icon.vue'
+import Monogram from '../../components/Monogram.vue'
 import { useQuote } from '../../composables/useQuote'
+import { COUNTRY_NAMES, currencySymbol } from '../../lib/corridors'
 import { fiatDisplay, rateDisplay, usdtDisplay } from '../../lib/format'
+import { titleCase } from '../../lib/names'
 import { useCashoutStore } from '../../stores/cashout'
 import { useSessionStore } from '../../stores/session'
 
@@ -23,42 +27,46 @@ const draft = useCashoutStore()
 const session = useSessionStore()
 
 const currency = computed(() => draft.currency!)
+const symbol = computed(() => currencySymbol(currency.value))
 const { quote, loading, error } = useQuote(
   toRef(draft, 'currency'),
   toRef(draft, 'amountInput'),
   toRef(draft, 'amountIn'),
 )
-
 const limits = computed(() => session.meta?.limits ?? DEFAULT_LIMITS)
 const feeBps = computed(() => session.meta?.fees.ferryFeeBps ?? 50)
-const symbol = computed(
-  () =>
-    new Intl.NumberFormat('en', {
-      style: 'currency',
-      currency: currency.value,
-      currencyDisplay: 'narrowSymbol',
-    })
-      .formatToParts(0)
-      .find((p) => p.type === 'currency')?.value ?? currency.value,
+const feePct = computed(() => (feeBps.value / 100).toString())
+
+/** Thousands separators while typing; the store keeps the plain decimal string. */
+const display = computed(() => {
+  const [whole = '', frac] = draft.amountInput.split('.')
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return frac !== undefined ? `${grouped}.${frac}` : grouped
+})
+const fontSize = computed(() =>
+  display.value.length > 9 ? '36px' : display.value.length > 7 ? '40px' : '44px',
 )
 
 function onInput(e: Event) {
-  const raw = (e.target as HTMLInputElement).value.replace(/,/g, '').replace(/[^\d.]/g, '')
+  const raw = (e.target as HTMLInputElement).value.replace(/[^\d.]/g, '')
   const [whole = '', ...rest] = raw.split('.')
   const maxDecimals = draft.amountIn === 'usdt' ? USDT_DECIMALS : 2
-  draft.amountInput = rest.length ? `${whole}.${rest.join('').slice(0, maxDecimals)}` : whole
+  const cleanWhole = whole.replace(/^0+(?=\d)/, '').slice(0, 12)
+  draft.amountInput = rest.length
+    ? `${cleanWhole || '0'}.${rest.join('').slice(0, maxDecimals)}`
+    : cleanWhole
 }
 
-function toggle() {
-  // Carry the equivalent amount across so the user doesn't lose what they typed.
+function setMode(mode: 'fiat' | 'usdt') {
+  if (draft.amountIn === mode) return
+  // Carry the equivalent amount across so nothing typed is lost.
   const q = quote.value
-  if (draft.amountIn === 'fiat') {
-    draft.amountIn = 'usdt'
-    draft.amountInput = q ? formatUsdt(BigInt(q.amountUnits)) : ''
-  } else {
-    draft.amountIn = 'fiat'
-    draft.amountInput = q ? (BigInt(q.theyReceiveMinor) / 100n).toString() : ''
-  }
+  draft.amountIn = mode
+  draft.amountInput = q
+    ? mode === 'usdt'
+      ? formatUsdt(BigInt(q.amountUnits))
+      : (BigInt(q.theyReceiveMinor) / 100n).toString()
+    : ''
 }
 
 const connectBusy = ref(false)
@@ -73,159 +81,196 @@ async function connect() {
   else if (result !== 'ok') connectMsg.value = t('errors.generic')
 }
 
+const maxUnits = computed(() => parseUnits(limits.value.maxUsd, USDT_DECIMALS))
+const minUnits = computed(() => parseUnits(limits.value.minUsd, USDT_DECIMALS))
 function useMax() {
   if (!session.balances) return
-  const cap = parseUnits(limits.value.maxUsd, USDT_DECIMALS)
   const max = maxAmountForBalance(session.balances.usdt, feeBps.value)
   draft.amountIn = 'usdt'
-  draft.amountInput = formatUsdt(max < cap ? max : cap)
+  draft.amountInput = formatUsdt(max < maxUnits.value ? max : maxUnits.value)
 }
 
-const outsideLimits = computed(() => {
-  if (!quote.value) return false
-  const units = BigInt(quote.value.amountUnits)
-  return (
-    units < parseUnits(limits.value.minUsd, USDT_DECIMALS) ||
-    units > parseUnits(limits.value.maxUsd, USDT_DECIMALS)
-  )
+type Msg = { tone: 'danger' | 'warning'; text: string }
+const message = computed<Msg | null>(() => {
+  if (error.value) {
+    if (error.value.code === 'CORRIDOR_PAUSED')
+      return {
+        tone: 'warning',
+        text: t('amount.paused', { country: COUNTRY_NAMES[currency.value] }),
+      }
+    if (error.value.code === 'OFFLINE') return { tone: 'danger', text: t('errors.offline') }
+    return { tone: 'warning', text: t('amount.noRate') }
+  }
+  const q = quote.value
+  if (!q) return null
+  const units = BigInt(q.amountUnits)
+  if (units > maxUnits.value) {
+    return {
+      tone: 'warning',
+      text: t('amount.outsideLimits', {
+        min: limits.value.minUsd,
+        maxUsd: limits.value.maxUsd,
+        maxFiat: fiatDisplay(usdtToFiatMinor(maxUnits.value, q.rate), currency.value),
+      }),
+    }
+  }
+  if (units < minUnits.value)
+    return { tone: 'warning', text: t('amount.belowMin', { min: limits.value.minUsd }) }
+  if (session.balances && BigInt(q.youSendUnits) > session.balances.usdt) {
+    const canSend = maxAmountForBalance(session.balances.usdt, feeBps.value)
+    return {
+      tone: 'danger',
+      text: t('amount.notEnough', {
+        balance: usdtDisplay(session.balances.usdt),
+        max: fiatDisplay(usdtToFiatMinor(canSend, q.rate), currency.value),
+      }),
+    }
+  }
+  return null
 })
-const notEnough = computed(
-  () =>
-    !!quote.value && !!session.balances && BigInt(quote.value.youSendUnits) > session.balances.usdt,
-)
-const canContinue = computed(
-  () =>
-    !!quote.value &&
-    !loading.value &&
-    !outsideLimits.value &&
-    !!session.evmAddress &&
-    !!session.balances &&
-    !notEnough.value,
-)
 
-const quoteErrorText = computed(() => {
-  if (!error.value) return null
-  if (error.value.code === 'CORRIDOR_PAUSED')
-    return t('amount.paused', { country: draft.corridor()?.name ?? '' })
-  if (error.value.code === 'OFFLINE') return t('errors.offline')
-  return t('amount.quoteFailed')
-})
+const canReview = computed(
+  () =>
+    !!quote.value && !loading.value && !message.value && !!session.evmAddress && !!session.balances,
+)
 </script>
 
 <template>
-  <main class="page">
-    <TopBar :title="t('amount.title')" :step="4" :steps="5" back="/cashout/confirm" />
+  <main class="fy-screen">
+    <AppHeader back="/cashout/confirm">
+      <Monogram :name="draft.institution!.name" :seed="draft.institution!.code" size="xs" />
+      <span style="color: var(--fy-ink)">{{
+        t('amount.header', { name: titleCase(draft.accountName ?? '') })
+      }}</span>
+    </AppHeader>
 
-    <section class="card">
-      <label class="label" for="amount-input">
-        {{ draft.amountIn === 'fiat' ? t('amount.theyReceive') : t('amount.youSend') }}
-      </label>
-      <div class="amount-field">
-        <span class="text-2xl font-bold text-neutral-700" aria-hidden="true">
-          {{ draft.amountIn === 'fiat' ? symbol : '' }}
-        </span>
-        <input
-          id="amount-input"
-          class="amount-input"
-          :value="draft.amountInput"
-          inputmode="decimal"
-          autocomplete="off"
-          placeholder="0"
-          :aria-describedby="'amount-help'"
-          @input="onInput"
-        />
-        <span v-if="draft.amountIn === 'usdt'" class="text-lg font-bold text-neutral-700"
-          >USDT</span
+    <div class="fy-content" style="gap: 18px">
+      <div class="fy-seg" role="radiogroup" :aria-label="t('amount.modeLabel')">
+        <button
+          type="button"
+          role="radio"
+          :aria-checked="draft.amountIn === 'fiat'"
+          @click="setMode('fiat')"
         >
+          {{ t('amount.toggleFiat', { symbol }) }}
+        </button>
+        <button
+          type="button"
+          role="radio"
+          :aria-checked="draft.amountIn === 'usdt'"
+          @click="setMode('usdt')"
+        >
+          {{ t('amount.toggleUsdt') }}
+        </button>
       </div>
 
-      <p id="amount-help" class="mt-2 min-h-6 text-neutral-900" aria-live="polite">
-        <template v-if="quote">
-          <template v-if="draft.amountIn === 'fiat'">
-            {{ t('amount.youSend') }}:
-            <strong>{{ usdtDisplay(BigInt(quote.youSendUnits)) }} USDT</strong>
+      <div class="flex flex-col items-center gap-2.5" style="padding: 10px 0 4px">
+        <label
+          for="amount-input"
+          style="font: 600 14px var(--fy-font-body); color: var(--fy-ink-2)"
+        >
+          {{ draft.amountIn === 'fiat' ? t('amount.theyReceive') : t('amount.youSend') }}
+        </label>
+        <div class="fy-amount-input" :style="{ fontSize }">
+          <span v-if="draft.amountIn === 'fiat'" aria-hidden="true">{{ symbol }}</span>
+          <span class="fy-amount-input__box">
+            <span class="fy-amount-input__mirror" aria-hidden="true">{{ display || '0' }}</span>
+            <input
+              id="amount-input"
+              :value="display"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="0"
+              aria-describedby="amount-conv"
+              @input="onInput"
+            />
+          </span>
+          <span v-if="draft.amountIn === 'usdt'" class="fy-amount-input__unit">USDT</span>
+        </div>
+        <span id="amount-conv" aria-live="polite">
+          <span v-if="quote" class="fy-pill">
+            <Icon name="swap" :size="16" />
+            {{
+              draft.amountIn === 'fiat'
+                ? t('amount.convFiat', { amount: usdtDisplay(BigInt(quote.youSendUnits)) })
+                : t('amount.convUsdt', { amount: fiatDisplay(quote.theyReceiveMinor, currency) })
+            }}
+          </span>
+          <span
+            v-else-if="loading || error"
+            class="fy-skel fy-skel--shimmer"
+            style="width: 180px; height: 36px; border-radius: 999px"
+          />
+        </span>
+      </div>
+
+      <dl class="fy-panel">
+        <div class="fy-row">
+          <dt class="fy-row__k">{{ t('amount.rate') }}</dt>
+          <dd class="fy-row__v">
+            <template v-if="quote">{{ rateDisplay(quote.rate, currency) }}</template>
+            <span v-else class="fy-skel" style="width: 120px; height: 14px" />
+          </dd>
+        </div>
+        <div class="fy-row">
+          <dt class="fy-row__k">{{ t('amount.fee', { pct: feePct }) }}</dt>
+          <dd class="fy-row__v">{{ t('amount.feeIncluded') }}</dd>
+        </div>
+        <div class="fy-row" style="min-height: 52px; padding-right: 8px">
+          <template v-if="session.evmAddress && session.balances">
+            <dt class="fy-row__k">
+              {{ t('amount.balance', { amount: usdtDisplay(session.balances.usdt) }) }}
+            </dt>
+            <dd>
+              <button type="button" class="fy-chipbtn" @click="useMax">
+                {{ t('amount.useMax') }}
+              </button>
+            </dd>
           </template>
           <template v-else>
-            {{ t('amount.theyReceive') }}:
-            <strong>{{ fiatDisplay(quote.theyReceiveMinor, currency) }}</strong>
+            <dt class="fy-row__k">{{ t('amount.connectRow') }}</dt>
+            <dd>
+              <button type="button" class="fy-chipbtn" :disabled="connectBusy" @click="connect">
+                {{ connectBusy ? '…' : t('amount.connect') }}
+              </button>
+            </dd>
           </template>
-        </template>
-        <span v-else-if="loading" class="text-neutral-700">…</span>
-      </p>
-
-      <button type="button" class="btn-ghost mt-2" @click="toggle">
-        <span class="i-nimiq:exchange-chevron" aria-hidden="true" />
-        {{
-          draft.amountIn === 'fiat' ? t('amount.toggleUsdt') : t('amount.toggleFiat', { currency })
-        }}
-      </button>
-    </section>
-
-    <section v-if="quote" class="card">
-      <dl>
-        <div class="row">
-          <dt class="row-label">{{ t('amount.rate') }}</dt>
-          <dd class="row-value">{{ rateDisplay(quote.rate, currency) }}</dd>
-        </div>
-        <div class="row">
-          <dt class="row-label">{{ t('amount.fee') }}</dt>
-          <dd class="row-value">{{ usdtDisplay(BigInt(quote.ferryFeeUnits)) }} USDT</dd>
         </div>
       </dl>
-    </section>
 
-    <StatusMessage
-      v-if="quoteErrorText"
-      tone="error"
-      :text="quoteErrorText"
-      :support-ref="error?.ref"
-    />
-    <StatusMessage
-      v-else-if="outsideLimits"
-      tone="warn"
-      :text="t('amount.outsideLimits', { min: limits.minUsd, max: limits.maxUsd })"
-    />
-    <StatusMessage
-      v-else-if="notEnough && session.balances"
-      tone="warn"
-      :text="t('amount.notEnough', { balance: usdtDisplay(session.balances.usdt) })"
-    />
-    <p v-else class="text-sm text-neutral-800 px-1 mb-3">
-      {{ t('amount.limits', { min: limits.minUsd, max: limits.maxUsd, daily: limits.dailyUsd }) }}
-    </p>
+      <span class="fy-caption text-center">
+        {{ t('amount.limits', { min: limits.minUsd, max: limits.maxUsd, daily: limits.dailyUsd }) }}
+      </span>
 
-    <BottomAction>
-      <div
-        v-if="session.evmAddress && session.balances"
-        class="flex items-center justify-between text-sm"
+      <p
+        v-if="message"
+        class="fy-inline-msg"
+        :style="{ color: message.tone === 'danger' ? 'var(--fy-danger)' : 'var(--fy-warning)' }"
+        role="status"
       >
-        <span>{{ t('amount.balance', { amount: usdtDisplay(session.balances.usdt) }) }}</span>
-        <button type="button" class="link font-semibold" @click="useMax">
-          {{ t('amount.useMax') }}
-        </button>
-      </div>
-      <template v-if="session.evmAddress && session.balancesError">
-        <p class="text-sm text-red-1100" role="alert">{{ t('evm.balanceFailed') }}</p>
-        <button type="button" class="btn-secondary" @click="session.loadBalances().catch(() => {})">
-          {{ t('common.tryAgain') }}
-        </button>
-      </template>
-      <template v-if="!session.evmAddress">
-        <p class="text-sm text-neutral-800">{{ t('amount.connectToContinue') }}</p>
-        <p v-if="connectMsg" class="text-sm text-neutral-900" role="status">{{ connectMsg }}</p>
-        <button type="button" class="btn-primary" :disabled="connectBusy" @click="connect">
-          {{ connectBusy ? t('evm.connecting') : t('evm.connect') }}
-        </button>
-      </template>
+        <Icon :name="message.tone === 'danger' ? 'alert' : 'info'" :size="18" :stroke="2.2" />{{
+          message.text
+        }}
+      </p>
+      <Banner v-if="connectMsg" tone="brand" :body="connectMsg" />
+      <Banner
+        v-if="session.evmAddress && session.balancesError"
+        tone="danger"
+        :body="t('evm.balanceFailed')"
+        :action="t('common.tryAgain')"
+        @action="session.loadBalances().catch(() => {})"
+      />
+    </div>
+
+    <div class="fy-bottom">
       <button
-        v-else
         type="button"
-        class="btn-primary"
-        :disabled="!canContinue"
+        class="fy-btn fy-btn--primary"
+        :disabled="!canReview"
         @click="router.push('/cashout/review')"
       >
-        {{ t('common.continue') }}
+        {{ t('amount.review') }}
       </button>
-    </BottomAction>
+    </div>
   </main>
 </template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import './spike.css'
 import {
   buildMetaTxTypedData,
   formatUsdt,

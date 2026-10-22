@@ -24,6 +24,22 @@ function devKey(): Hex {
 }
 
 const account = privateKeyToAccount(devKey())
+
+const CONNECTED_KEY = 'ferry.dev.connected'
+function isRemembered(): boolean {
+  try {
+    return sessionStorage.getItem(CONNECTED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+function rememberConnection() {
+  try {
+    sessionStorage.setItem(CONNECTED_KEY, '1')
+  } catch {
+    // storage unavailable: the connection lasts until reload
+  }
+}
 const rejected = () => Object.assign(new Error('User rejected the request.'), { code: 4001 })
 
 function describeTypedData(raw: string) {
@@ -62,9 +78,11 @@ const ethereum = {
           ]))
         )
           throw rejected()
+        rememberConnection()
         return [account.address]
       case 'eth_accounts':
-        return [account.address]
+        // Like a real wallet: only an account the user already approved, never a prompt.
+        return isRemembered() ? [account.address] : []
       case 'eth_chainId':
         return chainId
       case 'wallet_switchEthereumChain': {

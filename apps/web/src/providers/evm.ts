@@ -26,6 +26,12 @@ export async function requestAccount(): Promise<Address> {
   return getAddress(first)
 }
 
+/** No approval: the account the user already shared with Ferry, if any. Never prompts. */
+export async function currentAccount(): Promise<Address | null> {
+  const accounts = await provider().request({ method: 'eth_accounts' })
+  return accounts[0] ? getAddress(accounts[0]) : null
+}
+
 /** No approval. */
 export async function currentChainId(): Promise<Hex> {
   return provider().request({ method: 'eth_chainId' })

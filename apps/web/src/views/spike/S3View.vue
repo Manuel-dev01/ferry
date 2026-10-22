@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import './spike.css'
 import { normalizeKenyanPhone, type SpikeLnurlResponse } from '@ferry/shared'
 import { computed, onUnmounted, ref } from 'vue'
 import StatusMessage from '../../components/StatusMessage.vue'

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import './spike.css'
 import type { SpikeNimVerifyResponse } from '@ferry/shared'
 import { ref } from 'vue'
 import StatusMessage from '../../components/StatusMessage.vue'
