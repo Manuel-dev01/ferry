@@ -229,3 +229,25 @@ export const createOfframpResponseSchema = z.object({
 export type CreateOfframpResponse = z.infer<typeof createOfframpResponseSchema>
 
 export const submitSignatureRequestSchema = z.object({ signature: hexSchema })
+
+// ---- Proof of Ferry ----
+
+export const statsResponseSchema = z.object({
+  settledPayouts: z.number().int(),
+  uniqueWallets: z.number().int(),
+  countries: z.number().int(),
+  volumeUsd: z.string(),
+  medianSeconds: z.number().nullable(),
+  successRate: z.string().nullable(),
+  latest: z.array(
+    z.object({
+      currency: corridorCurrencySchema,
+      theyReceiveMinor: unitsSchema,
+      recipientMasked: z.string(),
+      seconds: z.number(),
+      at: z.number().int(),
+    }),
+  ),
+  updatedAt: z.number().int(),
+})
+export type StatsResponse = z.infer<typeof statsResponseSchema>

@@ -14,6 +14,7 @@ import {
   type MetaResponse,
   type QuoteAmounts,
   type QuoteResponse,
+  type StatsResponse,
 } from '@ferry/shared'
 import { Hono } from 'hono'
 import { getAddress } from 'viem'
@@ -101,6 +102,22 @@ export function v1Routes(deps: Deps) {
       features: { lightning: false, onramp: false, testDrive: false },
       paycrestMode: paycrest.keyed.mode,
       relayer: deps.relayer?.account.address ?? null,
+    }
+    return c.json(body)
+  })
+
+  // Proof of Ferry. Counts only real, settled, non-internal orders; simulated (mock) orders
+  // never count. TODO(M4): aggregate from the orders table once live orders are stored.
+  r.get('/stats', (c) => {
+    const body: StatsResponse = {
+      settledPayouts: 0,
+      uniqueWallets: 0,
+      countries: 0,
+      volumeUsd: '0',
+      medianSeconds: null,
+      successRate: null,
+      latest: [],
+      updatedAt: Date.now(),
     }
     return c.json(body)
   })
