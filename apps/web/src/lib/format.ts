@@ -53,7 +53,19 @@ export function durationDisplay(ms: number): string {
   return s % 60 ? `${m} min ${s % 60} s` : `${m} min`
 }
 
-export const timeDisplay = (at: number, locale = 'en') =>
-  new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(
-    at,
-  )
+export const timeDisplay = (at: number) =>
+  new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(at)
+
+/** "14:02" */
+export const shortTimeDisplay = (at: number) =>
+  new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(at)
+
+/** "21 OCT, 14:02:39" */
+export const dateTimeDisplay = (at: number) => {
+  const d = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(at)
+  return `${d}, ${timeDisplay(at)}`.toUpperCase()
+}

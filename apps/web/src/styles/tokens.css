@@ -1,0 +1,112 @@
+/* Ferry "Deal" design system tokens. Light is the default; dark follows the system unless
+   data-theme on <html> pins a theme. Card colours are the same in both themes. */
+
+:root {
+  --fy-card-cobalt: #2337e8;
+  --fy-card-cream: #fff4e2;
+  --fy-card-tangerine: #ff8a3d;
+  --fy-card-mint: #8fe3c2;
+  --fy-card-ink: #0b0e3a;
+  --fy-on-card: #0b0e3a;
+  --fy-on-brand: #ffffff;
+
+  --fy-font-display: 'Syne', system-ui, sans-serif;
+  --fy-font-body: 'Albert Sans', system-ui, sans-serif;
+
+  --fy-radius-xs: 8px;
+  --fy-radius-s: 12px;
+  --fy-radius-m: 16px;
+  --fy-radius-l: 24px;
+  --fy-radius-xl: 32px;
+  --fy-tap: 44px;
+  --fy-gutter: 20px;
+
+  --fy-dur-fast: 120ms;
+  --fy-dur-base: 200ms;
+  --fy-dur-slow: 320ms;
+  --fy-dur-deal: 560ms;
+  --fy-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --fy-ease-in-out: cubic-bezier(0.6, 0, 0.3, 1);
+  --fy-ease-deal: cubic-bezier(0.34, 1.4, 0.5, 1);
+
+  --fy-tilt: -1.5deg;
+}
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --fy-bg: #fbf6ee;
+  --fy-surface: #ffffff;
+  --fy-surface-2: #f4ecdf;
+  --fy-line: #e7ddcc;
+  --fy-ink: #0b0e3a;
+  --fy-ink-2: #4b5080;
+  --fy-ink-3: #6e7299;
+  --fy-brand: #2337e8;
+  --fy-brand-soft: #e4e7ff;
+  --fy-brand-text: #2337e8;
+  --fy-success: #0e7a4f;
+  --fy-success-soft: #d7f5e8;
+  --fy-warning: #8a5a00;
+  --fy-warning-soft: #ffefc7;
+  --fy-danger: #c42839;
+  --fy-danger-soft: #ffe3e3;
+  --fy-focus: #2337e8;
+  --fy-skeleton: #ede4d5;
+  --fy-scrim: rgba(5, 6, 24, 0.42);
+  --fy-shadow-1: 0 1px 2px rgba(11, 14, 58, 0.06), 0 0 0 1px var(--fy-line);
+  --fy-shadow-2: 0 14px 28px -14px rgba(11, 14, 58, 0.35);
+  --fy-shadow-3: 0 28px 48px -18px rgba(11, 14, 58, 0.45);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --fy-bg: #0a0c2b;
+    --fy-surface: #141849;
+    --fy-surface-2: #1d2260;
+    --fy-line: #2c3275;
+    --fy-ink: #fff4e2;
+    --fy-ink-2: #b9bde8;
+    --fy-ink-3: #8e93c9;
+    --fy-brand: #4757ff;
+    --fy-brand-soft: #232a7a;
+    --fy-brand-text: #9ba4ff;
+    --fy-success: #5fd9a4;
+    --fy-success-soft: #0f3b33;
+    --fy-warning: #ffc85c;
+    --fy-warning-soft: #3a2e12;
+    --fy-danger: #ff8f98;
+    --fy-danger-soft: #45152a;
+    --fy-focus: #9ba4ff;
+    --fy-skeleton: #1d2260;
+    --fy-shadow-1: 0 0 0 1px var(--fy-line);
+    --fy-shadow-2: 0 14px 28px -14px rgba(0, 0, 0, 0.6);
+    --fy-shadow-3: 0 28px 48px -18px rgba(0, 0, 0, 0.75);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --fy-bg: #0a0c2b;
+  --fy-surface: #141849;
+  --fy-surface-2: #1d2260;
+  --fy-line: #2c3275;
+  --fy-ink: #fff4e2;
+  --fy-ink-2: #b9bde8;
+  --fy-ink-3: #8e93c9;
+  --fy-brand: #4757ff;
+  --fy-brand-soft: #232a7a;
+  --fy-brand-text: #9ba4ff;
+  --fy-success: #5fd9a4;
+  --fy-success-soft: #0f3b33;
+  --fy-warning: #ffc85c;
+  --fy-warning-soft: #3a2e12;
+  --fy-danger: #ff8f98;
+  --fy-danger-soft: #45152a;
+  --fy-focus: #9ba4ff;
+  --fy-skeleton: #1d2260;
+  --fy-shadow-1: 0 0 0 1px var(--fy-line);
+  --fy-shadow-2: 0 14px 28px -14px rgba(0, 0, 0, 0.6);
+  --fy-shadow-3: 0 28px 48px -18px rgba(0, 0, 0, 0.75);
+}

@@ -2,28 +2,25 @@
 import { monogram } from '@ferry/shared'
 import { computed } from 'vue'
 
-const props = withDefaults(defineProps<{ name: string; size?: 'sm' | 'md' }>(), { size: 'md' })
+const props = withDefaults(
+  defineProps<{ name: string; seed?: string; size?: 'md' | 'sm' | 'xs' }>(),
+  { size: 'md', seed: undefined },
+)
 
-// Stable tint per name. We never show third-party logos.
-const TINTS = [
-  'bg-blue-400 text-blue-1100',
-  'bg-green-400 text-green-1100',
-  'bg-gold-400 text-gold-1100',
-  'bg-neutral-300 text-neutral-1100',
-]
+// Two letters, tint from a stable hash of the institution. Never a third-party logo.
+const TINTS = ['ink', 'tangerine', 'mint', 'cream', 'cobalt'] as const
 const tint = computed(() => {
   let h = 0
-  for (const ch of props.name) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  for (const ch of props.seed ?? props.name) h = (h * 31 + ch.charCodeAt(0)) >>> 0
   return TINTS[h % TINTS.length]
 })
 </script>
 
 <template>
   <span
-    class="monogram"
-    :class="[tint, size === 'sm' ? 'size-8 text-xs' : 'size-11 text-sm']"
+    class="fy-mono"
+    :class="[`fy-mono--${tint}`, size !== 'md' && `fy-mono--${size}`]"
     aria-hidden="true"
+    >{{ monogram(name) }}</span
   >
-    {{ monogram(name) }}
-  </span>
 </template>
