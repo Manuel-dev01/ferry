@@ -76,7 +76,7 @@ const txA = ref<SpikeTxResponse | null>(null)
 
 async function runPathA() {
   const from = session.evmAddress
-  if (!from || !config.value || amount.value === null) return
+  if (!from || !config.value?.recipient || amount.value === null) return
   busyA.value = true
   txA.value = null
   try {
@@ -84,7 +84,7 @@ async function runPathA() {
     const functionSignature = encodeFunctionData({
       abi: erc20Abi,
       functionName: 'transfer',
-      args: [config.value.recipient, amount.value],
+      args: [config.value.recipient!, amount.value],
     })
     const typedData = buildMetaTxTypedData({ nonce, from, functionSignature })
     logA.add(`Nonce ${nonce}. Asking Nimiq Pay to sign (eth_signTypedData_v4)…`)
@@ -186,14 +186,14 @@ async function switchChain() {
 
 async function sendNative() {
   const from = session.evmAddress
-  if (!from || !config.value || amount.value === null) return
+  if (!from || !config.value?.recipient || amount.value === null) return
   busyB.value = true
   txB.value = null
   try {
     const data = encodeFunctionData({
       abi: erc20Abi,
       functionName: 'transfer',
-      args: [config.value.recipient, amount.value],
+      args: [config.value.recipient!, amount.value],
     })
     logB.add('Asking Nimiq Pay to send (eth_sendTransaction)…')
     let hash: Hex
@@ -234,7 +234,9 @@ async function sendNative() {
       <dl>
         <div class="row">
           <dt class="row-label">Recipient</dt>
-          <dd class="row-value font-mono">{{ shortAddress(config.recipient) }}</dd>
+          <dd class="row-value font-mono">
+            {{ config.recipient ? shortAddress(config.recipient) : 'not configured on the server' }}
+          </dd>
         </div>
         <div class="row">
           <dt class="row-label">Relayer gas</dt>

@@ -33,7 +33,17 @@ export function s2Routes(deps: Deps) {
   const r = new Hono<AppEnv>()
   const { env, polygon, relayer } = deps
   const token = env.USDT0_ADDRESS as Address
-  const recipient = getAddress(env.SPIKE_ALLOWED_RECIPIENT!)
+  const recipient = env.SPIKE_ALLOWED_RECIPIENT ? getAddress(env.SPIKE_ALLOWED_RECIPIENT) : null
+  const requireRecipient = () => {
+    if (!recipient) {
+      throw new HttpError(
+        503,
+        'SPIKE_NOT_CONFIGURED',
+        'SPIKE_ALLOWED_RECIPIENT is not set on the server',
+      )
+    }
+    return recipient
+  }
 
   // Spike-only abuse guards; this process may be reachable by anyone on the network.
   let relaysUsed = 0
@@ -127,7 +137,12 @@ export function s2Routes(deps: Deps) {
           functionSignature: body.functionSignature,
           signature: body.signature,
         },
-        { recipient, amount: env.spikeMaxUsdtUnits, exact: false, onchainNonce },
+        {
+          recipient: requireRecipient(),
+          amount: env.spikeMaxUsdtUnits,
+          exact: false,
+          onchainNonce,
+        },
       )
       const balance = await polygon.readContract({
         address: token,

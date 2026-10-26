@@ -94,8 +94,10 @@ describe('spikes flag', () => {
 })
 
 describe('env', () => {
-  it('requires a recipient when spikes are on, and a database in production', () => {
-    expect(() => loadEnv({ SPIKES_ENABLED: 'true' })).toThrow(/SPIKE_ALLOWED_RECIPIENT/)
+  it('requires a database in production and refuses mock orders there by default', () => {
+    expect(() => loadEnv({ NODE_ENV: 'production', DATABASE_URL: 'postgres://x@y/z' })).toThrow(
+      /ALLOW_MOCK_ORDERS/,
+    )
     expect(() => loadEnv({ NODE_ENV: 'production' })).toThrow(/DATABASE_URL/)
   })
 

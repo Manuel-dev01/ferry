@@ -66,6 +66,16 @@ const envSchema = z
     SPIKE_MAX_USDT: z.string().default('1'),
     SPIKE_MAX_RELAYS: z.coerce.number().int().nonnegative().default(10),
     SPIKE_LN_MAX_SATS: z.coerce.number().int().positive().default(2000),
+    SPIKE_GATEWAY_MIN_USDT: z
+      .string()
+      .regex(/^\d+(\.\d+)?$/)
+      .default('0.5'),
+    SPIKE_GATEWAY_MAX_USDT: z
+      .string()
+      .regex(/^\d+(\.\d+)?$/)
+      .default('2'),
+    /** Hosted demo only: lets the simulated order engine run with NODE_ENV=production. */
+    ALLOW_MOCK_ORDERS: bool('false'),
     GAS_DRIP_ENABLED: bool('false'),
     GAS_DRIP_AMOUNT_POL: z.string().default('0.02'),
     GAS_DRIP_MAX_TOTAL: z.coerce.number().int().nonnegative().default(5),
@@ -81,18 +91,11 @@ const envSchema = z
         message: 'PAYCREST_API_KEY and PAYCREST_API_SECRET are required when PAYCREST_MODE=live',
       })
     }
-    if (env.NODE_ENV === 'production' && env.PAYCREST_MODE === 'mock') {
+    if (env.NODE_ENV === 'production' && env.PAYCREST_MODE === 'mock' && !env.ALLOW_MOCK_ORDERS) {
       ctx.addIssue({
         code: 'custom',
         path: ['PAYCREST_MODE'],
-        message: 'mock is not allowed in production',
-      })
-    }
-    if (env.SPIKES_ENABLED && !env.SPIKE_ALLOWED_RECIPIENT) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['SPIKE_ALLOWED_RECIPIENT'],
-        message: 'Required when SPIKES_ENABLED=true',
+        message: 'mock is not allowed in production unless ALLOW_MOCK_ORDERS=true',
       })
     }
   })
@@ -100,6 +103,8 @@ const envSchema = z
     ...env,
     spikeMaxUsdtUnits: parseUnits(env.SPIKE_MAX_USDT, USDT_DECIMALS),
     gasDripWei: parseUnits(env.GAS_DRIP_AMOUNT_POL, POL_DECIMALS),
+    spikeGatewayMinUnits: parseUnits(env.SPIKE_GATEWAY_MIN_USDT, USDT_DECIMALS),
+    spikeGatewayMaxUnits: parseUnits(env.SPIKE_GATEWAY_MAX_USDT, USDT_DECIMALS),
     ferryFeeBps: percentToBps(env.FERRY_FEE_PERCENT),
     // USDT is treated as 1:1 with USD for limits.
     limits: {

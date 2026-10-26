@@ -97,6 +97,9 @@ const appearanceLabel = () =>
         <RouterLink class="fy-row fy-row--link" to="/spike/s4"
           ><span class="fy-row__k">S4 · Nimiq sign-in</span></RouterLink
         >
+        <RouterLink class="fy-row fy-row--link" to="/spike/s5"
+          ><span class="fy-row__k">S5 · Real $1 via Gateway</span></RouterLink
+        >
       </nav>
 
       <p class="fy-caption text-center" style="line-height: 1.5">{{ t('settings.footer') }}</p>

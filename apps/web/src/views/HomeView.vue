@@ -160,6 +160,13 @@ function startCashout(kind: 'self' | 'other') {
           </template>
         </section>
 
+        <Banner
+          v-if="session.meta?.paycrestMode === 'mock'"
+          tone="warning"
+          icon="info"
+          :title="t('home.demoTitle')"
+          :body="t('home.demoBody')"
+        />
         <Banner v-if="msg" :tone="msg.tone" :body="msg.text" />
         <Banner
           v-if="session.balancesError"

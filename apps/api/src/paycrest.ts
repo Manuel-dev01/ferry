@@ -83,7 +83,57 @@ export class PaycrestPublic {
     this.rateCache.set(key, { at: Date.now(), value })
     return value
   }
+
+  /** Account-name lookup. Public: needs no API key (verified 2026-10-26). */
+  async verifyAccount(institution: string, accountIdentifier: string): Promise<string> {
+    let res: Response
+    try {
+      res = await this.fetchImpl(`${this.baseUrl}/v1/verify-account`, {
+        method: 'POST',
+        headers: { accept: 'application/json', 'content-type': 'application/json' },
+        body: JSON.stringify({ institution, accountIdentifier }),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      })
+    } catch {
+      throw new HttpError(503, 'NAME_CHECK_UNAVAILABLE', "We can't check names right now")
+    }
+    const body = verifySchema.safeParse(await res.json().catch(() => null))
+    if (res.ok && body.success && typeof body.data.data === 'string' && body.data.data.trim()) {
+      return body.data.data.trim()
+    }
+    if (res.status === 400 || res.status === 404 || res.status === 422) {
+      throw new HttpError(404, 'ACCOUNT_NOT_FOUND', "We couldn't find that account")
+    }
+    throw new HttpError(503, 'NAME_CHECK_UNAVAILABLE', "We can't check names right now")
+  }
+
+  private pubkey: { at: number; value: string } | null = null
+
+  /** The aggregator's RSA key for encrypting recipient details. Public. */
+  async publicKey(): Promise<string> {
+    if (this.pubkey && Date.now() - this.pubkey.at < INSTITUTIONS_TTL_MS) return this.pubkey.value
+    const parsed = envelope(z.string()).safeParse(await this.get('/v1/pubkey'))
+    const pem = parsed.success ? parsed.data.data.trim() : ''
+    if (!pem.startsWith('-----BEGIN PUBLIC KEY-----')) {
+      throw new HttpError(502, 'PAYCREST_BAD_RESPONSE', "We couldn't reach the payout partner")
+    }
+    this.pubkey = { at: Date.now(), value: pem }
+    return pem
+  }
+
+  /** Status of an on-chain Gateway order, or null if the aggregator hasn't indexed it yet. */
+  async gatewayOrder(chainId: number, orderId: string): Promise<Record<string, unknown> | null> {
+    const raw = await this.get(`/v1/orders/${chainId}/${orderId}`)
+    const parsed = envelope(z.record(z.string(), z.unknown())).safeParse(raw)
+    return parsed.success ? parsed.data.data : null
+  }
 }
+
+const verifySchema = z.object({
+  status: z.string().optional(),
+  message: z.string().optional(),
+  data: z.unknown(),
+})
 
 /** Calls that need a KYB-verified API key. The mock stands in until the key exists. */
 export interface PaycrestKeyed {

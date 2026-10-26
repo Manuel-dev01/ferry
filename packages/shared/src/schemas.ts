@@ -33,7 +33,7 @@ export type BalancesResponse = z.infer<typeof balancesResponseSchema>
 // ---- Spike S2: gasless USDT ----
 
 export const spikeConfigResponseSchema = z.object({
-  recipient: evmAddressSchema,
+  recipient: evmAddressSchema.nullable(),
   maxUsdt: unitsSchema,
   relayer: z.object({ address: evmAddressSchema, pol: unitsSchema }).nullable(),
   gasDrip: z.object({ enabled: z.boolean(), amountWei: unitsSchema }),
