@@ -33,7 +33,8 @@
     "demoTitle": "Demo mode",
     "demoBody": "Payouts are simulated while Ferry waits for its payout licence. Nothing leaves your wallet.",
     "addMoney": "Add money",
-    "proof": "Proof of Ferry: live numbers"
+    "proof": "Proof of Ferry: live numbers",
+    "cashOutNim": "Cash out NIM"
   },
   "evm": {
     "rejected": "No problem. Connect when you're ready.",
@@ -287,10 +288,12 @@
       "failed": "Failed · refunded",
       "sending": "Sending",
       "handed_off": "Sent to Fonbnk",
-      "received": "Added"
+      "received": "Added",
+      "swapping": "Swapping…"
     },
     "topupTitle": "Added money",
-    "cashoutTitle": "Cash-out · {method}"
+    "cashoutTitle": "Cash-out · {method}",
+    "nimTitle": "NIM → USDT"
   },
   "settings": {
     "title": "Settings",
@@ -592,5 +595,48 @@
     "how1": "A cash-out counts once Ferry sees the user's own USDT transfer to the payout partner on Polygon. Each row links to it.",
     "how2": "“Confirmed received” and the median time come from senders tapping “I've got my money” in Ferry. The payout partner doesn't report back.",
     "how3": "The builder's own wallets and test cash-outs are left out."
+  },
+  "nimSwap": {
+    "header": "Cash out NIM",
+    "title": "Turn NIM into USDT",
+    "lede": "Pay from your NIM and get USDT in your own wallet. Then cash it out to a bank or mobile money in 13 countries.",
+    "amount": "USDT to receive",
+    "limits": "From {min} to {max} USDT.",
+    "tooLow": "The minimum is {amount} USDT.",
+    "tooHigh": "Ferry's limit is {amount} USDT at a time.",
+    "quoting": "Getting a price…",
+    "quote": "≈ {sats} sats over Lightning",
+    "quoteNote": "Includes the swap fee of {fee} sats. Nimiq Pay shows the exact NIM before you approve.",
+    "howTitle": "How it works",
+    "how1": "Nimiq Pay pays a Lightning invoice from your NIM. One approval.",
+    "how2": "LendaSwap locks the USDT for you on Polygon.",
+    "how3": "Ferry releases it to your wallet, with no gas needed. Then cash it out.",
+    "safety": "It's an atomic swap: if it doesn't complete, the Lightning payment fails and your NIM comes back.",
+    "connect": "Connect your wallet",
+    "continue": "Continue",
+    "preparing": "Preparing the swap…",
+    "createFailed": "We couldn't start the swap. Try again in a moment.",
+    "youGet": "You get",
+    "lightning": "Lightning invoice",
+    "to": "To",
+    "yourWallet": "Your wallet",
+    "validFor": "Valid for",
+    "payNote": "In Nimiq Pay, choose NIM to pay. The USDT goes only to your own wallet.",
+    "pay": "Pay with NIM",
+    "confirmInWallet": "Confirm in Nimiq Pay",
+    "cancelled": "Cancelled. Nothing was sent.",
+    "expired": "That price expired. Check the amount and continue again.",
+    "unsupported": "This version of Nimiq Pay can't pay Lightning invoices. Update Nimiq Pay and try again.",
+    "payFailed": "The payment didn't start. Nothing was sent.",
+    "swapping": "Swapping",
+    "step1": "Payment sent from Nimiq Pay",
+    "step2": "USDT locked for you on Polygon",
+    "step3": "USDT released to your wallet",
+    "waiting": "This usually takes under a minute. It's safe to leave; Ferry picks up where it left off.",
+    "slow": "Taking longer than usual. Ferry keeps checking; you can leave and come back.",
+    "failed": "The swap didn't complete, so no USDT was sent. Your NIM comes back when the Lightning payment times out.",
+    "doneTitle": "USDT arrived",
+    "doneNote": "It's in your Nimiq Pay wallet. Cash it out now, or keep it as USDT.",
+    "cashOutNow": "Cash out now"
   }
 }

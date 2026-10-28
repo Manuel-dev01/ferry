@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ferry/shared": "workspace:*",
+    "@lendasat/lendaswap-sdk-pure": "2.6.0",
     "@nimiq/mini-app-sdk": "0.2.4",
     "pinia": "4.1.0",
     "uqr": "0.1.3",

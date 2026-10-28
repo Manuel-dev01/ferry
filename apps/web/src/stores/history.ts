@@ -22,8 +22,8 @@ export interface HistoryEntry {
   mock: boolean
   /** Set for cash-outs a partner pays out: the user's own transfer to the partner. */
   provider?: 'fonbnk'
-  /** A top-up: USDT bought through the partner into the user's wallet. */
-  kind?: 'topup'
+  /** A top-up (USDT bought through the partner) or a NIM → USDT swap, into the user's wallet. */
+  kind?: 'topup' | 'nim'
   txHash?: string
   /** ISO 3166 code for partner cash-outs and top-ups; older entries only have `currency`. */
   country?: string
@@ -35,7 +35,7 @@ export interface HistoryEntry {
 
 /** The amount a history row shows: fiat for Ferry orders, USDT sent for partner cash-outs. */
 export const entryAmount = (e: HistoryEntry) =>
-  e.kind === 'topup'
+  e.kind === 'topup' || e.kind === 'nim'
     ? `+${usdtDisplay(BigInt(e.amountUnits ?? '0'))} USDT`
     : e.provider === 'fonbnk'
       ? `${usdtDisplay(BigInt(e.amountUnits ?? '0'))} USDT`
@@ -48,6 +48,7 @@ export function entryTitle(
   te: (key: string) => boolean,
 ) {
   if (e.kind === 'topup') return t('history.topupTitle')
+  if (e.kind === 'nim') return t('history.nimTitle')
   if (e.provider === 'fonbnk') {
     const method = channelLabel(t, te, recordCountry(e) ?? '', e.channel ?? '')
     return t('history.cashoutTitle', { method })
@@ -59,9 +60,11 @@ export function entryTitle(
 export const entryLink = (e: HistoryEntry) =>
   e.kind === 'topup'
     ? `/topup?id=${e.id}`
-    : e.provider === 'fonbnk' && e.txHash
-      ? `/cashout/fonbnk?tx=${e.txHash}`
-      : `/orders/${e.id}`
+    : e.kind === 'nim'
+      ? `/nim?swap=${e.id}`
+      : e.provider === 'fonbnk' && e.txHash
+        ? `/cashout/fonbnk?tx=${e.txHash}`
+        : `/orders/${e.id}`
 
 function load(): HistoryEntry[] {
   try {

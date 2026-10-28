@@ -157,14 +157,22 @@ function startCashout(kind: 'self' | 'other') {
                 t('home.approx', { amount: fiatDisplay(approx.theyReceiveMinor, approxCurrency) })
               }}
             </span>
-            <RouterLink
-              v-if="session.meta?.payoutRoute === 'fonbnk'"
-              to="/topup"
-              class="fy-btn fy-btn--cream fy-btn--sm self-start"
-              style="font-weight: 700"
-            >
-              <Icon name="plus" :size="18" :stroke="2.5" />{{ t('home.addMoney') }}
-            </RouterLink>
+            <div v-if="session.meta?.payoutRoute === 'fonbnk'" class="flex flex-wrap gap-2">
+              <RouterLink
+                to="/topup"
+                class="fy-btn fy-btn--cream fy-btn--sm"
+                style="font-weight: 700"
+              >
+                <Icon name="plus" :size="18" :stroke="2.5" />{{ t('home.addMoney') }}
+              </RouterLink>
+              <RouterLink
+                to="/nim"
+                class="fy-btn fy-btn--cream fy-btn--sm"
+                style="font-weight: 700"
+              >
+                <Icon name="swap" :size="18" :stroke="2.5" />{{ t('home.cashOutNim') }}
+              </RouterLink>
+            </div>
           </template>
         </section>
 

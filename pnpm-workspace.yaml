@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
 allowBuilds:
+  better-sqlite3: false # pulled in by the LendaSwap SDK for Node storage; the web app uses IndexedDB
   esbuild: true
 # Generous network settings: installs must survive slow connections.
 fetchTimeout: 600000
