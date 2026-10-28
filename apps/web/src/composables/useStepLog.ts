@@ -6,12 +6,17 @@ export interface LogEntry {
   tone: 'info' | 'success' | 'warn' | 'error'
 }
 
-/** A visible, timestamped trail of what happened, so phone tests can be reported precisely. */
+const clock = new Intl.DateTimeFormat('en-GB', {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+})
+
+/** A timestamped trail of what happened, kept behind a disclosure so phone tests can be reported. */
 export function useStepLog() {
   const entries = ref<LogEntry[]>([])
-  const started = Date.now()
   const add = (text: string, tone: LogEntry['tone'] = 'info') => {
-    entries.value.push({ at: `+${((Date.now() - started) / 1000).toFixed(1)}s`, text, tone })
+    entries.value.push({ at: clock.format(new Date()), text, tone })
   }
   return { entries, add }
 }

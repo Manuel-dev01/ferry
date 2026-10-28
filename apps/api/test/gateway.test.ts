@@ -13,6 +13,7 @@ import {
   buildRecipient,
   encryptRecipient,
   gatewayAbi,
+  gatewayGasNeedWei,
   orderIdFromLogs,
   POLYGON_GATEWAY,
   scaleRate,
@@ -136,5 +137,19 @@ describe('gateway calls', () => {
     const log = { address: POLYGON_GATEWAY, topics, data } as unknown as Log
     expect(orderIdFromLogs([log], POLYGON_GATEWAY)).toBe(orderId)
     expect(orderIdFromLogs([{ ...log, address: token } as Log], POLYGON_GATEWAY)).toBeNull()
+  })
+})
+
+describe('gatewayGasNeedWei', () => {
+  // Seen live on 2026-10-28: Nimiq Pay asked for 426,193 gas at a 527.48 gwei max fee.
+  const maxFee = 527_480_000_000n
+
+  it('covers what Nimiq Pay budgets for createOrder alone', () => {
+    expect(gatewayGasNeedWei(maxFee, false)).toBeGreaterThan(426_193n * maxFee)
+  })
+
+  it('adds the approval when one is still needed', () => {
+    const both = gatewayGasNeedWei(maxFee, true)
+    expect(both - gatewayGasNeedWei(maxFee, false)).toBe((80_000n * maxFee * 5n) / 4n)
   })
 })

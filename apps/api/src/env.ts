@@ -78,6 +78,7 @@ const envSchema = z
     ALLOW_MOCK_ORDERS: bool('false'),
     GAS_DRIP_ENABLED: bool('false'),
     GAS_DRIP_AMOUNT_POL: z.string().default('0.2'),
+    GAS_DRIP_CAP_POL: z.string().default('1'),
     GAS_DRIP_MAX_TOTAL: z.coerce.number().int().nonnegative().default(5),
   })
   .superRefine((env, ctx) => {
@@ -103,6 +104,7 @@ const envSchema = z
     ...env,
     spikeMaxUsdtUnits: parseUnits(env.SPIKE_MAX_USDT, USDT_DECIMALS),
     gasDripWei: parseUnits(env.GAS_DRIP_AMOUNT_POL, POL_DECIMALS),
+    gasDripCapWei: parseUnits(env.GAS_DRIP_CAP_POL, POL_DECIMALS),
     spikeGatewayMinUnits: parseUnits(env.SPIKE_GATEWAY_MIN_USDT, USDT_DECIMALS),
     spikeGatewayMaxUnits: parseUnits(env.SPIKE_GATEWAY_MAX_USDT, USDT_DECIMALS),
     ferryFeeBps: percentToBps(env.FERRY_FEE_PERCENT),

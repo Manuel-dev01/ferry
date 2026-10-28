@@ -21,6 +21,7 @@ import {
 } from 'viem'
 import type { AppEnv, Deps } from '../../app'
 import { HttpError } from '../../errors'
+import { gatewayGasNeedWei } from '../../gateway'
 import { verifyMetaTx } from '../../metatx'
 import { metaTxAbi, polygonFees } from '../../polygon'
 import { parseJson, parseValue } from '../validate'
@@ -48,7 +49,8 @@ export function s2Routes(deps: Deps) {
   // Spike-only abuse guards; this process may be reachable by anyone on the network.
   let relaysUsed = 0
   let relayInFlight = false
-  const dripped = new Set<string>()
+  const dripped = new Map<string, number>() // address → drips this server run
+  const MAX_DRIPS_PER_ADDRESS = 3
 
   const requireRelayer = () => {
     if (!relayer) {
@@ -204,26 +206,28 @@ export function s2Routes(deps: Deps) {
     const wallet = requireRelayer()
     const address = getAddress((await parseJson(c, spikeGasDripRequestSchema)).address)
 
+    // Top up to what a Gateway order needs at today's fees, so the wallet's own check passes.
+    const fees = await polygonFees(polygon)
+    const need = gatewayGasNeedWei(fees.maxFeePerGas, true)
+    const target =
+      need < env.gasDripWei ? env.gasDripWei : need > env.gasDripCapWei ? env.gasDripCapWei : need
     const current = await polygon.getBalance({ address })
-    if (current >= env.gasDripWei) {
+    if (current >= target) {
       const res: SpikeGasDripResponse = { status: 'already_funded', txHash: null, txStatus: null }
       return c.json(res)
     }
-    if (dripped.has(address)) {
+    const times = dripped.get(address) ?? 0
+    if (times >= MAX_DRIPS_PER_ADDRESS) {
       throw new HttpError(429, 'GAS_DRIP_USED', 'This address already received gas')
     }
-    if (dripped.size >= env.GAS_DRIP_MAX_TOTAL) {
+    if (times === 0 && dripped.size >= env.GAS_DRIP_MAX_TOTAL) {
       throw new HttpError(429, 'SPIKE_LIMIT', 'The gas drip limit for this server run is used up')
     }
-    dripped.add(address)
-    const fees = await polygonFees(polygon)
-    const request = await wallet.prepareTransactionRequest({
-      to: address,
-      value: env.gasDripWei,
-      ...fees,
-    })
+    dripped.set(address, times + 1)
+    const value = target - current
+    const request = await wallet.prepareTransactionRequest({ to: address, value, ...fees })
     const serialized = await wallet.signTransaction(request)
-    log.info({ address, wei: env.gasDripWei.toString() }, 'sending gas drip')
+    log.info({ address, wei: value.toString() }, 'sending gas drip')
     const result = await broadcastAndWait(serialized, log)
     const res: SpikeGasDripResponse = {
       status: 'sent',

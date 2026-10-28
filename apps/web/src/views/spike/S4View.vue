@@ -5,6 +5,7 @@ import { ref } from 'vue'
 import StatusMessage from '../../components/StatusMessage.vue'
 import StepLog from '../../components/StepLog.vue'
 import { useStepLog } from '../../composables/useStepLog'
+import { evmErrorText } from '../../providers/evm'
 import { api, ApiRequestError } from '../../lib/api'
 import { classifyNimiqError } from '../../providers/nimiq'
 import { useSessionStore } from '../../stores/session'
@@ -57,7 +58,7 @@ async function signIn() {
     }
   } catch (err) {
     log.add(
-      `Error: ${err instanceof ApiRequestError ? `${err.message} (${err.code})` : String(err)}`,
+      `Error: ${err instanceof ApiRequestError ? `${err.message} (${err.code})` : evmErrorText(err)}`,
       'error',
     )
   } finally {

@@ -15,6 +15,18 @@ import {
 /** Paycrest Gateway proxy on Polygon (paycrest/contracts README, verified on-chain 2026-10-26). */
 export const POLYGON_GATEWAY: Address = '0xfB411Cc6385Af50A562aFCb441864E9d541CDA67'
 
+/** Gas limits Nimiq Pay sets for the user's own Gateway transactions (it pads its estimates). */
+export const GATEWAY_GAS = { approve: 80_000n, createOrder: 450_000n } as const
+
+/**
+ * POL the wallet must hold before it lets the user confirm: the wallet checks gas limit × max fee,
+ * not the fee actually paid. 25% margin for the base fee moving between prepare and confirm.
+ */
+export function gatewayGasNeedWei(maxFeePerGas: bigint, needsApprove: boolean): bigint {
+  const gas = GATEWAY_GAS.createOrder + (needsApprove ? GATEWAY_GAS.approve : 0n)
+  return (gas * maxFeePerGas * 5n) / 4n
+}
+
 export const gatewayAbi = parseAbi([
   'function createOrder(address _token, uint256 _amount, uint96 _rate, address _senderFeeRecipient, uint256 _senderFee, address _refundAddress, string messageHash) returns (bytes32 orderId)',
   'function getOrderInfo(bytes32 _orderId) view returns ((address sender, address token, address senderFeeRecipient, uint256 senderFee, uint256 protocolFee, bool isFulfilled, bool isRefunded, address refundAddress, uint96 currentBPS, uint256 amount))',

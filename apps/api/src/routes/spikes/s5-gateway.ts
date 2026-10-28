@@ -18,10 +18,12 @@ import {
   buildRecipient,
   encryptRecipient,
   gatewayAbi,
+  gatewayGasNeedWei,
   orderIdFromLogs,
   POLYGON_GATEWAY,
   scaleRate,
 } from '../../gateway'
+import { polygonFees } from '../../polygon'
 import { parseJson, parseValue } from '../validate'
 
 const prepareSchema = z.object({
@@ -119,6 +121,8 @@ export function s5Routes(deps: Deps) {
       refundAddress: from,
       messageHash,
     })
+    const needsApprove = allowance < amount
+    const fees = await polygonFees(polygon)
     log.info(
       { currency: body.currency, institution: institution.code, amount: amount.toString(), rate },
       'gateway order prepared',
@@ -131,7 +135,8 @@ export function s5Routes(deps: Deps) {
       theyReceiveMinor: usdtToFiatMinor(amount, rate).toString(),
       gateway: POLYGON_GATEWAY,
       chainId: POLYGON_CHAIN_ID,
-      needsApprove: allowance < amount,
+      needsApprove,
+      gasNeededWei: gatewayGasNeedWei(fees.maxFeePerGas, needsApprove).toString(),
       approve: calls.approve,
       createOrder: calls.createOrder,
     })

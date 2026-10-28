@@ -26,6 +26,7 @@ import {
   sendTransaction,
   signTypedDataV4,
   switchToPolygon,
+  evmErrorText,
 } from '../../providers/evm'
 import { useSessionStore } from '../../stores/session'
 
@@ -47,9 +48,7 @@ const amount = computed<bigint | null>(() => {
 const describe = (err: unknown) =>
   err instanceof ApiRequestError
     ? `${err.message} (${err.code}${err.ref ? `, ${err.ref}` : ''})`
-    : err instanceof Error
-      ? err.message
-      : String(err)
+    : evmErrorText(err)
 
 onMounted(async () => {
   try {

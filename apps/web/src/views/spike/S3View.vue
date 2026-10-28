@@ -5,6 +5,7 @@ import { computed, onUnmounted, ref } from 'vue'
 import StatusMessage from '../../components/StatusMessage.vue'
 import StepLog from '../../components/StepLog.vue'
 import { useStepLog } from '../../composables/useStepLog'
+import { evmErrorText } from '../../providers/evm'
 import { api, ApiRequestError } from '../../lib/api'
 import { classifyNimiqError, lightningIdsFrom } from '../../providers/nimiq'
 import { useSessionStore } from '../../stores/session'
@@ -36,9 +37,7 @@ const secondsLeft = computed(() => (invoice.value ? invoice.value.expiresAt - no
 const describe = (err: unknown) =>
   err instanceof ApiRequestError
     ? `${err.message} (${err.code}${err.ref ? `, ${err.ref}` : ''})`
-    : err instanceof Error
-      ? err.message
-      : String(err)
+    : evmErrorText(err)
 
 function fillFromPhone(form: 'local' | 'international') {
   const normalized = normalizeKenyanPhone(phone.value)

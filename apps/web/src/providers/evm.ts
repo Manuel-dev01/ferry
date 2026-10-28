@@ -81,6 +81,28 @@ export function evmErrorCode(err: unknown): number | undefined {
   return undefined
 }
 
+/** A readable line from whatever a wallet throws: an Error, an EIP-1193 error object or a string. */
+export function evmErrorText(err: unknown): string {
+  if (typeof err === 'string' && err) return err
+  if (err && typeof err === 'object') {
+    const e = err as { message?: unknown; reason?: unknown; code?: unknown }
+    const msg = [e.message, e.reason].find((m): m is string => typeof m === 'string' && !!m)
+    if (msg) {
+      if (/insufficient funds/i.test(msg)) {
+        return 'Not enough POL for the network fee. Get gas, then try again.'
+      }
+      return typeof e.code === 'number' ? `${msg} (code ${e.code})` : msg
+    }
+    try {
+      const json = JSON.stringify(err)
+      if (json && json !== '{}') return json.slice(0, 200)
+    } catch {
+      // circular; fall through
+    }
+  }
+  return 'The wallet stopped without saying why. Nothing was sent.'
+}
+
 export type EvmErrorKind = 'rejected' | 'chain_missing' | 'unsupported' | 'unavailable' | 'unknown'
 
 export function classifyEvmError(err: unknown): EvmErrorKind {

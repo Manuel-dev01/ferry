@@ -93,28 +93,5 @@
 .row-value {
   font-weight: 600;
   text-align: right;
-  word-break: break-all;
-}
-.steplog {
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 14px;
   overflow-wrap: anywhere;
-}
-.steplog-at {
-  margin-right: 8px;
-  color: var(--fy-ink-3);
-}
-.steplog-success {
-  color: var(--fy-success);
-}
-.steplog-warn {
-  color: var(--fy-warning);
-}
-.steplog-error {
-  color: var(--fy-danger);
 }
