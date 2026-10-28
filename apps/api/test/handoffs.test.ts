@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { TRANSFER_GAS, transferGasNeedWei } from '../src/routes/handoffs'
+import { USDT0_ADDRESS } from '@ferry/shared'
+import { encodeAbiParameters, encodeEventTopics, erc20Abi, type Address, type Log } from 'viem'
+import { directUsdtTransfer, TRANSFER_GAS, transferGasNeedWei } from '../src/routes/handoffs'
 import { json, makeApp } from './helpers'
 
 const ADDRESS = '0x358bC84A34Df878A5497DFc01D14D6AaFe7E8A76'
@@ -59,5 +61,45 @@ describe('POST /v1/handoffs', () => {
       }),
     })
     expect(res.status).toBe(503) // no database in tests; checked before anything else
+  })
+})
+
+const USER: Address = '0x358bC84A34Df878A5497DFc01D14D6AaFe7E8A76'
+const FONBNK: Address = '0x1111111254EEB25477B68fb85Ed929f73A960582'
+const GATEWAY: Address = '0xfB411Cc6385Af50A562aFCb441864E9d541CDA67'
+
+function transferLog(
+  from: Address,
+  to: Address,
+  value: bigint,
+  token: Address = USDT0_ADDRESS,
+): Log {
+  return {
+    address: token,
+    topics: encodeEventTopics({ abi: erc20Abi, eventName: 'Transfer', args: { from, to } }),
+    data: encodeAbiParameters([{ type: 'uint256' }], [value]),
+  } as unknown as Log
+}
+
+describe('directUsdtTransfer', () => {
+  it('accepts the wallet sending its own USDT straight to the token contract', () => {
+    const receipt = { from: USER, to: USDT0_ADDRESS, logs: [transferLog(USER, FONBNK, 5_000_000n)] }
+    expect(directUsdtTransfer(receipt)).toEqual({ from: USER, to: FONBNK, value: 5_000_000n })
+  })
+
+  it('rejects a transfer a contract made, like a Paycrest Gateway order', () => {
+    const receipt = { from: USER, to: GATEWAY, logs: [transferLog(USER, GATEWAY, 1_000_000n)] }
+    expect(directUsdtTransfer(receipt)).toBeNull()
+  })
+
+  it("rejects moving someone else's tokens", () => {
+    const receipt = { from: USER, to: USDT0_ADDRESS, logs: [transferLog(FONBNK, USER, 1n)] }
+    expect(directUsdtTransfer(receipt)).toBeNull()
+  })
+
+  it('rejects anything but exactly one USDT transfer', () => {
+    const two = [transferLog(USER, FONBNK, 1n), transferLog(USER, FONBNK, 2n)]
+    expect(directUsdtTransfer({ from: USER, to: USDT0_ADDRESS, logs: two })).toBeNull()
+    expect(directUsdtTransfer({ from: USER, to: USDT0_ADDRESS, logs: [] })).toBeNull()
   })
 })

@@ -9,7 +9,16 @@ import {
 } from '@ferry/shared'
 import { and, count, eq, gte } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { BaseError, erc20Abi, getAddress, keccak256, parseEventLogs, type Hex } from 'viem'
+import {
+  BaseError,
+  erc20Abi,
+  getAddress,
+  keccak256,
+  parseEventLogs,
+  type Address,
+  type Hex,
+  type Log,
+} from 'viem'
 import type { AppEnv, Deps } from '../app'
 import { gasTopups, handoffs } from '../db/schema'
 import { HttpError } from '../errors'
@@ -23,6 +32,27 @@ const RECEIPT_TIMEOUT_MS = 60_000
 
 /** POL a wallet needs so the wallet's own check (gas limit × max fee) passes, with 25% margin. */
 export const transferGasNeedWei = (maxFeePerGas: bigint) => (TRANSFER_GAS * maxFeePerGas * 5n) / 4n
+
+/**
+ * The one USDT transfer a wallet sent itself: the transaction calls the USDT contract directly and
+ * moves the sender's own tokens. Contract-made transfers (a Gateway order, a swap) don't count.
+ */
+export function directUsdtTransfer(receipt: {
+  from: Address
+  to: Address | null
+  logs: Log[]
+}): { from: Address; to: Address; value: bigint } | null {
+  const token = USDT0_ADDRESS.toLowerCase()
+  if (receipt.to?.toLowerCase() !== token) return null
+  const transfers = parseEventLogs({
+    abi: erc20Abi,
+    eventName: 'Transfer',
+    logs: receipt.logs,
+  }).filter((l) => l.address.toLowerCase() === token)
+  const t = transfers.length === 1 ? transfers[0] : undefined
+  if (!t || getAddress(t.args.from) !== getAddress(receipt.from)) return null
+  return { from: getAddress(t.args.from), to: getAddress(t.args.to), value: t.args.value }
+}
 
 const short = (err: unknown) => (err instanceof BaseError ? err.shortMessage : String(err))
 
@@ -130,21 +160,20 @@ export function handoffRoutes(deps: Deps) {
     if (!receipt) return c.json(pending(txHash, 'pending'), 202)
     if (receipt.status !== 'success') return c.json(pending(txHash, 'reverted'))
 
-    const transfers = parseEventLogs({
-      abi: erc20Abi,
-      eventName: 'Transfer',
-      logs: receipt.logs,
-    }).filter((l) => l.address.toLowerCase() === USDT0_ADDRESS.toLowerCase())
-    if (transfers.length !== 1 || !transfers[0]) {
-      throw new HttpError(400, 'NOT_A_TRANSFER', 'That transaction is not a single USDT transfer')
+    const t = directUsdtTransfer(receipt)
+    if (!t) {
+      throw new HttpError(
+        400,
+        'NOT_A_TRANSFER',
+        'That transaction is not a USDT transfer from a wallet',
+      )
     }
-    const t = transfers[0]
     const row = {
       txHash,
       provider: body.provider,
-      fromAddress: getAddress(t.args.from),
-      toAddress: getAddress(t.args.to),
-      amountUnits: t.args.value,
+      fromAddress: t.from,
+      toAddress: t.to,
+      amountUnits: t.value,
       currency: body.currency,
       channel: body.channel,
       blockNumber: receipt.blockNumber,
