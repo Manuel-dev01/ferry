@@ -66,7 +66,8 @@ function describeTypedData(raw: string) {
   }
 }
 
-let chainId: Hex = '0x89'
+// Starts on Ethereum, like a wallet last used elsewhere, so flows must switch to Polygon themselves.
+let chainId: Hex = '0x1'
 
 const ethereum = {
   async request({ method, params }: { method: string; params?: unknown[] }) {

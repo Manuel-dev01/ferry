@@ -89,7 +89,7 @@ export function evmErrorText(err: unknown): string {
     const msg = [e.message, e.reason].find((m): m is string => typeof m === 'string' && !!m)
     if (msg) {
       if (/insufficient funds/i.test(msg)) {
-        return 'Not enough POL for the network fee. Get gas, then try again.'
+        return 'Not enough gas for the network fee. Check the wallet is on Polygon, then try again.'
       }
       return typeof e.code === 'number' ? `${msg} (code ${e.code})` : msg
     }

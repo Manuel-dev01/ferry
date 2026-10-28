@@ -6,6 +6,7 @@ import {
   isCorridorCurrency,
   MoneyFormatError,
   parseUsdt,
+  POLYGON_CHAIN_ID_HEX,
   USDT0_ADDRESS,
   usdtToFiatMinor,
   type CorridorCurrency,
@@ -22,7 +23,13 @@ import { ApiRequestError } from '../../lib/api'
 import { COUNTRY_NAMES, FLAGS } from '../../lib/corridors'
 import { ferryApi } from '../../lib/ferryApi'
 import { fiatDisplay, polygonscanTx, usdtDisplay } from '../../lib/format'
-import { classifyEvmError, evmErrorText, sendTransaction } from '../../providers/evm'
+import {
+  classifyEvmError,
+  currentChainId,
+  evmErrorText,
+  sendTransaction,
+  switchToPolygon,
+} from '../../providers/evm'
 import { useCashoutStore } from '../../stores/cashout'
 import { useHistoryStore } from '../../stores/history'
 import { useSessionStore } from '../../stores/session'
@@ -156,6 +163,39 @@ onUnmounted(() => (stopped = true))
 const describe = (err: unknown) =>
   err instanceof ApiRequestError ? err.message : evmErrorText(err)
 
+// The wallet sends on whatever network it is set to, and the USDT is on Polygon. Switching is its
+// own tap and approval, never chained onto the send.
+const onPolygon = ref<boolean | null>(null)
+async function checkNetwork(): Promise<boolean> {
+  try {
+    onPolygon.value = (await currentChainId()).toLowerCase() === POLYGON_CHAIN_ID_HEX
+  } catch {
+    onPolygon.value = null
+  }
+  return onPolygon.value === true
+}
+watch(tab, (now) => {
+  if (now === 'send') void checkNetwork()
+})
+
+async function switchNetwork() {
+  busy.value = true
+  problem.value = ''
+  status.value = t('fonbnk.confirmInWallet')
+  try {
+    await switchToPolygon()
+  } catch (err) {
+    problem.value =
+      classifyEvmError(err) === 'rejected'
+        ? t('fonbnk.switchCancelled')
+        : t('fonbnk.switchFailed', { reason: describe(err) })
+  } finally {
+    await checkNetwork()
+    busy.value = false
+    status.value = ''
+  }
+}
+
 async function send() {
   const to = address.value
   const units = amountUnits.value
@@ -163,6 +203,10 @@ async function send() {
   busy.value = true
   problem.value = ''
   try {
+    if (!(await checkNetwork())) {
+      problem.value = t('fonbnk.wrongNetwork')
+      return
+    }
     if (session.meta?.gasTopup) {
       status.value = t('fonbnk.gettingGas')
       try {
@@ -509,10 +553,28 @@ function onBack() {
           </dl>
         </template>
 
+        <Banner
+          v-if="onPolygon === false && !problem"
+          tone="warning"
+          icon="alert"
+          :body="t('fonbnk.wrongNetwork')"
+        />
         <Banner v-if="problem" tone="danger" :body="problem" />
       </div>
       <div class="fy-bottom">
         <button
+          v-if="onPolygon === false"
+          type="button"
+          class="fy-btn fy-btn--primary"
+          :class="{ 'fy-btn--busy': busy }"
+          :disabled="busy"
+          @click="switchNetwork"
+        >
+          {{ busy ? status : t('fonbnk.switchNetwork') }}
+          <span v-if="busy" class="fy-btn__progress" />
+        </button>
+        <button
+          v-else
           type="button"
           class="fy-btn fy-btn--primary"
           :class="{ 'fy-btn--busy': busy }"
