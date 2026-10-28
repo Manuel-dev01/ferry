@@ -9,7 +9,13 @@ import { REPO_URL } from '../config'
 import { useLandingMotion } from '../composables/useLandingMotion'
 import { api } from '../lib/api'
 import { FLAGS } from '../lib/corridors'
-import { durationDisplay, fiatDisplay } from '../lib/format'
+import {
+  durationDisplay,
+  polygonscanTx,
+  roughDurationDisplay,
+  usdHeadline,
+  usdtDisplay,
+} from '../lib/format'
 import { openInNimiqPayUrl } from '../providers/host'
 
 const { t } = useI18n()
@@ -27,13 +33,13 @@ onMounted(async () => {
     stats.value = null
   }
 })
-const hasStats = computed(() => !!stats.value && stats.value.settledPayouts > 0)
+const hasStats = computed(() => !!stats.value && stats.value.cashouts > 0)
 const statTiles = computed(() => {
   const s = stats.value
   const dash = '—'
   return [
     {
-      v: hasStats.value ? s!.settledPayouts.toLocaleString('en') : dash,
+      v: hasStats.value ? s!.cashouts.toLocaleString('en') : dash,
       k: t('landing.proof.settled'),
       bg: 'cream',
     },
@@ -43,13 +49,17 @@ const statTiles = computed(() => {
       bg: 'cream',
     },
     {
-      v: s?.medianSeconds != null ? durationDisplay(s.medianSeconds * 1000) : dash,
+      v: s?.medianSeconds != null ? roughDurationDisplay(s.medianSeconds * 1000) : dash,
       k: t('landing.proof.median'),
       bg: 'mint',
     },
-    { v: s?.successRate ? `${s.successRate}%` : dash, k: t('landing.proof.success'), bg: 'mint' },
     {
-      v: hasStats.value ? `$${s!.volumeUsd}` : dash,
+      v: hasStats.value ? s!.confirmedPaid.toLocaleString('en') : dash,
+      k: t('landing.proof.confirmed'),
+      bg: 'mint',
+    },
+    {
+      v: hasStats.value ? usdHeadline(BigInt(s!.volumeUnits)) : dash,
       k: t('landing.proof.volume'),
       bg: 'tangerine',
     },
@@ -384,16 +394,26 @@ const countries = [
           <span style="font: 700 17px var(--fy-font-body)">{{ t('landing.proof.latest') }}</span>
         </div>
         <template v-if="stats?.latest.length">
-          <div v-for="(p, i) in stats.latest" :key="i" class="payouts__row">
+          <a
+            v-for="p in stats.latest.slice(0, 6)"
+            :key="p.txHash"
+            class="payouts__row"
+            :href="polygonscanTx(p.txHash)"
+            target="_blank"
+            rel="noopener"
+          >
             <span style="font-size: 20px">{{ FLAGS[p.currency] }}</span>
-            <span style="font-weight: 700">{{ fiatDisplay(p.theyReceiveMinor, p.currency) }}</span>
-            <span class="payouts__to">{{ p.recipientMasked }}</span>
+            <span style="font-weight: 700">{{ usdtDisplay(BigInt(p.amountUnits)) }} USDT</span>
+            <span class="payouts__to">{{ t(`fonbnk.channels.${p.currency}.${p.channel}`) }}</span>
             <span class="payouts__chip">{{
-              t('landing.proof.paidIn', { t: durationDisplay(p.seconds * 1000) })
+              p.seconds !== null
+                ? t('landing.proof.paidIn', { t: durationDisplay(p.seconds * 1000) })
+                : t('landing.proof.sent')
             }}</span>
-          </div>
+          </a>
         </template>
         <p v-else class="payouts__empty">{{ t('landing.proof.empty') }}</p>
+        <RouterLink to="/proof" class="payouts__more">{{ t('landing.proof.more') }} →</RouterLink>
       </div>
     </section>
 
@@ -924,8 +944,13 @@ const countries = [
 }
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+@media (min-width: 900px) {
+  .stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .stat {
   border-radius: 24px;
@@ -977,6 +1002,14 @@ const countries = [
   display: flex;
   align-items: center;
   white-space: nowrap;
+}
+.payouts__more {
+  display: inline-flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 22px;
+  font-weight: 700;
+  color: inherit;
 }
 .payouts__empty {
   margin: 0;

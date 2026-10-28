@@ -20,11 +20,14 @@ import { Hono } from 'hono'
 import { getAddress } from 'viem'
 import { z } from 'zod'
 import type { AppEnv, Deps } from '../app'
+import { handoffs } from '../db/schema'
 import { HttpError } from '../errors'
 import { ORDER_VALID_MS } from '../orders/mock-engine'
+import { computeStats } from '../proof'
 import { parseJson, parseValue } from './validate'
 
 const QUOTE_VALID_S = ORDER_VALID_MS / 1000
+const STATS_CACHE_MS = 30_000
 const USDT_SCALE = 10n ** BigInt(USDT_DECIMALS)
 
 const quoteQuerySchema = z.object({
@@ -108,20 +111,27 @@ export function v1Routes(deps: Deps) {
     return c.json(body)
   })
 
-  // Proof of Ferry. Counts only real, settled, non-internal orders; simulated (mock) orders
-  // never count. TODO(M4): aggregate from the orders table once live orders are stored.
-  r.get('/stats', (c) => {
-    const body: StatsResponse = {
-      settledPayouts: 0,
-      uniqueWallets: 0,
-      countries: 0,
-      volumeUsd: '0',
-      medianSeconds: null,
-      successRate: null,
-      latest: [],
-      updatedAt: Date.now(),
+  // Proof of Ferry: real cash-outs Ferry saw on-chain, minus the builder's own wallets. Simulated
+  // orders never count. Cached briefly, since the page is public.
+  let statsCache: { body: StatsResponse; at: number } | null = null
+  r.get('/stats', async (c) => {
+    const db = deps.db?.db
+    if (!db) throw new HttpError(503, 'DB_UNAVAILABLE', "Ferry can't read this right now")
+    if (!statsCache || Date.now() - statsCache.at > STATS_CACHE_MS) {
+      const rows = await db
+        .select({
+          txHash: handoffs.txHash,
+          fromAddress: handoffs.fromAddress,
+          amountUnits: handoffs.amountUnits,
+          currency: handoffs.currency,
+          channel: handoffs.channel,
+          createdAt: handoffs.createdAt,
+          receivedAt: handoffs.receivedAt,
+        })
+        .from(handoffs)
+      statsCache = { body: computeStats(rows, env.PROOF_EXCLUDE_ADDRESSES), at: Date.now() }
     }
-    return c.json(body)
+    return c.json(statsCache.body)
   })
 
   r.get('/institutions/:currency', async (c) => {

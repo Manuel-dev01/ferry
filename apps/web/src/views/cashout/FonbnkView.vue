@@ -318,6 +318,7 @@ const paidAt = ref<number | null>(null)
 function markPaid() {
   if (!txHash.value) return
   history.markPaid(txHash.value)
+  void ferryApi.handoffReceived(txHash.value).catch(() => undefined) // stats only; never blocks
   paidAt.value = history.find(txHash.value)?.paidAt ?? Date.now()
   phase.value = 'paid'
 }

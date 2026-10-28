@@ -43,6 +43,10 @@ export const ferryApi = {
   handoff: (body: { txHash: Hex; currency: CorridorCurrency; channel: string }) =>
     api<HandoffResponse>('/v1/handoffs', { method: 'POST', body: { ...body, provider: 'fonbnk' } }),
 
+  /** The sender says the payout arrived; feeds the median time on Proof of Ferry. */
+  handoffReceived: (txHash: Hex) =>
+    api<HandoffResponse>(`/v1/handoffs/${txHash}/received`, { method: 'POST' }),
+
   order: (orderId: string, clientSecret: string) =>
     api<OrderView>(`/v1/orders/${orderId}`, { headers: { 'X-Client-Secret': clientSecret } }),
 }

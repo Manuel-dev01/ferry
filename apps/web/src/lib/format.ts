@@ -53,6 +53,20 @@ export function durationDisplay(ms: number): string {
   return s % 60 ? `${m} min ${s % 60} s` : `${m} min`
 }
 
+/** For headline numbers: "45 s", "6 min", "3 h". */
+export function roughDurationDisplay(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000))
+  if (s < 60) return `${s} s`
+  const m = Math.round(s / 60)
+  return m < 90 ? `${m} min` : `${Math.round(m / 60)} h`
+}
+
+/** For headline USDT totals: "$12.50" under $100, then whole dollars ("$1,240"). */
+export function usdHeadline(units: bigint): string {
+  const whole = units / 10n ** BigInt(USDT_DECIMALS)
+  return whole >= 100n ? `$${whole.toLocaleString('en')}` : `$${usdtDisplay(units)}`
+}
+
 export const timeDisplay = (at: number) =>
   new Intl.DateTimeFormat('en-GB', {
     hour: '2-digit',

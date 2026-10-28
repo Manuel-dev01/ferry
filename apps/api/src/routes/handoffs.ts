@@ -7,7 +7,7 @@ import {
   type GasTopupResponse,
   type HandoffResponse,
 } from '@ferry/shared'
-import { and, count, eq, gte } from 'drizzle-orm'
+import { and, count, eq, gte, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
 import {
   BaseError,
@@ -29,6 +29,7 @@ import { parseJson, parseValue } from './validate'
 export const TRANSFER_GAS = 120_000n
 const DAY_MS = 24 * 60 * 60_000
 const RECEIPT_TIMEOUT_MS = 60_000
+const RECEIVED_WINDOW_MS = 7 * DAY_MS
 
 /** POL a wallet needs so the wallet's own check (gas limit × max fee) passes, with 25% margin. */
 export const transferGasNeedWei = (maxFeePerGas: bigint) => (TRANSFER_GAS * maxFeePerGas * 5n) / 4n
@@ -184,6 +185,30 @@ export function handoffRoutes(deps: Deps) {
       'handoff recorded',
     )
     return c.json(view(row))
+  })
+
+  // The sender says the payout arrived. First answer wins; only plausible within a week.
+  r.post('/handoffs/:tx/received', async (c) => {
+    if (!db) throw new HttpError(503, 'DB_UNAVAILABLE', "Ferry can't record this right now")
+    const tx = parseValue(hexSchema, c.req.param('tx')).toLowerCase()
+    const [row] = await db
+      .update(handoffs)
+      .set({ receivedAt: new Date() })
+      .where(
+        and(
+          eq(handoffs.txHash, tx),
+          isNull(handoffs.receivedAt),
+          gte(handoffs.createdAt, new Date(Date.now() - RECEIVED_WINDOW_MS)),
+        ),
+      )
+      .returning()
+    if (row) {
+      c.get('log').info({ txHash: tx }, 'handoff confirmed received')
+      return c.json(view(row))
+    }
+    const [known] = await db.select().from(handoffs).where(eq(handoffs.txHash, tx)).limit(1)
+    if (!known) throw new HttpError(404, 'NOT_FOUND', 'No hand-off with that transaction')
+    return c.json(view(known))
   })
 
   r.get('/handoffs/:tx', async (c) => {

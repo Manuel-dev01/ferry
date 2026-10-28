@@ -15,6 +15,13 @@
       "when": 1793190878316,
       "tag": "0001_gas_and_handoffs",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793202769455,
+      "tag": "0002_handoff_received",
+      "breakpoints": true
     }
   ]
 }

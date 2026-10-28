@@ -215,6 +215,13 @@ function startCashout(kind: 'self' | 'other') {
         <p v-if="!session.evmAddress || !recent.length" class="fy-note">
           <Icon name="shield" :size="18" />{{ t('home.reach') }}
         </p>
+        <RouterLink
+          to="/proof"
+          class="fy-btn fy-btn--text fy-btn--sm self-start"
+          style="padding: 0 4px"
+        >
+          {{ t('home.proof') }} <Icon name="arrow-right" :size="16" />
+        </RouterLink>
       </template>
     </div>
 

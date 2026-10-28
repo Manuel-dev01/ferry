@@ -32,7 +32,8 @@
     "nimBalance": "{amount} NIM",
     "demoTitle": "Demo mode",
     "demoBody": "Payouts are simulated while Ferry waits for its payout licence. Nothing leaves your wallet.",
-    "addMoney": "Add money"
+    "addMoney": "Add money",
+    "proof": "Proof of Ferry: live numbers"
   },
   "evm": {
     "rejected": "No problem. Connect when you're ready.",
@@ -379,17 +380,19 @@
     "proof": {
       "live": "Live · updated every minute",
       "title": "Proof of Ferry",
-      "lede": "Every payout, counted in public. Recipients are anonymised.",
-      "settled": "Settled payouts",
+      "lede": "Every cash-out Ferry sees on-chain, counted in public. No names, no account numbers.",
+      "settled": "Cash-outs",
       "wallets": "Unique wallets",
-      "median": "Median time to payout",
-      "success": "Success rate",
+      "median": "Median time to money",
       "volume": "Volume",
       "countries": "Countries",
-      "latest": "Latest payouts",
+      "latest": "Latest cash-outs",
       "paidIn": "Paid in {t}",
-      "empty": "Live numbers start with our first public payouts. Every one will be counted here.",
-      "pending": "Counting from launch"
+      "empty": "Live numbers start with the first public cash-outs. Every one is counted here.",
+      "pending": "Counting from launch",
+      "confirmed": "Confirmed received",
+      "sent": "Sent",
+      "more": "See the full numbers"
     },
     "test": {
       "label": "Test drive · for anyone, anywhere",
@@ -550,5 +553,29 @@
     "arrivedNote": "It's in your Nimiq Pay wallet now. Cash it out any time, or keep it as USDT.",
     "home": "Back to Home",
     "cashOut": "Cash out"
+  },
+  "proof": {
+    "header": "Proof of Ferry",
+    "title": "Proof of Ferry",
+    "lede": "Every cash-out Ferry sees on-chain, counted in public. No names, no account numbers.",
+    "live": "Live · updated {time}",
+    "loading": "Loading live numbers…",
+    "failed": "We couldn't load the numbers. Check your connection and try again.",
+    "cashouts": "Cash-outs",
+    "volume": "Volume",
+    "wallets": "Unique wallets",
+    "countries": "Countries",
+    "median": "Median time to money",
+    "confirmed": "Confirmed received",
+    "byCountry": "By country",
+    "countryLine": "{n} · {amount}",
+    "latest": "Latest cash-outs",
+    "paidIn": "Paid in {t}",
+    "sent": "Sent",
+    "empty": "No public cash-outs yet. The first ones will show here the moment they happen.",
+    "howTitle": "How we count",
+    "how1": "A cash-out counts once Ferry sees the user's own USDT transfer to the payout partner on Polygon. Each row links to it.",
+    "how2": "“Confirmed received” and the median time come from senders tapping “I've got my money” in Ferry. The payout partner doesn't report back.",
+    "how3": "The builder's own wallets and test cash-outs are left out."
   }
 }

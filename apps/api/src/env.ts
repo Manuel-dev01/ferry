@@ -68,6 +68,8 @@ const envSchema = z
     GAS_TOPUP_CAP_POL: z.string().default('0.3'),
     GAS_TOPUP_PER_ADDRESS_DAY: z.coerce.number().int().nonnegative().default(3),
     GAS_TOPUP_DAILY_MAX: z.coerce.number().int().nonnegative().default(100),
+    // Wallets left out of Proof of Ferry: the builder's own and test wallets.
+    PROOF_EXCLUDE_ADDRESSES: csv.pipe(z.array(address)),
 
     SPIKES_ENABLED: bool('false'),
     SPIKE_ALLOWED_RECIPIENT: address.optional(),

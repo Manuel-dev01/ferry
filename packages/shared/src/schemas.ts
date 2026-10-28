@@ -259,20 +259,33 @@ export const submitSignatureRequestSchema = z.object({ signature: hexSchema })
 
 // ---- Proof of Ferry ----
 
+/**
+ * Counts only cash-outs Ferry can see on-chain: a wallet's own USDT transfer to the payout
+ * partner. "Confirmed" means the sender told Ferry the money arrived; partners report nothing.
+ */
 export const statsResponseSchema = z.object({
-  settledPayouts: z.number().int(),
+  cashouts: z.number().int(),
+  confirmedPaid: z.number().int(),
   uniqueWallets: z.number().int(),
   countries: z.number().int(),
-  volumeUsd: z.string(),
+  volumeUnits: unitsSchema,
+  /** Sent to confirmed arrival, median over confirmed cash-outs. */
   medianSeconds: z.number().nullable(),
-  successRate: z.string().nullable(),
+  byCountry: z.array(
+    z.object({
+      currency: corridorCurrencySchema,
+      cashouts: z.number().int(),
+      volumeUnits: unitsSchema,
+    }),
+  ),
   latest: z.array(
     z.object({
       currency: corridorCurrencySchema,
-      theyReceiveMinor: unitsSchema,
-      recipientMasked: z.string(),
-      seconds: z.number(),
+      channel: fonbnkChannelSchema,
+      amountUnits: unitsSchema,
+      txHash: hexSchema,
       at: z.number().int(),
+      seconds: z.number().nullable(),
     }),
   ),
   updatedAt: z.number().int(),

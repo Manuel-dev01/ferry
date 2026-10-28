@@ -203,6 +203,8 @@ export const handoffs = pgTable(
     channel: text('channel').notNull(),
     blockNumber: bigint('block_number', { mode: 'bigint' }).notNull(),
     createdAt: createdAt(),
+    /** When the sender said the money arrived. Self-reported: Fonbnk tells Ferry nothing. */
+    receivedAt: timestamp('received_at', { withTimezone: true }),
   },
   (t) => [index('handoffs_from_idx').on(t.fromAddress)],
 )
