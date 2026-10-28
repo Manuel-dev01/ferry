@@ -17,7 +17,7 @@ import {
 } from '../stores/history'
 import { useSessionStore } from '../stores/session'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const router = useRouter()
 const history = useHistoryStore()
 const draft = useCashoutStore()
@@ -127,7 +127,7 @@ function cashOut() {
         <RouterLink v-for="e in g.rows" :key="e.id" :to="entryLink(e)" class="fy-list-row">
           <Monogram :name="e.institutionName" />
           <span class="fy-list-row__main">
-            <span class="fy-list-row__name">{{ entryTitle(e, t) }}</span>
+            <span class="fy-list-row__name">{{ entryTitle(e, t, te) }}</span>
             <span class="fy-list-row__meta">{{ meta(e) }}</span>
           </span>
           <span class="fy-list-row__end">

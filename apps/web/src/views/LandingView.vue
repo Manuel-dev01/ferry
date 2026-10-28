@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { StatsResponse } from '@ferry/shared'
+import { FONBNK_COUNTRIES, FONBNK_COUNTRY_CODES, type StatsResponse } from '@ferry/shared'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { renderSVG } from 'uqr'
@@ -9,6 +9,7 @@ import { REPO_URL } from '../config'
 import { useLandingMotion } from '../composables/useLandingMotion'
 import { api } from '../lib/api'
 import { FLAGS } from '../lib/corridors'
+import { channelLabel, flagOf } from '../lib/fonbnk'
 import {
   durationDisplay,
   polygonscanTx,
@@ -18,7 +19,7 @@ import {
 } from '../lib/format'
 import { openInNimiqPayUrl } from '../providers/host'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 useLandingMotion()
 
 const openUrl = openInNimiqPayUrl()
@@ -75,6 +76,10 @@ const faqs = [1, 2, 3, 4, 5, 6].map((n) => ({
   q: t(`landing.faq.q${n}`),
   a: t(`landing.faq.a${n}`),
 }))
+const MAIN_COUNTRIES = ['NG', 'KE', 'UG', 'TZ']
+const moreCountries = FONBNK_COUNTRY_CODES.filter((c) => !MAIN_COUNTRIES.includes(c)).map(
+  (code) => ({ code, name: FONBNK_COUNTRIES[code].name }),
+)
 const countries = [
   {
     flag: FLAGS.NGN,
@@ -293,6 +298,12 @@ const countries = [
           <span class="country__body">{{ c.body }}</span>
         </div>
       </div>
+      <div class="more-countries">
+        <span class="more-countries__label">{{ t('landing.countries.more') }}</span>
+        <span v-for="c in moreCountries" :key="c.code" class="more-countries__chip"
+          >{{ flagOf(c.code) }} {{ c.name }}</span
+        >
+      </div>
     </section>
 
     <!-- 04 Why it's safe -->
@@ -402,9 +413,9 @@ const countries = [
             target="_blank"
             rel="noopener"
           >
-            <span style="font-size: 20px">{{ FLAGS[p.currency] }}</span>
+            <span style="font-size: 20px">{{ flagOf(p.country) }}</span>
             <span style="font-weight: 700">{{ usdtDisplay(BigInt(p.amountUnits)) }} USDT</span>
-            <span class="payouts__to">{{ t(`fonbnk.channels.${p.currency}.${p.channel}`) }}</span>
+            <span class="payouts__to">{{ channelLabel(t, te, p.country, p.channel) }}</span>
             <span class="payouts__chip">{{
               p.seconds !== null
                 ? t('landing.proof.paidIn', { t: durationDisplay(p.seconds * 1000) })
@@ -1224,5 +1235,24 @@ const countries = [
   .live__dot {
     animation: none;
   }
+}
+.more-countries {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+.more-countries__label {
+  font-weight: 700;
+  margin-right: 4px;
+}
+.more-countries__chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--fy-surface);
+  box-shadow: inset 0 0 0 1px var(--fy-line);
+  font-size: 15px;
+  font-weight: 600;
 }
 </style>

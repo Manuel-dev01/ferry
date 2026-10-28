@@ -1,9 +1,9 @@
-import type { CorridorCurrency } from './constants'
 import { formatUnits, USDT_DECIMALS } from './money'
 
 /**
- * Fonbnk's hosted off-ramp: the user verifies with Fonbnk, enters payout details there, and gets
- * a deposit address. Ferry sends the USDT from the user's own wallet to that address.
+ * Fonbnk's hosted widget: the user verifies with Fonbnk and enters payout details there. For a
+ * cash-out Ferry sends the USDT from the user's own wallet to the deposit address Fonbnk gives;
+ * for a top-up Fonbnk sends USDT to the address the user pastes.
  */
 export const FONBNK_WIDGET = {
   production: 'https://pay.fonbnk.com',
@@ -14,50 +14,136 @@ export const FONBNK_HOSTS = ['pay.fonbnk.com', 'sandbox-pay.fonbnk.com'] as cons
 
 export type FonbnkChannel = 'bank' | 'mobile_money' | 'paybill' | 'buy_goods'
 
-/** Payout channels Fonbnk offers per corridor (airtime left out on purpose). */
-export const FONBNK_CHANNELS: Record<CorridorCurrency, readonly FonbnkChannel[]> = {
-  NGN: ['bank'],
-  KES: ['mobile_money', 'paybill', 'buy_goods', 'bank'],
-  UGX: ['mobile_money'],
-  TZS: ['mobile_money'],
+export interface FonbnkCountryInfo {
+  /** ISO 4217 code of the payout currency. */
+  currency: string
+  name: string
+  /** How a cash-out can be paid out (airtime left out on purpose). */
+  cashout: readonly FonbnkChannel[]
+  /** How a top-up can be paid in; empty where no route was confirmed. */
+  topup: readonly FonbnkChannel[]
+  /** Smallest cash-out Ferry offers, with headroom over Fonbnk's own floor for rate moves. */
+  minUsdt: string
 }
 
-export const FONBNK_COUNTRY: Record<CorridorCurrency, string> = {
+/**
+ * Countries keyed by ISO 3166 code: two of them share XOF, so currency can't be the key. Routes
+ * as Fonbnk's public order-limits API reported them on 2026-10-28.
+ */
+export const FONBNK_COUNTRIES = {
+  NG: { currency: 'NGN', name: 'Nigeria', cashout: ['bank'], topup: ['bank'], minUsdt: '4' },
+  KE: {
+    currency: 'KES',
+    name: 'Kenya',
+    cashout: ['mobile_money', 'paybill', 'buy_goods', 'bank'],
+    topup: ['mobile_money'],
+    minUsdt: '1',
+  },
+  GH: {
+    currency: 'GHS',
+    name: 'Ghana',
+    cashout: ['mobile_money'],
+    topup: ['mobile_money'],
+    minUsdt: '1.5',
+  },
+  ZA: { currency: 'ZAR', name: 'South Africa', cashout: ['bank'], topup: ['bank'], minUsdt: '1.5' },
+  UG: {
+    currency: 'UGX',
+    name: 'Uganda',
+    cashout: ['mobile_money'],
+    topup: ['mobile_money'],
+    minUsdt: '1',
+  },
+  TZ: {
+    currency: 'TZS',
+    name: 'Tanzania',
+    cashout: ['mobile_money'],
+    topup: ['mobile_money'],
+    minUsdt: '1',
+  },
+  RW: { currency: 'RWF', name: 'Rwanda', cashout: ['mobile_money'], topup: [], minUsdt: '1.5' },
+  ZM: { currency: 'ZMW', name: 'Zambia', cashout: ['mobile_money'], topup: [], minUsdt: '1.5' },
+  GM: { currency: 'GMD', name: 'The Gambia', cashout: ['mobile_money'], topup: [], minUsdt: '1.5' },
+  SN: { currency: 'XOF', name: 'Senegal', cashout: ['mobile_money'], topup: [], minUsdt: '1.5' },
+  CI: {
+    currency: 'XOF',
+    name: 'Côte d’Ivoire',
+    cashout: ['mobile_money'],
+    topup: [],
+    minUsdt: '1.5',
+  },
+  CM: { currency: 'XAF', name: 'Cameroon', cashout: ['mobile_money'], topup: [], minUsdt: '1.5' },
+  BR: { currency: 'BRL', name: 'Brazil', cashout: ['bank'], topup: [], minUsdt: '1.5' },
+} as const satisfies Record<string, FonbnkCountryInfo>
+
+export type FonbnkCountry = keyof typeof FONBNK_COUNTRIES
+
+/** In display order. */
+export const FONBNK_COUNTRY_CODES = Object.keys(FONBNK_COUNTRIES) as FonbnkCountry[]
+
+export const isFonbnkCountry = (value: unknown): value is FonbnkCountry =>
+  typeof value === 'string' && Object.hasOwn(FONBNK_COUNTRIES, value)
+
+export const fonbnkCountry = (country: FonbnkCountry): FonbnkCountryInfo =>
+  FONBNK_COUNTRIES[country]
+
+/** Countries where a top-up route was confirmed. */
+export const FONBNK_TOPUP_COUNTRIES = FONBNK_COUNTRY_CODES.filter(
+  (c) => FONBNK_COUNTRIES[c].topup.length > 0,
+)
+
+/** Records from before countries existed carry only one of the first four currencies. */
+const LEGACY_CURRENCY_COUNTRY: Record<string, FonbnkCountry> = {
   NGN: 'NG',
   KES: 'KE',
   UGX: 'UG',
   TZS: 'TZ',
 }
+export const countryFromLegacyCurrency = (currency: string): FonbnkCountry | null =>
+  LEGACY_CURRENCY_COUNTRY[currency] ?? null
 
-/**
- * Smallest USDT amount to offer per corridor. Fonbnk's own floor seen on 2026-10-28 was about
- * 3.64 USDT for Nigerian banks and under 1 USDT elsewhere; Nigeria gets headroom for rate moves.
- */
-export const FONBNK_MIN_USDT: Record<CorridorCurrency, string> = {
-  NGN: '4',
-  KES: '1',
-  UGX: '1',
-  TZS: '1',
-}
+/** The country an old (currency-only) or new record belongs to. */
+export const recordCountry = (record: {
+  country?: string | null
+  currency?: string | null
+}): FonbnkCountry | null =>
+  isFonbnkCountry(record.country)
+    ? record.country
+    : record.currency
+      ? countryFromLegacyCurrency(record.currency)
+      : null
+
+const query = (params: [string, string][]) =>
+  params.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
 
 export interface FonbnkOfframpLink {
-  currency: CorridorCurrency
+  country: FonbnkCountry
   channel: FonbnkChannel
   amountUnits: bigint
   callbackUrl?: string
   base?: string
 }
 
-/** How people pay in for a top-up. Fonbnk offered only these deposit routes on 2026-10-28. */
-export const FONBNK_ONRAMP_CHANNELS: Record<CorridorCurrency, readonly FonbnkChannel[]> = {
-  NGN: ['bank'],
-  KES: ['mobile_money'],
-  UGX: ['mobile_money'],
-  TZS: ['mobile_money'],
+/** A public sell link: no merchant key, amount locked so it matches what Ferry sends. */
+export function fonbnkOfframpUrl(link: FonbnkOfframpLink): string {
+  const params: [string, string][] = [
+    ['network', 'POLYGON'],
+    ['asset', 'USDT'],
+    ['currency', 'crypto'],
+    ['amount', formatUnits(link.amountUnits, USDT_DECIMALS)],
+    ['freezeAmount', 'true'],
+    ['hideSwitch', 'true'],
+    ['countryIsoCode', link.country],
+    ['paymentChannel', link.channel],
+  ]
+  if (link.callbackUrl) {
+    params.push(['callbackUrl', link.callbackUrl], ['callbackBtnText', 'Back to Ferry'])
+  }
+  return `${link.base ?? FONBNK_WIDGET.production}/offramp?${query(params)}`
 }
 
 export interface FonbnkOnrampLink {
-  currency: CorridorCurrency
+  country: FonbnkCountry
   channel: FonbnkChannel
   callbackUrl?: string
   base?: string
@@ -73,32 +159,11 @@ export function fonbnkOnrampUrl(link: FonbnkOnrampLink): string {
     ['asset', 'USDT'],
     ['currency', 'local'],
     ['hideSwitch', 'true'],
-    ['countryIsoCode', FONBNK_COUNTRY[link.currency]],
+    ['countryIsoCode', link.country],
     ['paymentChannel', link.channel],
   ]
   if (link.callbackUrl) {
     params.push(['callbackUrl', link.callbackUrl], ['callbackBtnText', 'Back to Ferry'])
   }
   return `${link.base ?? FONBNK_WIDGET.production}/?${query(params)}`
-}
-
-const query = (params: [string, string][]) =>
-  params.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
-
-/** A public widget link: no merchant key, amount locked so it matches what Ferry sends. */
-export function fonbnkOfframpUrl(link: FonbnkOfframpLink): string {
-  const params: [string, string][] = [
-    ['network', 'POLYGON'],
-    ['asset', 'USDT'],
-    ['currency', 'crypto'],
-    ['amount', formatUnits(link.amountUnits, USDT_DECIMALS)],
-    ['freezeAmount', 'true'],
-    ['hideSwitch', 'true'],
-    ['countryIsoCode', FONBNK_COUNTRY[link.currency]],
-    ['paymentChannel', link.channel],
-  ]
-  if (link.callbackUrl) {
-    params.push(['callbackUrl', link.callbackUrl], ['callbackBtnText', 'Back to Ferry'])
-  }
-  return `${link.base ?? FONBNK_WIDGET.production}/offramp?${query(params)}`
 }

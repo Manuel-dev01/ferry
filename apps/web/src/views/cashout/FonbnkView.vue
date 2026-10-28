@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import {
-  FONBNK_CHANNELS,
-  FONBNK_MIN_USDT,
+  FONBNK_COUNTRIES,
   fonbnkOfframpUrl,
   isCorridorCurrency,
+  isFonbnkCountry,
   MoneyFormatError,
   parseUsdt,
   POLYGON_CHAIN_ID_HEX,
   USDT0_ADDRESS,
+  recordCountry,
   usdtToFiatMinor,
-  type CorridorCurrency,
   type FonbnkChannel,
+  type FonbnkCountry,
 } from '@ferry/shared'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -20,7 +21,7 @@ import AppHeader from '../../components/AppHeader.vue'
 import Banner from '../../components/Banner.vue'
 import Icon from '../../components/Icon.vue'
 import { ApiRequestError } from '../../lib/api'
-import { COUNTRY_NAMES, FLAGS } from '../../lib/corridors'
+import { channelLabel, flagOf } from '../../lib/fonbnk'
 import { ferryApi } from '../../lib/ferryApi'
 import { fiatDisplay, polygonscanTx, usdtDisplay } from '../../lib/format'
 import {
@@ -34,7 +35,7 @@ import { useCashoutStore } from '../../stores/cashout'
 import { useHistoryStore } from '../../stores/history'
 import { useSessionStore } from '../../stores/session'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const draft = useCashoutStore()
@@ -48,14 +49,23 @@ type Phase = 'amount' | 'fonbnk' | 'done' | 'paid'
 const phase = ref<Phase>('amount')
 const tab = ref<'details' | 'send'>('details')
 
-const currency = ref<CorridorCurrency>(draft.currency ?? 'NGN')
-const channels = computed(() => FONBNK_CHANNELS[currency.value])
+const queryCountry = route.query.country
+const country = ref<FonbnkCountry>(
+  isFonbnkCountry(queryCountry)
+    ? queryCountry
+    : (recordCountry({ currency: draft.currency ?? '' }) ?? 'NG'),
+)
+const info = computed(() => FONBNK_COUNTRIES[country.value])
+/** The payout currency; Ferry only has rates (for the estimate) for the first four. */
+const currency = computed(() => info.value.currency)
+const channels = computed<readonly FonbnkChannel[]>(() => info.value.cashout)
 const channel = ref<FonbnkChannel>(channels.value[0] ?? 'bank')
+const methodLabel = (c: FonbnkChannel) => channelLabel(t, te, country.value, c)
 
 // ---- Amount ----
 
 const amountInput = ref('')
-const minUnits = computed(() => parseUsdt(FONBNK_MIN_USDT[currency.value]))
+const minUnits = computed(() => parseUsdt(info.value.minUsdt))
 const maxUnits = computed(() => {
   const limit = session.meta ? parseUsdt(session.meta.limits.maxUsd) : parseUsdt('200')
   const balance = session.balances?.usdt
@@ -73,7 +83,7 @@ const amountUnits = computed<bigint | null>(() => {
 const amountError = computed(() => {
   const units = amountUnits.value
   if (units === null) return ''
-  if (units < minUnits.value) return t('fonbnk.tooLow', { amount: FONBNK_MIN_USDT[currency.value] })
+  if (units < minUnits.value) return t('fonbnk.tooLow', { amount: info.value.minUsdt })
   if (session.balances && units > session.balances.usdt) return t('fonbnk.tooHigh')
   if (session.meta && units > parseUsdt(session.meta.limits.maxUsd)) {
     return t('fonbnk.overLimit', { amount: session.meta.limits.maxUsd })
@@ -90,8 +100,10 @@ function useMax() {
 const rate = ref<string | null>(null)
 async function loadRate() {
   rate.value = null
+  const c = currency.value
+  if (!isCorridorCurrency(c)) return
   try {
-    rate.value = (await ferryApi.quote(currency.value, '10', 'usdt')).rate
+    rate.value = (await ferryApi.quote(c, '10', 'usdt')).rate
   } catch {
     // no estimate is fine; Fonbnk shows the real number
   }
@@ -108,7 +120,7 @@ const widgetUrl = computed(() =>
   amountUnits.value === null
     ? ''
     : fonbnkOfframpUrl({
-        currency: currency.value,
+        country: country.value,
         channel: channel.value,
         amountUnits: amountUnits.value,
         callbackUrl: `${window.location.origin}/fonbnk/return`,
@@ -239,6 +251,7 @@ async function send() {
       clientSecret: '',
       createdAt: Date.now(),
       currency: currency.value,
+      country: country.value,
       institutionName: 'Fonbnk',
       recipientMasked: '',
       recipientName: null,
@@ -266,7 +279,7 @@ async function follow(hash: Hex) {
     try {
       const res = await ferryApi.handoff({
         txHash: hash,
-        currency: currency.value,
+        country: country.value,
         channel: channel.value,
       })
       if (res.status === 'confirmed') {
@@ -351,7 +364,7 @@ onMounted(() => {
   if (typeof tx === 'string' && /^0x[0-9a-fA-F]{64}$/.test(tx)) {
     const entry = history.find(tx)
     if (entry?.provider === 'fonbnk') {
-      if (isCorridorCurrency(entry.currency)) currency.value = entry.currency
+      country.value = recordCountry(entry) ?? country.value
       channel.value = (entry.channel as FonbnkChannel) ?? channel.value
       amountInput.value = usdtDisplay(BigInt(entry.amountUnits ?? '0')).replace(/,/g, '')
       txHash.value = tx as Hex
@@ -368,18 +381,14 @@ onMounted(() => {
       return
     }
   }
-  if (!draft.currency) {
-    void router.replace('/cashout')
-    return
-  }
   void loadRate()
 })
-watch(currency, () => {
-  channel.value = channels.value[0] ?? 'bank'
+watch(country, () => {
+  if (!channels.value.includes(channel.value)) channel.value = channels.value[0] ?? 'bank'
   void loadRate()
 })
 
-const title = computed(() => `${FLAGS[currency.value]} ${COUNTRY_NAMES[currency.value]}`)
+const title = computed(() => `${flagOf(country.value)} ${info.value.name}`)
 
 function onBack() {
   // Once the USDT is sent, back never leads to a screen that could send it again.
@@ -422,12 +431,12 @@ function onBack() {
               :aria-pressed="channel === c"
               @click="channel = c"
             >
-              {{ t(`fonbnk.channels.${currency}.${c}`) }}
+              {{ methodLabel(c) }}
             </button>
           </div>
         </div>
         <p v-else class="fy-caption" style="margin: 0">
-          {{ t('fonbnk.method') }}: {{ t(`fonbnk.channels.${currency}.${channel}`) }}
+          {{ t('fonbnk.method') }}: {{ methodLabel(channel) }}
         </p>
 
         <div class="flex flex-col gap-1.5">
@@ -459,9 +468,7 @@ function onBack() {
             </button>
           </div>
           <span v-if="amountError" class="fy-help fy-help--error">{{ amountError }}</span>
-          <span v-else class="fy-caption">{{
-            t('fonbnk.min', { amount: FONBNK_MIN_USDT[currency] })
-          }}</span>
+          <span v-else class="fy-caption">{{ t('fonbnk.min', { amount: info.minUsdt }) }}</span>
         </div>
 
         <div v-if="estimate" class="fy-panel" style="padding: 14px 16px">
@@ -772,9 +779,7 @@ function onBack() {
             <Icon name="check" :size="18" :stroke="3" />
           </div>
           <span class="fy-now__title">{{ t('fonbnk.paidTitle') }}</span>
-          <span style="font: 600 16px var(--fy-font-body)">{{
-            t(`fonbnk.channels.${currency}.${channel}`)
-          }}</span>
+          <span style="font: 600 16px var(--fy-font-body)">{{ methodLabel(channel) }}</span>
         </div>
         <dl class="fy-panel" style="margin: 0">
           <div class="fy-row">

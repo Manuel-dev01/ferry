@@ -16,7 +16,7 @@ import { useCashoutStore } from '../stores/cashout'
 import { useHistoryStore, entryAmount, entryLink, entryTitle } from '../stores/history'
 import { useSessionStore } from '../stores/session'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const router = useRouter()
 const session = useSessionStore()
 const draft = useCashoutStore()
@@ -200,7 +200,7 @@ function startCashout(kind: 'self' | 'other') {
           <RouterLink v-for="e in recent" :key="e.id" :to="entryLink(e)" class="fy-list-row">
             <Monogram :name="e.institutionName" />
             <span class="fy-list-row__main">
-              <span class="fy-list-row__name">{{ entryTitle(e, t) }}</span>
+              <span class="fy-list-row__name">{{ entryTitle(e, t, te) }}</span>
               <span class="fy-list-row__meta"
                 >{{ e.institutionName }} · {{ timeText(e.createdAt) }}</span
               >

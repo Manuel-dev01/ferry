@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { FONBNK_COUNTRY_CODES, type FonbnkCountry } from './fonbnk'
 
 export const evmAddressSchema = z
   .string()
@@ -161,12 +162,20 @@ export type GasTopupResponse = z.infer<typeof gasTopupResponseSchema>
 
 export const fonbnkChannelSchema = z.enum(['bank', 'mobile_money', 'paybill', 'buy_goods'])
 
-export const handoffRequestSchema = z.object({
-  txHash: hexSchema,
-  provider: z.literal('fonbnk'),
-  currency: corridorCurrencySchema,
-  channel: fonbnkChannelSchema,
-})
+export const fonbnkCountrySchema = z.enum(
+  FONBNK_COUNTRY_CODES as [FonbnkCountry, ...FonbnkCountry[]],
+)
+
+/** `currency` alone is the older form from before the country list grew; it still works. */
+export const handoffRequestSchema = z
+  .object({
+    txHash: hexSchema,
+    provider: z.literal('fonbnk'),
+    country: fonbnkCountrySchema.optional(),
+    currency: corridorCurrencySchema.optional(),
+    channel: fonbnkChannelSchema,
+  })
+  .refine((b) => b.country || b.currency, { message: 'country is required', path: ['country'] })
 export const handoffResponseSchema = z.object({
   status: z.enum(['pending', 'reverted', 'confirmed']),
   txHash: hexSchema,
@@ -273,14 +282,14 @@ export const statsResponseSchema = z.object({
   medianSeconds: z.number().nullable(),
   byCountry: z.array(
     z.object({
-      currency: corridorCurrencySchema,
+      country: fonbnkCountrySchema,
       cashouts: z.number().int(),
       volumeUnits: unitsSchema,
     }),
   ),
   latest: z.array(
     z.object({
-      currency: corridorCurrencySchema,
+      country: fonbnkCountrySchema,
       channel: fonbnkChannelSchema,
       amountUnits: unitsSchema,
       txHash: hexSchema,

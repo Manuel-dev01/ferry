@@ -2,6 +2,7 @@ import type {
   CorridorCurrency,
   CreateOfframpRequest,
   CreateOfframpResponse,
+  FonbnkCountry,
   GasTopupResponse,
   HandoffResponse,
   Institution,
@@ -40,7 +41,7 @@ export const ferryApi = {
     api<GasTopupResponse>('/v1/gas', { method: 'POST', body: { address } }),
 
   /** Records the user's transfer to Fonbnk once it is on-chain; 'pending' until then. */
-  handoff: (body: { txHash: Hex; currency: CorridorCurrency; channel: string }) =>
+  handoff: (body: { txHash: Hex; country: FonbnkCountry; channel: string }) =>
     api<HandoffResponse>('/v1/handoffs', { method: 'POST', body: { ...body, provider: 'fonbnk' } }),
 
   /** The sender says the payout arrived; feeds the median time on Proof of Ferry. */

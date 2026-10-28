@@ -1,5 +1,6 @@
 import {
-  FONBNK_CHANNELS,
+  FONBNK_COUNTRIES,
+  recordCountry,
   gasTopupRequestSchema,
   handoffRequestSchema,
   hexSchema,
@@ -150,7 +151,10 @@ export function handoffRoutes(deps: Deps) {
     const body = await parseJson(c, handoffRequestSchema)
     const txHash = body.txHash.toLowerCase() as Hex
     if (txHash.length !== 66) throw new HttpError(400, 'INVALID_REQUEST', 'Not a transaction hash')
-    if (!FONBNK_CHANNELS[body.currency].includes(body.channel)) {
+    const country = recordCountry(body)
+    if (!country) throw new HttpError(400, 'INVALID_REQUEST', 'Unknown country')
+    const info = FONBNK_COUNTRIES[country]
+    if (!(info.cashout as readonly string[]).includes(body.channel)) {
       throw new HttpError(400, 'INVALID_REQUEST', 'That payout method is not offered there')
     }
 
@@ -175,13 +179,14 @@ export function handoffRoutes(deps: Deps) {
       fromAddress: t.from,
       toAddress: t.to,
       amountUnits: t.value,
-      currency: body.currency,
+      currency: info.currency,
+      country,
       channel: body.channel,
       blockNumber: receipt.blockNumber,
     }
     await db.insert(handoffs).values(row).onConflictDoNothing()
     c.get('log').info(
-      { txHash, provider: row.provider, currency: row.currency, units: row.amountUnits.toString() },
+      { txHash, provider: row.provider, country, units: row.amountUnits.toString() },
       'handoff recorded',
     )
     return c.json(view(row))

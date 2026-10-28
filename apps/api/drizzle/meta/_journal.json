@@ -22,6 +22,13 @@
       "when": 1793202769455,
       "tag": "0002_handoff_received",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793211396453,
+      "tag": "0003_handoff_country",
+      "breakpoints": true
     }
   ]
 }

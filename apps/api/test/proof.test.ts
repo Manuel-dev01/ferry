@@ -12,6 +12,7 @@ const row = (over: Partial<ProofRow>): ProofRow => ({
   fromAddress: ALICE,
   amountUnits: 5_000_000n,
   currency: 'NGN',
+  country: null,
   channel: 'bank',
   createdAt: new Date(T0),
   receivedAt: null,
@@ -37,7 +38,13 @@ describe('computeStats', () => {
     const s = computeStats(
       [
         row({ txHash: '0x01', fromAddress: ALICE }),
-        row({ txHash: '0x02', fromAddress: BOB, currency: 'KES', channel: 'mobile_money' }),
+        row({
+          txHash: '0x02',
+          fromAddress: BOB,
+          currency: 'GMD',
+          country: 'GM',
+          channel: 'mobile_money',
+        }),
         row({ txHash: '0x03', fromAddress: ALICE.toLowerCase(), amountUnits: 1_500_000n }),
         row({ txHash: '0x04', fromAddress: BUILDER.toLowerCase(), amountUnits: 99_000_000n }),
       ],
@@ -48,7 +55,8 @@ describe('computeStats', () => {
     expect(s.uniqueWallets).toBe(2)
     expect(s.countries).toBe(2)
     expect(s.volumeUnits).toBe('11500000')
-    expect(s.byCountry[0]).toEqual({ currency: 'NGN', cashouts: 2, volumeUnits: '6500000' })
+    expect(s.byCountry[0]).toEqual({ country: 'NG', cashouts: 2, volumeUnits: '6500000' })
+    expect(s.byCountry[1]?.country).toBe('GM')
     expect(s.latest.map((l) => l.txHash)).not.toContain('0x04')
   })
 

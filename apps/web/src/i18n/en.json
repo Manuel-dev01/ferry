@@ -23,7 +23,7 @@
     "connecting": "Waiting for Nimiq Pay…",
     "connectNote": "Nimiq Pay asks once. Nothing moves.",
     "approx": "≈ {amount} at today's rate",
-    "reach": "To banks and mobile money in Nigeria, Kenya, Uganda and Tanzania. Ferry never holds your money.",
+    "reach": "To banks and mobile money in 13 countries, from Nigeria and Kenya to Ghana and The Gambia. Ferry never holds your money.",
     "history": "History",
     "cashOut": "Cash out",
     "send": "Send to someone",
@@ -61,6 +61,11 @@
       "KES": "KSh",
       "UGX": "USh",
       "TZS": "TSh"
+    },
+    "fonbnkLede": "Cash out to banks and mobile money in 13 countries. You pay in USDT from your own wallet.",
+    "regions": {
+      "main": "Most used",
+      "more": "More countries"
     }
   },
   "institution": {
@@ -355,7 +360,7 @@
       "cardPaidSub": "Paid in 31 s · network fee covered"
     },
     "countries": {
-      "title": "Cash out in four countries. Send from anywhere.",
+      "title": "Cash out in 13 countries. Send from anywhere.",
       "lede": "Pay yourself in Lagos, or family in Nairobi from Berlin. Amounts show in their currency first.",
       "ng": "174 banks and fintechs, including OPay, PalmPay, Kuda, Moniepoint and GTBank.",
       "ke": "M-Pesa, Airtel Money and banks.",
@@ -364,7 +369,8 @@
       "ngCur": "Naira · ₦",
       "keCur": "Shilling · KSh",
       "ugCur": "Shilling · USh",
-      "tzCur": "Shilling · TSh"
+      "tzCur": "Shilling · TSh",
+      "more": "Also:"
     },
     "safe": {
       "title": "Your money is never ours to hold.",
@@ -431,23 +437,6 @@
     "step": "Step 2 of 3",
     "title": "How much are you cashing out?",
     "method": "Paid to",
-    "channels": {
-      "NGN": {
-        "bank": "Bank account"
-      },
-      "KES": {
-        "mobile_money": "M-Pesa",
-        "paybill": "Paybill",
-        "buy_goods": "Buy Goods",
-        "bank": "Bank"
-      },
-      "UGX": {
-        "mobile_money": "MTN or Airtel"
-      },
-      "TZS": {
-        "mobile_money": "M-Pesa, Airtel and more"
-      }
-    },
     "amount": "Amount",
     "balance": "Balance {amount} USDT",
     "max": "Max",
@@ -520,7 +509,27 @@
     "paidNote": "Saved in your history on this phone.",
     "again": "Cash out again",
     "returning": "Back to Ferry…",
-    "detailsHelpSent": "Paste the transaction hash where Fonbnk asks for it. Once the money is in your account, tap “I’ve got my money”."
+    "detailsHelpSent": "Paste the transaction hash where Fonbnk asks for it. Once the money is in your account, tap “I’ve got my money”.",
+    "channelNames": {
+      "bank": "Bank account",
+      "mobile_money": "Mobile money",
+      "paybill": "Paybill",
+      "buy_goods": "Buy Goods till"
+    },
+    "channelsByCountry": {
+      "KE": {
+        "mobile_money": "M-Pesa",
+        "paybill": "Paybill",
+        "buy_goods": "Buy Goods",
+        "bank": "Bank"
+      },
+      "UG": {
+        "mobile_money": "MTN or Airtel"
+      },
+      "TZ": {
+        "mobile_money": "M-Pesa, Airtel and more"
+      }
+    }
   },
   "topup": {
     "header": "Add money",
@@ -528,10 +537,8 @@
     "lede": "Pay in local money and get USDT on Polygon in your Nimiq Pay wallet.",
     "payFrom": "Pay from",
     "methods": {
-      "NGN": "By bank transfer in naira.",
-      "KES": "With M-Pesa.",
-      "UGX": "With MTN or Airtel Money.",
-      "TZS": "With M-Pesa, Airtel Money and more."
+      "bank": "By bank transfer in {currency}.",
+      "mobile_money": "With mobile money."
     },
     "yourAddress": "Your wallet address",
     "addressNote": "Fonbnk asks for it. Polygon network.",
@@ -552,7 +559,15 @@
     "arrivedTitle": "Money added",
     "arrivedNote": "It's in your Nimiq Pay wallet now. Cash it out any time, or keep it as USDT.",
     "home": "Back to Home",
-    "cashOut": "Cash out"
+    "cashOut": "Cash out",
+    "methodsByCountry": {
+      "NG": "By bank transfer in naira.",
+      "KE": "With M-Pesa.",
+      "UG": "With MTN or Airtel Money.",
+      "TZ": "With M-Pesa, Airtel Money and more.",
+      "GH": "With mobile money.",
+      "ZA": "By bank transfer in rand."
+    }
   },
   "proof": {
     "header": "Proof of Ferry",

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import {
-  CORRIDORS,
-  FONBNK_ONRAMP_CHANNELS,
+  FONBNK_COUNTRIES,
+  FONBNK_TOPUP_COUNTRIES,
   fonbnkOnrampUrl,
-  isCorridorCurrency,
-  type CorridorCurrency,
+  recordCountry,
+  type FonbnkChannel,
+  type FonbnkCountry,
 } from '@ferry/shared'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -12,13 +13,13 @@ import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '../components/AppHeader.vue'
 import Banner from '../components/Banner.vue'
 import Icon from '../components/Icon.vue'
-import { COUNTRY_NAMES, FLAGS } from '../lib/corridors'
+import { flagOf } from '../lib/fonbnk'
 import { usdtDisplay } from '../lib/format'
 import { useCashoutStore } from '../stores/cashout'
 import { useHistoryStore } from '../stores/history'
 import { useSessionStore } from '../stores/session'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
@@ -33,14 +34,21 @@ const WATCH_MAX_MS = 3 * 60 * 60_000
 type Phase = 'pick' | 'fonbnk' | 'arrived'
 const phase = ref<Phase>('pick')
 
-const currency = ref<CorridorCurrency>(
-  isCorridorCurrency(session.host.fiat) ? session.host.fiat : 'NGN',
+const hostCountry = recordCountry({ currency: session.host.fiat ?? '' })
+const country = ref<FonbnkCountry>(
+  hostCountry && FONBNK_TOPUP_COUNTRIES.includes(hostCountry) ? hostCountry : 'NG',
 )
-const channel = computed(() => FONBNK_ONRAMP_CHANNELS[currency.value][0] ?? 'mobile_money')
+const info = computed(() => FONBNK_COUNTRIES[country.value])
+const channel = computed<FonbnkChannel>(() => info.value.topup[0] ?? 'mobile_money')
+const methodText = computed(() =>
+  te(`topup.methodsByCountry.${country.value}`)
+    ? t(`topup.methodsByCountry.${country.value}`)
+    : t(`topup.methods.${channel.value}`, { currency: info.value.currency }),
+)
 
 const widgetUrl = computed(() =>
   fonbnkOnrampUrl({
-    currency: currency.value,
+    country: country.value,
     channel: channel.value,
     callbackUrl: `${window.location.origin}/fonbnk/return`,
   }),
@@ -130,7 +138,8 @@ function arrived(units: bigint) {
     id,
     clientSecret: '',
     createdAt: Date.now(),
-    currency: currency.value,
+    currency: info.value.currency,
+    country: country.value,
     institutionName: 'Fonbnk',
     recipientMasked: '',
     recipientName: null,
@@ -164,7 +173,7 @@ window.addEventListener('message', onFrameMessage)
 onUnmounted(() => window.removeEventListener('message', onFrameMessage))
 
 function cashOut() {
-  draft.start('self', currency.value)
+  draft.start('self', info.value.currency)
   void router.push('/cashout')
 }
 
@@ -173,7 +182,7 @@ onMounted(() => {
   if (typeof id === 'string') {
     const entry = history.find(id)
     if (entry?.kind === 'topup') {
-      if (isCorridorCurrency(entry.currency)) currency.value = entry.currency
+      country.value = recordCountry(entry) ?? country.value
       arrivedUnits.value = BigInt(entry.amountUnits ?? '0')
       phase.value = 'arrived'
     }
@@ -196,19 +205,19 @@ onMounted(() => {
           <span class="fy-label">{{ t('topup.payFrom') }}</span>
           <div class="fy-filters" style="flex-wrap: wrap" role="radiogroup">
             <button
-              v-for="c in CORRIDORS"
-              :key="c.currency"
+              v-for="c in FONBNK_TOPUP_COUNTRIES"
+              :key="c"
               type="button"
               class="fy-filter"
               role="radio"
-              :aria-checked="currency === c.currency"
-              :aria-pressed="currency === c.currency"
-              @click="currency = c.currency"
+              :aria-checked="country === c"
+              :aria-pressed="country === c"
+              @click="country = c"
             >
-              {{ FLAGS[c.currency] }} {{ COUNTRY_NAMES[c.currency] }}
+              {{ flagOf(c) }} {{ FONBNK_COUNTRIES[c].name }}
             </button>
           </div>
-          <span class="fy-caption">{{ t(`topup.methods.${currency}`) }}</span>
+          <span class="fy-caption">{{ methodText }}</span>
         </div>
 
         <section v-if="session.evmAddress" class="flex flex-col gap-2">
@@ -310,7 +319,7 @@ onMounted(() => {
       <div class="fy-content" style="gap: 18px">
         <div class="fy-now fy-now--mint" style="margin-top: 4px">
           <div class="fy-now__top">
-            <span class="fy-eyebrow">{{ FLAGS[currency] }} {{ COUNTRY_NAMES[currency] }}</span>
+            <span class="fy-eyebrow">{{ flagOf(country) }} {{ info.name }}</span>
             <Icon name="check" :size="18" :stroke="3" />
           </div>
           <span class="fy-now__title">{{ t('topup.arrivedTitle') }}</span>

@@ -124,6 +124,7 @@ export function v1Routes(deps: Deps) {
           fromAddress: handoffs.fromAddress,
           amountUnits: handoffs.amountUnits,
           currency: handoffs.currency,
+          country: handoffs.country,
           channel: handoffs.channel,
           createdAt: handoffs.createdAt,
           receivedAt: handoffs.receivedAt,

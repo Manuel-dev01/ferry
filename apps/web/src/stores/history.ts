@@ -1,4 +1,5 @@
-import type { OrderView } from '@ferry/shared'
+import { recordCountry, type OrderView } from '@ferry/shared'
+import { channelLabel } from '../lib/fonbnk'
 import { fiatDisplay, usdtDisplay } from '../lib/format'
 import { titleCase } from '../lib/names'
 import { defineStore } from 'pinia'
@@ -24,6 +25,8 @@ export interface HistoryEntry {
   /** A top-up: USDT bought through the partner into the user's wallet. */
   kind?: 'topup'
   txHash?: string
+  /** ISO 3166 code for partner cash-outs and top-ups; older entries only have `currency`. */
+  country?: string
   amountUnits?: string
   channel?: string
   /** When the user confirmed the money arrived (partner payouts report no status to Ferry). */
@@ -42,10 +45,12 @@ export const entryAmount = (e: HistoryEntry) =>
 export function entryTitle(
   e: HistoryEntry,
   t: (key: string, values?: Record<string, unknown>) => string,
+  te: (key: string) => boolean,
 ) {
   if (e.kind === 'topup') return t('history.topupTitle')
   if (e.provider === 'fonbnk') {
-    return t('history.cashoutTitle', { method: t(`fonbnk.channels.${e.currency}.${e.channel}`) })
+    const method = channelLabel(t, te, recordCountry(e) ?? '', e.channel ?? '')
+    return t('history.cashoutTitle', { method })
   }
   return e.recipientName ? titleCase(e.recipientName) : e.institutionName
 }

@@ -1,3 +1,4 @@
+import { isFonbnkCountry } from '@ferry/shared'
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useCashoutStore } from './stores/cashout'
 import { useSessionStore } from './stores/session'
@@ -21,8 +22,11 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/cashout/fonbnk',
     component: () => import('./views/cashout/FonbnkView.vue'),
-    // A link with ?tx= reopens a sent cash-out; otherwise a country must be chosen first.
-    beforeEnter: (to) => (typeof to.query.tx === 'string' ? true : needs('currency')()),
+    // A link with ?tx= reopens a sent cash-out; otherwise it needs a country.
+    beforeEnter: (to) =>
+      typeof to.query.tx === 'string' || isFonbnkCountry(to.query.country)
+        ? true
+        : { path: '/cashout' },
     meta: app,
   },
   {

@@ -200,6 +200,8 @@ export const handoffs = pgTable(
     toAddress: text('to_address').notNull(),
     amountUnits: usdtUnits('amount_units').notNull(),
     currency: text('currency').notNull(),
+    /** ISO 3166 code; null on rows from before the country list grew (read their currency). */
+    country: text('country'),
     channel: text('channel').notNull(),
     blockNumber: bigint('block_number', { mode: 'bigint' }).notNull(),
     createdAt: createdAt(),

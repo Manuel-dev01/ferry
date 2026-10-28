@@ -1,7 +1,7 @@
 import {
-  isCorridorCurrency,
-  type CorridorCurrency,
+  recordCountry,
   type FonbnkChannel,
+  type FonbnkCountry,
   type StatsResponse,
 } from '@ferry/shared'
 import { getAddress, type Hex } from 'viem'
@@ -11,6 +11,7 @@ export interface ProofRow {
   fromAddress: string
   amountUnits: bigint
   currency: string
+  country: string | null
   channel: string
   createdAt: Date
   receivedAt: Date | null
@@ -37,18 +38,21 @@ const secondsToConfirm = (row: ProofRow) => {
 export function computeStats(rows: ProofRow[], exclude: string[], now = Date.now()): StatsResponse {
   const skip = new Set(exclude.map((a) => getAddress(a)))
   const counted = rows
-    .filter((r) => !skip.has(getAddress(r.fromAddress)) && isCorridorCurrency(r.currency))
+    .filter((r) => !skip.has(getAddress(r.fromAddress)))
+    .flatMap((r) => {
+      const country = recordCountry(r)
+      return country ? [{ ...r, country }] : []
+    })
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 
-  const byCountry = new Map<CorridorCurrency, { cashouts: number; volume: bigint }>()
+  const byCountry = new Map<FonbnkCountry, { cashouts: number; volume: bigint }>()
   let volume = 0n
   const seconds: number[] = []
   for (const r of counted) {
-    const currency = r.currency as CorridorCurrency
-    const c = byCountry.get(currency) ?? { cashouts: 0, volume: 0n }
+    const c = byCountry.get(r.country) ?? { cashouts: 0, volume: 0n }
     c.cashouts += 1
     c.volume += r.amountUnits
-    byCountry.set(currency, c)
+    byCountry.set(r.country, c)
     volume += r.amountUnits
     const s = secondsToConfirm(r)
     if (s !== null) seconds.push(s)
@@ -62,14 +66,14 @@ export function computeStats(rows: ProofRow[], exclude: string[], now = Date.now
     volumeUnits: volume.toString(),
     medianSeconds: median(seconds),
     byCountry: [...byCountry]
-      .map(([currency, c]) => ({
-        currency,
+      .map(([country, c]) => ({
+        country,
         cashouts: c.cashouts,
         volumeUnits: c.volume.toString(),
       }))
       .sort((a, b) => b.cashouts - a.cashouts),
     latest: counted.slice(0, LATEST).map((r) => ({
-      currency: r.currency as CorridorCurrency,
+      country: r.country,
       channel: r.channel as FonbnkChannel,
       amountUnits: r.amountUnits.toString(),
       txHash: r.txHash as Hex,

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { StatsResponse } from '@ferry/shared'
+import { FONBNK_COUNTRIES, type StatsResponse } from '@ferry/shared'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppHeader from '../components/AppHeader.vue'
 import Banner from '../components/Banner.vue'
 import { api } from '../lib/api'
-import { COUNTRY_NAMES, FLAGS } from '../lib/corridors'
+import { channelLabel, flagOf } from '../lib/fonbnk'
 import {
   durationDisplay,
   polygonscanTx,
@@ -16,7 +16,7 @@ import {
   usdtDisplay,
 } from '../lib/format'
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 
 const REFRESH_MS = 60_000
 
@@ -97,11 +97,11 @@ const maxCountry = computed(() =>
 
         <section v-if="stats.byCountry.length" class="flex flex-col gap-2.5">
           <h2 class="fy-section-label" style="margin: 0">{{ t('proof.byCountry') }}</h2>
-          <div v-for="c in stats.byCountry" :key="c.currency" class="s-country">
-            <span style="font-size: 24px" aria-hidden="true">{{ FLAGS[c.currency] }}</span>
+          <div v-for="c in stats.byCountry" :key="c.country" class="s-country">
+            <span style="font-size: 24px" aria-hidden="true">{{ flagOf(c.country) }}</span>
             <span class="flex-1 flex flex-col gap-1.5" style="min-width: 0">
               <span class="flex justify-between gap-2">
-                <strong>{{ COUNTRY_NAMES[c.currency] }}</strong>
+                <strong>{{ FONBNK_COUNTRIES[c.country].name }}</strong>
                 <span class="fy-caption">{{
                   t('proof.countryLine', { n: c.cashouts, amount: usd(c.volumeUnits) })
                 }}</span>
@@ -123,13 +123,11 @@ const maxCountry = computed(() =>
             target="_blank"
             rel="noopener"
           >
-            <span class="s-flag" aria-hidden="true">{{ FLAGS[p.currency] }}</span>
+            <span class="s-flag" aria-hidden="true">{{ flagOf(p.country) }}</span>
             <span class="fy-list-row__main">
-              <span class="fy-list-row__name">{{
-                t(`fonbnk.channels.${p.currency}.${p.channel}`)
-              }}</span>
+              <span class="fy-list-row__name">{{ channelLabel(t, te, p.country, p.channel) }}</span>
               <span class="fy-list-row__meta"
-                >{{ COUNTRY_NAMES[p.currency] }} · {{ shortTimeDisplay(p.at) }}</span
+                >{{ FONBNK_COUNTRIES[p.country].name }} · {{ shortTimeDisplay(p.at) }}</span
               >
             </span>
             <span class="fy-list-row__end">
