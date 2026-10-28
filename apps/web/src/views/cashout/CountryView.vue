@@ -25,7 +25,7 @@ const paused = computed(() => corridors.value.filter((c) => !c.enabled))
 
 function choose(currency: CorridorCurrency) {
   draft.setCurrency(currency)
-  void router.push('/cashout/bank')
+  void router.push(session.meta?.payoutRoute === 'fonbnk' ? '/cashout/fonbnk' : '/cashout/bank')
 }
 </script>
 

@@ -173,3 +173,36 @@ export const referrals = pgTable('referrals', {
   uses: integer('uses').notNull().default(0),
   createdAt: createdAt(),
 })
+
+/** POL that Ferry's relayer sent so a user's wallet can pay the network fee. Rate-limits top-ups. */
+export const gasTopups = pgTable(
+  'gas_topups',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    address: text('address').notNull(),
+    amountWei: numeric('amount_wei', { precision: 78, scale: 0 }).notNull(),
+    txHash: text('tx_hash').notNull().unique(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('gas_topups_address_idx').on(t.address, t.createdAt)],
+)
+
+/**
+ * A cash-out handed to a payout partner (Fonbnk): the user's own USDT transfer to the partner's
+ * deposit address, read back from the chain. No account details are stored.
+ */
+export const handoffs = pgTable(
+  'handoffs',
+  {
+    txHash: text('tx_hash').primaryKey(),
+    provider: text('provider').notNull(),
+    fromAddress: text('from_address').notNull(),
+    toAddress: text('to_address').notNull(),
+    amountUnits: usdtUnits('amount_units').notNull(),
+    currency: text('currency').notNull(),
+    channel: text('channel').notNull(),
+    blockNumber: bigint('block_number', { mode: 'bigint' }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('handoffs_from_idx').on(t.fromAddress)],
+)

@@ -11,6 +11,7 @@ import type { PaycrestKeyed, PaycrestPublic } from './paycrest'
 import type { RelayerWallet } from './polygon'
 import { balancesRoutes } from './routes/balances'
 import { healthRoutes } from './routes/health'
+import { handoffRoutes } from './routes/handoffs'
 import { spikeRoutes } from './routes/spikes'
 import { v1Routes } from './routes/v1'
 
@@ -87,6 +88,7 @@ export function createApp(deps: Deps) {
   app.route('/', healthRoutes(deps))
   app.route('/v1', balancesRoutes(deps))
   app.route('/v1', v1Routes(deps))
+  app.route('/v1', handoffRoutes(deps))
   if (deps.env.SPIKES_ENABLED) app.route('/spike', spikeRoutes(deps))
 
   return app

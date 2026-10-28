@@ -101,6 +101,8 @@ export function v1Routes(deps: Deps) {
       fees: { ferryFeeBps: env.ferryFeeBps, firstOrderFree: false },
       features: { lightning: false, onramp: false, testDrive: false },
       paycrestMode: paycrest.keyed.mode,
+      payoutRoute: env.PAYOUT_ROUTE,
+      gasTopup: env.GAS_TOPUP_ENABLED && !!deps.relayer && !!deps.db,
       relayer: deps.relayer?.account.address ?? null,
     }
     return c.json(body)

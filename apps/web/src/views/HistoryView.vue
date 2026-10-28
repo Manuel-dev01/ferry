@@ -6,10 +6,10 @@ import { useRouter } from 'vue-router'
 import AppHeader from '../components/AppHeader.vue'
 import Monogram from '../components/Monogram.vue'
 import StatusChip from '../components/StatusChip.vue'
-import { fiatDisplay, shortTimeDisplay } from '../lib/format'
+import { shortTimeDisplay } from '../lib/format'
 import { titleCase } from '../lib/names'
 import { useCashoutStore } from '../stores/cashout'
-import { useHistoryStore, type HistoryEntry } from '../stores/history'
+import { useHistoryStore, type HistoryEntry, entryAmount, entryLink } from '../stores/history'
 import { useSessionStore } from '../stores/session'
 
 const { t } = useI18n()
@@ -119,7 +119,7 @@ function cashOut() {
       </p>
       <section v-for="g in groups" :key="g.key" class="fy-list">
         <h2 class="fy-section-label" style="margin: 0">{{ t(`history.${g.key}`) }}</h2>
-        <RouterLink v-for="e in g.rows" :key="e.id" :to="`/orders/${e.id}`" class="fy-list-row">
+        <RouterLink v-for="e in g.rows" :key="e.id" :to="entryLink(e)" class="fy-list-row">
           <Monogram :name="e.institutionName" />
           <span class="fy-list-row__main">
             <span class="fy-list-row__name">{{
@@ -128,7 +128,7 @@ function cashOut() {
             <span class="fy-list-row__meta">{{ meta(e) }}</span>
           </span>
           <span class="fy-list-row__end">
-            <span>{{ fiatDisplay(e.theyReceiveMinor, e.currency) }}</span>
+            <span>{{ entryAmount(e) }}</span>
             <StatusChip :status="e.status" />
           </span>
         </RouterLink>

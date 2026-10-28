@@ -61,6 +61,14 @@ const envSchema = z
       .pipe(z.array(z.enum(['NGN', 'KES', 'UGX', 'TZS'])))
       .default(['NGN', 'KES', 'UGX', 'TZS']),
 
+    /** Who pays out: Fonbnk's hosted flow (no key needed) or Paycrest (needs a KYB'd key). */
+    PAYOUT_ROUTE: z.enum(['fonbnk', 'paycrest']).default('fonbnk'),
+    /** Production gas top-ups so a wallet with USDT but no POL can send its cash-out. */
+    GAS_TOPUP_ENABLED: bool('false'),
+    GAS_TOPUP_CAP_POL: z.string().default('0.3'),
+    GAS_TOPUP_PER_ADDRESS_DAY: z.coerce.number().int().nonnegative().default(3),
+    GAS_TOPUP_DAILY_MAX: z.coerce.number().int().nonnegative().default(100),
+
     SPIKES_ENABLED: bool('false'),
     SPIKE_ALLOWED_RECIPIENT: address.optional(),
     SPIKE_MAX_USDT: z.string().default('1'),
@@ -105,6 +113,7 @@ const envSchema = z
     spikeMaxUsdtUnits: parseUnits(env.SPIKE_MAX_USDT, USDT_DECIMALS),
     gasDripWei: parseUnits(env.GAS_DRIP_AMOUNT_POL, POL_DECIMALS),
     gasDripCapWei: parseUnits(env.GAS_DRIP_CAP_POL, POL_DECIMALS),
+    gasTopupCapWei: parseUnits(env.GAS_TOPUP_CAP_POL, POL_DECIMALS),
     spikeGatewayMinUnits: parseUnits(env.SPIKE_GATEWAY_MIN_USDT, USDT_DECIMALS),
     spikeGatewayMaxUnits: parseUnits(env.SPIKE_GATEWAY_MAX_USDT, USDT_DECIMALS),
     ferryFeeBps: percentToBps(env.FERRY_FEE_PERCENT),

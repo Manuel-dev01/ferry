@@ -13,7 +13,7 @@ import { ferryApi } from '../lib/ferryApi'
 import { fiatDisplay, shortTimeDisplay, usdtDisplay } from '../lib/format'
 import { tinyAddress, titleCase } from '../lib/names'
 import { useCashoutStore } from '../stores/cashout'
-import { useHistoryStore } from '../stores/history'
+import { useHistoryStore, entryAmount, entryLink } from '../stores/history'
 import { useSessionStore } from '../stores/session'
 
 const { t } = useI18n()
@@ -161,7 +161,7 @@ function startCashout(kind: 'self' | 'other') {
         </section>
 
         <Banner
-          v-if="session.meta?.paycrestMode === 'mock'"
+          v-if="session.meta?.payoutRoute === 'paycrest' && session.meta.paycrestMode === 'mock'"
           tone="warning"
           icon="info"
           :title="t('home.demoTitle')"
@@ -189,7 +189,7 @@ function startCashout(kind: 'self' | 'other') {
               {{ t('common.seeAll') }}
             </RouterLink>
           </div>
-          <RouterLink v-for="e in recent" :key="e.id" :to="`/orders/${e.id}`" class="fy-list-row">
+          <RouterLink v-for="e in recent" :key="e.id" :to="entryLink(e)" class="fy-list-row">
             <Monogram :name="e.institutionName" />
             <span class="fy-list-row__main">
               <span class="fy-list-row__name">{{
@@ -200,7 +200,7 @@ function startCashout(kind: 'self' | 'other') {
               >
             </span>
             <span class="fy-list-row__end">
-              <span>{{ fiatDisplay(e.theyReceiveMinor, e.currency) }}</span>
+              <span>{{ entryAmount(e) }}</span>
               <StatusChip :status="e.status" />
             </span>
           </RouterLink>

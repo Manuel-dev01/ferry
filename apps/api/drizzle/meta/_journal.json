@@ -8,6 +8,13 @@
       "when": 1792507809048,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793190878316,
+      "tag": "0001_gas_and_handoffs",
+      "breakpoints": true
     }
   ]
 }

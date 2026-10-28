@@ -103,6 +103,19 @@ const ethereum = {
           message: td.message,
         })
       }
+      case 'eth_sendTransaction': {
+        // Shown, never broadcast: the hash is made up, so nothing moves.
+        const tx = params?.[0] as { to: string; data?: string }
+        if (
+          !(await askApproval('Confirm transaction?', [
+            { label: 'To', value: tx.to },
+            { label: 'Data', value: (tx.data ?? '0x').slice(0, 42) },
+          ]))
+        )
+          throw rejected()
+        const bytes = crypto.getRandomValues(new Uint8Array(32))
+        return `0x${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`
+      }
       default:
         throw Object.assign(new Error(`Mock wallet does not support ${method}`), { code: 4200 })
     }

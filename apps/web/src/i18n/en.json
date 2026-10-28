@@ -277,7 +277,9 @@
       "settled": "Paid",
       "refunded": "Refunded",
       "expired": "Expired",
-      "failed": "Failed · refunded"
+      "failed": "Failed · refunded",
+      "sending": "Sending",
+      "handed_off": "Sent to Fonbnk"
     }
   },
   "settings": {
@@ -417,5 +419,77 @@
   "legal": {
     "privacyTitle": "Privacy",
     "termsTitle": "Terms"
+  },
+  "fonbnk": {
+    "step": "Step 2 of 3",
+    "title": "How much are you cashing out?",
+    "method": "Paid to",
+    "channels": {
+      "NGN": {
+        "bank": "Bank account"
+      },
+      "KES": {
+        "mobile_money": "M-Pesa",
+        "paybill": "Paybill",
+        "buy_goods": "Buy Goods",
+        "bank": "Bank"
+      },
+      "UGX": {
+        "mobile_money": "MTN or Airtel"
+      },
+      "TZS": {
+        "mobile_money": "M-Pesa, Airtel and more"
+      }
+    },
+    "amount": "Amount",
+    "balance": "Balance {amount} USDT",
+    "max": "Max",
+    "min": "Minimum {amount} USDT here.",
+    "tooLow": "The minimum here is {amount} USDT.",
+    "tooHigh": "That's more than you have.",
+    "overLimit": "Ferry's limit is {amount} USDT per cash-out.",
+    "estimate": "≈ {amount} at today's rate",
+    "estimateNote": "Fonbnk shows the exact amount next.",
+    "howTitle": "How it works",
+    "how1": "Fonbnk checks your account and gives you a deposit address.",
+    "how2": "Ferry sends your USDT there from your wallet. One approval in Nimiq Pay.",
+    "how3": "Fonbnk pays out, usually within minutes.",
+    "continue": "Continue",
+    "payoutBy": "Payout by Fonbnk",
+    "tabDetails": "1 · Your details",
+    "tabSend": "2 · Send USDT",
+    "detailsHelp": "Verify your email and add your account. When Fonbnk offers ways to pay, tap “Pay manually instead” and copy the address.",
+    "haveAddress": "I have the address",
+    "addressLabel": "Fonbnk's deposit address",
+    "paste": "Paste",
+    "addressHelp": "Copy it from Fonbnk's “Pay manually” screen.",
+    "addressInvalid": "That isn't a Polygon address.",
+    "addressSelf": "That's your own wallet. Use the address Fonbnk gave you.",
+    "addressToken": "That's the USDT contract, not a deposit address.",
+    "checkTitle": "Check it matches Fonbnk",
+    "youSend": "You send",
+    "network": "Network",
+    "to": "To",
+    "send": "Send {amount} USDT",
+    "gettingGas": "Getting gas for the fee…",
+    "confirmInWallet": "Confirm in Nimiq Pay",
+    "confirming": "Waiting for the network…",
+    "cancelled": "Cancelled. Nothing was sent.",
+    "gasFailed": "Ferry couldn't cover the network fee: {reason}",
+    "sendFailed": "The transfer didn't go through: {reason}",
+    "reverted": "The transfer failed on the network. Your USDT didn't move.",
+    "slow": "Still waiting for the network. It's safe to leave; this page remembers the transfer.",
+    "doneTitle": "Sent to Fonbnk",
+    "doneLast": "Last step: paste this transaction hash into Fonbnk.",
+    "txHash": "Transaction hash",
+    "copy": "Copy",
+    "copied": "Copied",
+    "backToFonbnk": "Back to Fonbnk",
+    "doneNote": "Fonbnk pays out once it sees the USDT, usually within minutes, and emails you when it's done.",
+    "viewTx": "View on Polygonscan",
+    "home": "Back to Home",
+    "openFonbnk": "Open Fonbnk",
+    "reopenNote": "Fonbnk keeps your order. Open it to finish or check the payout.",
+    "partner": "Fonbnk handles verification and payout. Ferry never sees your account details."
   }
 }

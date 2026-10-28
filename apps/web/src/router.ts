@@ -19,6 +19,13 @@ const routes: RouteRecordRaw[] = [
   { path: '/landing', component: () => import('./views/LandingView.vue') },
   { path: '/cashout', component: () => import('./views/cashout/CountryView.vue'), meta: app },
   {
+    path: '/cashout/fonbnk',
+    component: () => import('./views/cashout/FonbnkView.vue'),
+    // A link with ?tx= reopens a sent cash-out; otherwise a country must be chosen first.
+    beforeEnter: (to) => (typeof to.query.tx === 'string' ? true : needs('currency')()),
+    meta: app,
+  },
+  {
     path: '/cashout/bank',
     component: () => import('./views/cashout/InstitutionView.vue'),
     beforeEnter: needs('currency'),

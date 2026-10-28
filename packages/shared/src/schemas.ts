@@ -144,9 +144,36 @@ export const metaResponseSchema = z.object({
   fees: z.object({ ferryFeeBps: z.number().int(), firstOrderFree: z.boolean() }),
   features: z.object({ lightning: z.boolean(), onramp: z.boolean(), testDrive: z.boolean() }),
   paycrestMode: z.enum(['mock', 'live']),
+  payoutRoute: z.enum(['fonbnk', 'paycrest']),
+  gasTopup: z.boolean(),
   relayer: evmAddressSchema.nullable(),
 })
 export type MetaResponse = z.infer<typeof metaResponseSchema>
+
+// ---- Gas top-up and partner hand-offs ----
+
+export const gasTopupRequestSchema = z.object({ address: evmAddressSchema })
+export const gasTopupResponseSchema = z.object({
+  status: z.enum(['sent', 'already_funded', 'pending', 'reverted', 'unknown']),
+  txHash: hexSchema.nullable(),
+})
+export type GasTopupResponse = z.infer<typeof gasTopupResponseSchema>
+
+export const fonbnkChannelSchema = z.enum(['bank', 'mobile_money', 'paybill', 'buy_goods'])
+
+export const handoffRequestSchema = z.object({
+  txHash: hexSchema,
+  provider: z.literal('fonbnk'),
+  currency: corridorCurrencySchema,
+  channel: fonbnkChannelSchema,
+})
+export const handoffResponseSchema = z.object({
+  status: z.enum(['pending', 'reverted', 'confirmed']),
+  txHash: hexSchema,
+  amountUnits: unitsSchema.nullable(),
+  toAddress: evmAddressSchema.nullable(),
+})
+export type HandoffResponse = z.infer<typeof handoffResponseSchema>
 
 export const institutionSchema = z.object({
   code: z.string(),
