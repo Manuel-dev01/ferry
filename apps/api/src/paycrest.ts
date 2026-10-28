@@ -127,6 +127,11 @@ export class PaycrestPublic {
     const parsed = envelope(z.record(z.string(), z.unknown())).safeParse(raw)
     return parsed.success ? parsed.data.data : null
   }
+
+  /** Asks the aggregator to re-read a transaction's Gateway events (public; what Noblocks does). */
+  async reindex(network: string, txHash: string): Promise<void> {
+    await this.get(`/v1/reindex/${network}/${txHash}`)
+  }
 }
 
 const verifySchema = z.object({

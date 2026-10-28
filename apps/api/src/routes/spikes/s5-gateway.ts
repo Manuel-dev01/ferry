@@ -26,6 +26,9 @@ import {
 import { polygonFees } from '../../polygon'
 import { parseJson, parseValue } from '../validate'
 
+const REINDEX_AFTER_S = 30
+const REINDEX_EVERY_MS = 5 * 60_000
+
 const prepareSchema = z.object({
   currency: corridorCurrencySchema,
   institution: z.string().min(1).max(32),
@@ -143,6 +146,9 @@ export function s5Routes(deps: Deps) {
   })
 
   // Follow an order from the createOrder transaction: on-chain state plus Paycrest's view.
+  // tx → last reindex request, so a stuck order is re-read at most every few minutes.
+  const reindexedAt = new Map<string, number>()
+
   r.get('/gateway/order/:tx', async (c) => {
     const tx = parseValue(hexSchema, c.req.param('tx'))
     if (tx.length !== 66) throw new HttpError(400, 'INVALID_REQUEST', 'Not a transaction hash')
@@ -151,7 +157,7 @@ export function s5Routes(deps: Deps) {
     if (receipt.status !== 'success') return c.json({ stage: 'reverted', txHash: tx })
     const orderId = orderIdFromLogs(receipt.logs, POLYGON_GATEWAY)
     if (!orderId) return c.json({ stage: 'no_order', txHash: tx })
-    const [info, aggregator] = await Promise.all([
+    const [info, aggregator, block] = await Promise.all([
       polygon.readContract({
         address: POLYGON_GATEWAY,
         abi: gatewayAbi,
@@ -159,7 +165,18 @@ export function s5Routes(deps: Deps) {
         args: [orderId],
       }),
       paycrest.public.gatewayOrder(POLYGON_CHAIN_ID, orderId).catch(() => null),
+      polygon.getBlock({ blockNumber: receipt.blockNumber }),
     ])
+    const ageSeconds = Math.max(0, Math.floor(Date.now() / 1000) - Number(block.timestamp))
+    // Paycrest sometimes misses an event; ask it to re-read the transaction, as Noblocks does.
+    const last = reindexedAt.get(tx) ?? 0
+    if (!aggregator && ageSeconds > REINDEX_AFTER_S && Date.now() - last > REINDEX_EVERY_MS) {
+      reindexedAt.set(tx, Date.now())
+      await paycrest.public
+        .reindex('polygon', tx)
+        .then(() => c.get('log').info({ spike: 's5', tx }, 'asked Paycrest to reindex'))
+        .catch((err: unknown) => c.get('log').warn({ spike: 's5', err }, 'reindex failed'))
+    }
     const stage = info.isFulfilled ? 'settled' : info.isRefunded ? 'refunded' : 'created'
     c.get('log').info(
       { spike: 's5', orderId, stage, aggregatorStatus: aggregator?.status ?? null },
@@ -169,6 +186,8 @@ export function s5Routes(deps: Deps) {
       stage,
       txHash: tx,
       orderId,
+      ageSeconds,
+      amountUnits: info.amount.toString(),
       aggregator: aggregator
         ? {
             status: aggregator.status ?? null,

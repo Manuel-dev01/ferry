@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CORRIDORS, type CorridorCurrency, type Institution } from '@ferry/shared'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import type { Address, Hex } from 'viem'
 import AppHeader from '../../components/AppHeader.vue'
 import Banner from '../../components/Banner.vue'
@@ -11,7 +12,13 @@ import { useStepLog } from '../../composables/useStepLog'
 import { pollTx } from '../../composables/useTxPoll'
 import { api, ApiRequestError } from '../../lib/api'
 import { FLAGS } from '../../lib/corridors'
-import { fiatDisplay, polDisplay, polygonscanTx, usdtDisplay } from '../../lib/format'
+import {
+  fiatDisplay,
+  polDisplay,
+  polygonscanTx,
+  shortTimeDisplay,
+  usdtDisplay,
+} from '../../lib/format'
 import { tinyAddress } from '../../lib/names'
 import {
   classifyEvmError,
@@ -21,6 +28,7 @@ import {
   switchToPolygon,
 } from '../../providers/evm'
 import { useSessionStore } from '../../stores/session'
+import { loadS5Orders, saveS5Order, TERMINAL_STAGES, type S5Order } from './s5Orders'
 
 interface Prepared {
   accountName: string
@@ -37,15 +45,21 @@ interface Prepared {
 interface OrderState {
   stage: 'pending' | 'reverted' | 'no_order' | 'created' | 'settled' | 'refunded'
   orderId?: string
+  ageSeconds?: number
+  amountUnits?: string
   aggregator: { status: string | null; txHash: string | null } | null
 }
 type StepKey = 'gas' | 'network' | 'approve' | 'order' | 'payout'
 type StepState = 'done' | 'now' | 'next' | 'failed'
 
-const ORDER_POLL_MS = 5_000
-const ORDER_POLL_MAX = 120 // 10 minutes
+const ORDER_POLL_FAST_MS = 5_000 // first two minutes
+const ORDER_POLL_SLOW_MS = 30_000
+const ORDER_POLL_FOR_MS = 2 * 60 * 60_000
+/** After this long without Paycrest seeing the order, say so plainly. */
+const STUCK_AFTER_S = 10 * 60
 
 const session = useSessionStore()
+const route = useRoute()
 const log = useStepLog()
 const busy = ref(false)
 
@@ -58,6 +72,8 @@ const account = ref('')
 const amount = ref('1')
 
 const prepared = ref<Prepared | null>(null)
+const saved = ref<S5Order[]>(loadS5Orders())
+const copied = ref(false)
 const onPolygon = ref<boolean | null>(null)
 const approved = ref(false)
 const orderTx = ref<Hex | null>(null)
@@ -221,6 +237,7 @@ async function createOrder() {
     if (!hash) return
     orderTx.value = hash
     log.add(`Order sent (${hash})`, 'success')
+    remember(hash, 'pending')
     void follow(hash)
   } finally {
     status.value = ''
@@ -228,22 +245,130 @@ async function createOrder() {
   }
 }
 
+function remember(tx: Hex, stage: string) {
+  const p = prepared.value
+  if (!p) return
+  const existing = saved.value.find((o) => o.tx === tx)
+  saved.value = saveS5Order({
+    tx,
+    at: existing?.at ?? Date.now(),
+    currency: existing?.currency ?? currency.value,
+    amountUnits: p.amountUnits,
+    theyReceiveMinor: p.theyReceiveMinor,
+    accountName: p.accountName,
+    institutionName: p.institutionName,
+    stage,
+  })
+}
+
 async function follow(hash: Hex) {
   let last = ''
-  for (let i = 0; i < ORDER_POLL_MAX && !stopPolling; i++) {
+  const started = Date.now()
+  while (!stopPolling && orderTx.value === hash && Date.now() - started < ORDER_POLL_FOR_MS) {
     try {
       order.value = await api<OrderState>(`/spike/gateway/order/${hash}`)
+      // An order opened from a link learns its amount from the chain.
+      if (prepared.value?.amountUnits === '0' && order.value.amountUnits) {
+        prepared.value.amountUnits = order.value.amountUnits
+      }
       const now = `${order.value.stage}/${order.value.aggregator?.status ?? '-'}`
       if (now !== last) {
         last = now
         log.add(`Stage: ${now}`)
+        remember(hash, order.value.stage)
       }
-      if (['settled', 'refunded', 'reverted', 'no_order'].includes(order.value.stage)) return
+      if (TERMINAL_STAGES.includes(order.value.stage)) return
     } catch {
       // a failed read is not an outcome
     }
-    await new Promise((r) => setTimeout(r, ORDER_POLL_MS))
+    const wait = Date.now() - started < 2 * 60_000 ? ORDER_POLL_FAST_MS : ORDER_POLL_SLOW_MS
+    await new Promise((r) => setTimeout(r, wait))
   }
+}
+
+const NO_ADDRESS = '0x0000000000000000000000000000000000000000'
+
+/** Reopen a remembered order: show its tracker and keep following it. */
+function open(o: S5Order) {
+  problem.value = ''
+  order.value = null
+  currency.value = o.currency
+  prepared.value = {
+    accountName: o.accountName,
+    institutionName: o.institutionName,
+    rate: '',
+    amountUnits: o.amountUnits,
+    theyReceiveMinor: o.theyReceiveMinor,
+    gateway: NO_ADDRESS,
+    needsApprove: false,
+    gasNeededWei: '0',
+    approve: { to: NO_ADDRESS, data: '0x' },
+    createOrder: { to: NO_ADDRESS, data: '0x' },
+  }
+  approved.value = true
+  onPolygon.value = true
+  orderTx.value = o.tx
+  void follow(o.tx)
+}
+
+function closeOrder() {
+  orderTx.value = null
+  order.value = null
+  prepared.value = null
+  approved.value = false
+  onPolygon.value = null
+}
+
+// A link with ?tx= opens that order; otherwise the latest unfinished one comes back.
+onMounted(() => {
+  const tx = route.query.tx
+  if (typeof tx === 'string' && /^0x[0-9a-fA-F]{64}$/.test(tx)) {
+    const known = saved.value.find((o) => o.tx.toLowerCase() === tx.toLowerCase())
+    open(
+      known ?? {
+        tx: tx as Hex,
+        at: Date.now(),
+        currency: 'NGN',
+        amountUnits: '0',
+        theyReceiveMinor: '0',
+        accountName: '',
+        institutionName: '',
+        stage: 'created',
+      },
+    )
+    return
+  }
+  const active = saved.value.find(
+    (o) => !TERMINAL_STAGES.includes(o.stage) && Date.now() - o.at < 7 * 24 * 3600_000,
+  )
+  if (active) open(active)
+})
+
+const stuck = computed(
+  () =>
+    order.value?.stage === 'created' &&
+    !order.value.aggregator &&
+    (order.value.ageSeconds ?? 0) > STUCK_AFTER_S,
+)
+
+async function copyOrderId() {
+  if (!order.value?.orderId) return
+  try {
+    await navigator.clipboard.writeText(order.value.orderId)
+    copied.value = true
+    setTimeout(() => (copied.value = false), 2000)
+  } catch {
+    // clipboard blocked; the ID is on screen to copy by hand
+  }
+}
+
+const STAGE_LABEL: Record<string, string> = {
+  pending: 'Sending',
+  created: 'Waiting',
+  settled: 'Paid',
+  refunded: 'Refunded',
+  reverted: 'Failed',
+  no_order: 'Failed',
 }
 
 // ---- Steps ----
@@ -302,7 +427,9 @@ function stepDetail(key: StepKey): string {
     case 'order':
       return ''
     case 'payout':
-      return prepared.value ? fiatDisplay(prepared.value.theyReceiveMinor, currency.value) : ''
+      return prepared.value && prepared.value.theyReceiveMinor !== '0'
+        ? fiatDisplay(prepared.value.theyReceiveMinor, currency.value)
+        : ''
   }
 }
 
@@ -320,9 +447,12 @@ const nowText = computed(() => {
         ? 'Waiting for the network…'
         : 'Your USDT goes to the contract; your name and account go encrypted.'
     case 'payout':
-      return order.value?.aggregator?.status
-        ? `Paycrest: ${order.value.aggregator.status}`
-        : 'Waiting for a payout provider to pick it up…'
+      if (order.value?.aggregator?.status) return `Paycrest: ${order.value.aggregator.status}`
+      if (stuck.value) return 'Paycrest hasn’t picked this order up.'
+      if ((order.value?.ageSeconds ?? 0) > 60) {
+        return 'Paycrest hasn’t seen it yet. Ferry asked it to look again.'
+      }
+      return 'Waiting for a payout provider to pick it up…'
     default:
       return ''
   }
@@ -496,18 +626,54 @@ const outcome = computed(() => {
           </button>
         </form>
 
+        <section v-if="!prepared && saved.length" class="flex flex-col gap-1.5">
+          <span class="fy-section-label">Your test orders</span>
+          <div class="fy-list">
+            <button
+              v-for="o in saved"
+              :key="o.tx"
+              type="button"
+              class="fy-list-row"
+              @click="open(o)"
+            >
+              <Monogram :name="o.institutionName || 'Order'" size="sm" />
+              <span class="fy-list-row__main">
+                <span class="fy-list-row__name">{{
+                  o.theyReceiveMinor !== '0'
+                    ? fiatDisplay(o.theyReceiveMinor, o.currency)
+                    : `${usdtDisplay(BigInt(o.amountUnits))} USDT`
+                }}</span>
+                <span class="fy-list-row__meta"
+                  >{{ o.institutionName || 'Test order' }} · {{ shortTimeDisplay(o.at) }}</span
+                >
+              </span>
+              <span
+                class="fy-chip"
+                :class="
+                  o.stage === 'settled'
+                    ? 'fy-chip--success'
+                    : TERMINAL_STAGES.includes(o.stage)
+                      ? 'fy-chip--neutral'
+                      : 'fy-chip--brand'
+                "
+                >{{ STAGE_LABEL[o.stage] ?? o.stage }}</span
+              >
+            </button>
+          </div>
+        </section>
+
         <!-- 2. Check it, then go through the steps -->
-        <template v-else>
+        <template v-if="prepared">
           <dl class="fy-panel" style="margin: 0">
-            <div class="fy-row">
+            <div v-if="prepared.accountName" class="fy-row">
               <dt class="fy-row__k">To</dt>
               <dd class="fy-row__v s5-name">{{ prepared.accountName }}</dd>
             </div>
-            <div class="fy-row">
+            <div v-if="prepared.institutionName" class="fy-row">
               <dt class="fy-row__k">Bank</dt>
               <dd class="fy-row__v">{{ prepared.institutionName }}</dd>
             </div>
-            <div class="fy-row">
+            <div v-if="prepared.theyReceiveMinor !== '0'" class="fy-row">
               <dt class="fy-row__k">They receive</dt>
               <dd class="fy-row__v" style="font-weight: 700">
                 ≈ {{ fiatDisplay(prepared.theyReceiveMinor, currency) }}
@@ -566,6 +732,41 @@ const outcome = computed(() => {
           </ol>
 
           <Banner v-if="outcome" :tone="outcome.tone" :body="outcome.text" />
+          <Banner
+            v-if="stuck"
+            tone="warning"
+            title="Not picked up yet"
+            body="Your USDT is held in Paycrest’s Gateway contract, not lost. Only Paycrest can pay it out or refund it to your wallet. Send them the order ID below."
+          />
+          <dl v-if="order?.orderId" class="fy-panel" style="margin: 0">
+            <div
+              class="fy-row"
+              style="
+                flex-direction: column;
+                align-items: stretch;
+                gap: 4px;
+                padding-top: 12px;
+                padding-bottom: 12px;
+              "
+            >
+              <dt class="fy-row__k">Order ID</dt>
+              <dd class="flex items-center justify-between gap-2" style="margin: 0; min-width: 0">
+                <span style="overflow-wrap: anywhere; font-size: 13px">{{ order.orderId }}</span>
+                <button
+                  type="button"
+                  class="fy-iconbtn"
+                  style="width: 36px; height: 36px; flex: none"
+                  :aria-label="copied ? 'Copied' : 'Copy order ID'"
+                  @click="copyOrderId"
+                >
+                  <Icon :name="copied ? 'check' : 'copy'" :size="16" />
+                </button>
+              </dd>
+            </div>
+          </dl>
+          <button v-if="orderTx" type="button" class="fy-btn fy-btn--secondary" @click="closeOrder">
+            Back to test orders
+          </button>
           <Banner v-if="problem" tone="danger" :body="problem" />
 
           <div v-if="orderTx" class="flex flex-col gap-1">
