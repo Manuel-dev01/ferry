@@ -77,7 +77,7 @@ const envSchema = z
     /** Hosted demo only: lets the simulated order engine run with NODE_ENV=production. */
     ALLOW_MOCK_ORDERS: bool('false'),
     GAS_DRIP_ENABLED: bool('false'),
-    GAS_DRIP_AMOUNT_POL: z.string().default('0.02'),
+    GAS_DRIP_AMOUNT_POL: z.string().default('0.2'),
     GAS_DRIP_MAX_TOTAL: z.coerce.number().int().nonnegative().default(5),
   })
   .superRefine((env, ctx) => {

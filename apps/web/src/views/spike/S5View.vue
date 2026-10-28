@@ -34,7 +34,8 @@ interface OrderState {
   aggregator: { status: string | null; txHash: string | null } | null
 }
 
-const MIN_GAS_WEI = 10n ** 16n // 0.01 POL is plenty for approve + createOrder
+// approve + createOrder use ~300k gas; at Polygon peaks (~300 gwei) that is ~0.09 POL.
+const MIN_GAS_WEI = 10n ** 17n // 0.1 POL
 const ORDER_POLL_MS = 5_000
 const ORDER_POLL_MAX = 120 // 10 minutes
 
