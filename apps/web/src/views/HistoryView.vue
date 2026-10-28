@@ -7,9 +7,14 @@ import AppHeader from '../components/AppHeader.vue'
 import Monogram from '../components/Monogram.vue'
 import StatusChip from '../components/StatusChip.vue'
 import { shortTimeDisplay } from '../lib/format'
-import { titleCase } from '../lib/names'
 import { useCashoutStore } from '../stores/cashout'
-import { useHistoryStore, type HistoryEntry, entryAmount, entryLink } from '../stores/history'
+import {
+  useHistoryStore,
+  type HistoryEntry,
+  entryAmount,
+  entryLink,
+  entryTitle,
+} from '../stores/history'
 import { useSessionStore } from '../stores/session'
 
 const { t } = useI18n()
@@ -122,9 +127,7 @@ function cashOut() {
         <RouterLink v-for="e in g.rows" :key="e.id" :to="entryLink(e)" class="fy-list-row">
           <Monogram :name="e.institutionName" />
           <span class="fy-list-row__main">
-            <span class="fy-list-row__name">{{
-              e.recipientName ? titleCase(e.recipientName) : e.institutionName
-            }}</span>
+            <span class="fy-list-row__name">{{ entryTitle(e, t) }}</span>
             <span class="fy-list-row__meta">{{ meta(e) }}</span>
           </span>
           <span class="fy-list-row__end">

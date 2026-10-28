@@ -1,5 +1,6 @@
 import type { OrderView } from '@ferry/shared'
 import { fiatDisplay, usdtDisplay } from '../lib/format'
+import { titleCase } from '../lib/names'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
@@ -20,20 +21,42 @@ export interface HistoryEntry {
   mock: boolean
   /** Set for cash-outs a partner pays out: the user's own transfer to the partner. */
   provider?: 'fonbnk'
+  /** A top-up: USDT bought through the partner into the user's wallet. */
+  kind?: 'topup'
   txHash?: string
   amountUnits?: string
   channel?: string
+  /** When the user confirmed the money arrived (partner payouts report no status to Ferry). */
+  paidAt?: number
 }
 
 /** The amount a history row shows: fiat for Ferry orders, USDT sent for partner cash-outs. */
 export const entryAmount = (e: HistoryEntry) =>
-  e.provider === 'fonbnk'
-    ? `${usdtDisplay(BigInt(e.amountUnits ?? '0'))} USDT`
-    : fiatDisplay(e.theyReceiveMinor, e.currency)
+  e.kind === 'topup'
+    ? `+${usdtDisplay(BigInt(e.amountUnits ?? '0'))} USDT`
+    : e.provider === 'fonbnk'
+      ? `${usdtDisplay(BigInt(e.amountUnits ?? '0'))} USDT`
+      : fiatDisplay(e.theyReceiveMinor, e.currency)
+
+/** A history row's title: who was paid, or what happened. */
+export function entryTitle(
+  e: HistoryEntry,
+  t: (key: string, values?: Record<string, unknown>) => string,
+) {
+  if (e.kind === 'topup') return t('history.topupTitle')
+  if (e.provider === 'fonbnk') {
+    return t('history.cashoutTitle', { method: t(`fonbnk.channels.${e.currency}.${e.channel}`) })
+  }
+  return e.recipientName ? titleCase(e.recipientName) : e.institutionName
+}
 
 /** Where a history row opens. */
 export const entryLink = (e: HistoryEntry) =>
-  e.provider === 'fonbnk' && e.txHash ? `/cashout/fonbnk?tx=${e.txHash}` : `/orders/${e.id}`
+  e.kind === 'topup'
+    ? `/topup?id=${e.id}`
+    : e.provider === 'fonbnk' && e.txHash
+      ? `/cashout/fonbnk?tx=${e.txHash}`
+      : `/orders/${e.id}`
 
 function load(): HistoryEntry[] {
   try {
@@ -79,5 +102,15 @@ export const useHistoryStore = defineStore('history', () => {
     }
   }
 
-  return { entries, add, updateFrom, find, setStatus }
+  /** The user says the partner's payout reached them. */
+  function markPaid(id: string) {
+    const entry = entries.value.find((e) => e.id === id)
+    if (entry && entry.status !== 'settled') {
+      entry.status = 'settled'
+      entry.paidAt = Date.now()
+      persist()
+    }
+  }
+
+  return { entries, add, updateFrom, find, setStatus, markPaid }
 })

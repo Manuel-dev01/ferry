@@ -31,7 +31,8 @@
     "nim": "Show my NIM",
     "nimBalance": "{amount} NIM",
     "demoTitle": "Demo mode",
-    "demoBody": "Payouts are simulated while Ferry waits for its payout licence. Nothing leaves your wallet."
+    "demoBody": "Payouts are simulated while Ferry waits for its payout licence. Nothing leaves your wallet.",
+    "addMoney": "Add money"
   },
   "evm": {
     "rejected": "No problem. Connect when you're ready.",
@@ -279,8 +280,11 @@
       "expired": "Expired",
       "failed": "Failed · refunded",
       "sending": "Sending",
-      "handed_off": "Sent to Fonbnk"
-    }
+      "handed_off": "Sent to Fonbnk",
+      "received": "Added"
+    },
+    "topupTitle": "Added money",
+    "cashoutTitle": "Cash-out · {method}"
   },
   "settings": {
     "title": "Settings",
@@ -484,7 +488,6 @@
     "reverted": "The transfer failed on the network. Your USDT didn't move.",
     "slow": "Still waiting for the network. It's safe to leave; this page remembers the transfer.",
     "doneTitle": "Sent to Fonbnk",
-    "doneLast": "Last step: paste this transaction hash into Fonbnk.",
     "txHash": "Transaction hash",
     "copy": "Copy",
     "copied": "Copied",
@@ -492,8 +495,60 @@
     "doneNote": "Fonbnk pays out once it sees the USDT, usually within minutes, and emails you when it's done.",
     "viewTx": "View on Polygonscan",
     "home": "Back to Home",
-    "openFonbnk": "Open Fonbnk",
-    "reopenNote": "Fonbnk keeps your order. Open it to finish or check the payout.",
-    "partner": "Fonbnk handles verification and payout. Ferry never sees your account details."
+    "partner": "Fonbnk handles verification and payout. Ferry never sees your account details.",
+    "tabSent": "2 · Sent ✓",
+    "gotMoney": "I've got my money",
+    "copyHash": "Copy transaction hash",
+    "alreadySent": "You sent {amount} USDT to Fonbnk. Don't send it again; finish in Fonbnk instead.",
+    "step1": "USDT sent",
+    "step1Done": "Confirmed on Polygon.",
+    "step2": "Paste the hash into Fonbnk",
+    "step2Note": "Fonbnk asks for it on its payment screen. The button below copies it and takes you there.",
+    "step3": "Money arrives",
+    "copyAndBack": "Copy hash and go to Fonbnk",
+    "copyAndOpen": "Copy hash and open Fonbnk",
+    "paidTitle": "Cash-out complete",
+    "youSent": "You sent",
+    "paidBy": "Paid out by",
+    "took": "Took",
+    "tookMinutes": "about {n} min",
+    "tookHours": "about {n} h",
+    "transfer": "Transfer",
+    "paidNote": "Saved in your history on this phone.",
+    "again": "Cash out again",
+    "returning": "Back to Ferry…",
+    "detailsHelpSent": "Paste the transaction hash where Fonbnk asks for it. Once the money is in your account, tap “I’ve got my money”."
+  },
+  "topup": {
+    "header": "Add money",
+    "title": "Add money to your wallet",
+    "lede": "Pay in local money and get USDT on Polygon in your Nimiq Pay wallet.",
+    "payFrom": "Pay from",
+    "methods": {
+      "NGN": "By bank transfer in naira.",
+      "KES": "With M-Pesa.",
+      "UGX": "With MTN or Airtel Money.",
+      "TZS": "With M-Pesa, Airtel Money and more."
+    },
+    "yourAddress": "Your wallet address",
+    "addressNote": "Fonbnk asks for it. Polygon network.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "howTitle": "How it works",
+    "how1": "Choose how much in Fonbnk and paste your wallet address.",
+    "how2": "Pay with your bank or mobile money, the way Fonbnk shows.",
+    "how3": "Fonbnk sends USDT to your wallet. Ferry tells you when it lands.",
+    "partner": "Fonbnk handles verification and payment. Ferry never sees your account details.",
+    "connect": "Connect your wallet",
+    "continue": "Continue to Fonbnk",
+    "buyBy": "Buy with Fonbnk",
+    "pasteThis": "Paste this when Fonbnk asks for your wallet",
+    "watching": "Watching for your USDT · balance {amount}",
+    "watchingNoBalance": "Watching for your USDT",
+    "waitingLong": "Fonbnk is sending your USDT. This page updates the moment it lands, usually within minutes.",
+    "arrivedTitle": "Money added",
+    "arrivedNote": "It's in your Nimiq Pay wallet now. Cash it out any time, or keep it as USDT.",
+    "home": "Back to Home",
+    "cashOut": "Cash out"
   }
 }

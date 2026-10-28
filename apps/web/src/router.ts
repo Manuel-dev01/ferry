@@ -62,6 +62,9 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: app,
   },
+  { path: '/topup', component: () => import('./views/TopupView.vue'), meta: app },
+  // Opened by Fonbnk inside its frame, where Nimiq Pay's context isn't available.
+  { path: '/fonbnk/return', component: () => import('./views/FonbnkReturnView.vue') },
   { path: '/history', component: () => import('./views/HistoryView.vue'), meta: app },
   { path: '/settings', component: () => import('./views/SettingsView.vue') },
   { path: '/privacy', component: () => import('./views/LegalView.vue'), props: { doc: 'privacy' } },

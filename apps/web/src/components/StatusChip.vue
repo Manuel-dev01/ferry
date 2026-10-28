@@ -9,6 +9,7 @@ const { t, te } = useI18n()
 const tone = computed(() => {
   switch (props.status) {
     case 'settled':
+    case 'received':
       return 'success'
     case 'compliance_hold':
       return 'warning'
@@ -28,7 +29,7 @@ const label = computed(() =>
 
 <template>
   <span class="fy-chip" :class="[`fy-chip--${tone}`, large && 'fy-chip--lg']">
-    <Icon v-if="status === 'settled'" name="check" :size="12" :stroke="3" />
+    <Icon v-if="tone === 'success'" name="check" :size="12" :stroke="3" />
     {{ label }}
   </span>
 </template>

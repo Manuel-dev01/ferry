@@ -11,9 +11,9 @@ import StatusChip from '../components/StatusChip.vue'
 import { formatUsdt } from '@ferry/shared'
 import { ferryApi } from '../lib/ferryApi'
 import { fiatDisplay, shortTimeDisplay, usdtDisplay } from '../lib/format'
-import { tinyAddress, titleCase } from '../lib/names'
+import { tinyAddress } from '../lib/names'
 import { useCashoutStore } from '../stores/cashout'
-import { useHistoryStore, entryAmount, entryLink } from '../stores/history'
+import { useHistoryStore, entryAmount, entryLink, entryTitle } from '../stores/history'
 import { useSessionStore } from '../stores/session'
 
 const { t } = useI18n()
@@ -157,6 +157,14 @@ function startCashout(kind: 'self' | 'other') {
                 t('home.approx', { amount: fiatDisplay(approx.theyReceiveMinor, approxCurrency) })
               }}
             </span>
+            <RouterLink
+              v-if="session.meta?.payoutRoute === 'fonbnk'"
+              to="/topup"
+              class="fy-btn fy-btn--cream fy-btn--sm self-start"
+              style="font-weight: 700"
+            >
+              <Icon name="plus" :size="18" :stroke="2.5" />{{ t('home.addMoney') }}
+            </RouterLink>
           </template>
         </section>
 
@@ -192,9 +200,7 @@ function startCashout(kind: 'self' | 'other') {
           <RouterLink v-for="e in recent" :key="e.id" :to="entryLink(e)" class="fy-list-row">
             <Monogram :name="e.institutionName" />
             <span class="fy-list-row__main">
-              <span class="fy-list-row__name">{{
-                e.recipientName ? titleCase(e.recipientName) : e.institutionName
-              }}</span>
+              <span class="fy-list-row__name">{{ entryTitle(e, t) }}</span>
               <span class="fy-list-row__meta"
                 >{{ e.institutionName }} · {{ timeText(e.createdAt) }}</span
               >

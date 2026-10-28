@@ -44,7 +44,7 @@ const history = useHistoryStore()
 const HANDOFF_POLL_MS = 4_000
 const HANDOFF_POLL_MAX = 45 // 3 minutes, then the page says it's safe to leave
 
-type Phase = 'amount' | 'fonbnk' | 'done'
+type Phase = 'amount' | 'fonbnk' | 'done' | 'paid'
 const phase = ref<Phase>('amount')
 const tab = ref<'details' | 'send'>('details')
 
@@ -111,7 +111,7 @@ const widgetUrl = computed(() =>
         currency: currency.value,
         channel: channel.value,
         amountUnits: amountUnits.value,
-        callbackUrl: `${window.location.origin}/cashout/fonbnk`,
+        callbackUrl: `${window.location.origin}/fonbnk/return`,
       }),
 )
 /** The widget keeps its own state, so it is mounted once and only hidden between tabs. */
@@ -233,6 +233,7 @@ async function send() {
     }
     problem.value = ''
     txHash.value = hash
+    sentAt.value = Date.now()
     history.add({
       id: hash,
       clientSecret: '',
@@ -305,6 +306,42 @@ function backToFonbnk() {
   tab.value = 'details'
 }
 
+/** One tap for the last step: the hash on the clipboard and Fonbnk on screen. */
+async function copyAndGo() {
+  await copyHash()
+  backToFonbnk()
+}
+
+// Fonbnk never tells Ferry the payout landed, so the user closes the loop.
+const sentAt = ref<number | null>(null)
+const paidAt = ref<number | null>(null)
+function markPaid() {
+  if (!txHash.value) return
+  history.markPaid(txHash.value)
+  paidAt.value = history.find(txHash.value)?.paidAt ?? Date.now()
+  phase.value = 'paid'
+}
+const tookText = computed(() => {
+  if (!sentAt.value || !paidAt.value) return null
+  const minutes = Math.max(1, Math.round((paidAt.value - sentAt.value) / 60_000))
+  return minutes < 90
+    ? t('fonbnk.tookMinutes', { n: minutes })
+    : t('fonbnk.tookHours', { n: Math.round(minutes / 60) })
+})
+
+// Fonbnk's "Back to Ferry" link opens /fonbnk/return inside the frame, which tells this page.
+function onFrameMessage(e: MessageEvent) {
+  if (e.origin !== window.location.origin || e.data?.type !== 'ferry:fonbnk-return') return
+  if (txHash.value && phase.value === 'fonbnk') phase.value = 'done'
+}
+window.addEventListener('message', onFrameMessage)
+onUnmounted(() => window.removeEventListener('message', onFrameMessage))
+
+function cashOutAgain() {
+  draft.start('self', currency.value)
+  void router.push('/cashout')
+}
+
 // ---- Entry ----
 
 onMounted(() => {
@@ -317,6 +354,13 @@ onMounted(() => {
       channel.value = (entry.channel as FonbnkChannel) ?? channel.value
       amountInput.value = usdtDisplay(BigInt(entry.amountUnits ?? '0')).replace(/,/g, '')
       txHash.value = tx as Hex
+      sentAt.value = entry.createdAt
+      if (entry.status === 'settled') {
+        paidAt.value = entry.paidAt ?? null
+        confirmed.value = true
+        phase.value = 'paid'
+        return
+      }
       phase.value = 'done'
       confirmed.value = entry.status === 'handed_off'
       if (!confirmed.value) void follow(tx as Hex)
@@ -337,7 +381,8 @@ watch(currency, () => {
 const title = computed(() => `${FLAGS[currency.value]} ${COUNTRY_NAMES[currency.value]}`)
 
 function onBack() {
-  if (phase.value === 'fonbnk') phase.value = 'amount'
+  // Once the USDT is sent, back never leads to a screen that could send it again.
+  if (phase.value === 'fonbnk') phase.value = txHash.value ? 'done' : 'amount'
   else void router.push('/cashout')
 }
 </script>
@@ -406,7 +451,7 @@ function onBack() {
               v-if="session.balances"
               type="button"
               class="fy-btn fy-btn--text fy-btn--sm"
-              style="min-height: 32px; padding: 0 10px"
+              style="padding: 0 10px"
               @click="useMax"
             >
               {{ t('fonbnk.max') }}
@@ -476,14 +521,16 @@ function onBack() {
             :aria-selected="tab === 'send'"
             @click="tab = 'send'"
           >
-            {{ t('fonbnk.tabSend') }}
+            {{ txHash ? t('fonbnk.tabSent') : t('fonbnk.tabSend') }}
           </button>
         </div>
       </div>
     </template>
 
     <div v-if="widgetMounted" v-show="phase === 'fonbnk' && tab === 'details'" class="s-widget">
-      <p class="fy-caption" style="margin: 0 16px 8px">{{ t('fonbnk.detailsHelp') }}</p>
+      <p class="fy-caption" style="margin: 0 16px 8px">
+        {{ txHash ? t('fonbnk.detailsHelpSent') : t('fonbnk.detailsHelp') }}
+      </p>
       <iframe
         :src="widgetUrl"
         title="Fonbnk"
@@ -493,14 +540,49 @@ function onBack() {
     </div>
 
     <template v-if="phase === 'fonbnk' && tab === 'details'">
-      <div class="fy-bottom">
+      <div v-if="txHash" class="fy-bottom">
+        <button type="button" class="fy-btn fy-btn--primary" @click="markPaid">
+          {{ t('fonbnk.gotMoney') }}
+        </button>
+        <button type="button" class="fy-btn fy-btn--text" @click="copyHash">
+          <Icon :name="copied ? 'check' : 'copy'" :size="16" />
+          {{ copied ? t('fonbnk.copied') : t('fonbnk.copyHash') }}
+        </button>
+      </div>
+      <div v-else class="fy-bottom">
         <button type="button" class="fy-btn fy-btn--primary" @click="tab = 'send'">
           {{ t('fonbnk.haveAddress') }} <Icon name="arrow-right" :size="18" />
         </button>
       </div>
     </template>
 
-    <template v-if="phase === 'fonbnk' && tab === 'send'">
+    <!-- Already sent: show the transfer, never a second send form -->
+    <template v-if="phase === 'fonbnk' && tab === 'send' && txHash">
+      <div class="fy-content" style="gap: 18px">
+        <Banner
+          tone="success"
+          icon="check"
+          :body="t('fonbnk.alreadySent', { amount: amountUnits ? usdtDisplay(amountUnits) : '' })"
+        />
+        <section class="flex flex-col gap-2">
+          <span class="fy-section-label">{{ t('fonbnk.txHash') }}</span>
+          <div class="fy-panel s-hash">
+            <span>{{ txHash }}</span>
+            <button type="button" class="fy-btn fy-btn--secondary fy-btn--sm" @click="copyHash">
+              <Icon :name="copied ? 'check' : 'copy'" :size="16" />
+              {{ copied ? t('fonbnk.copied') : t('fonbnk.copy') }}
+            </button>
+          </div>
+        </section>
+      </div>
+      <div class="fy-bottom">
+        <button type="button" class="fy-btn fy-btn--primary" @click="tab = 'details'">
+          {{ t('fonbnk.backToFonbnk') }}
+        </button>
+      </div>
+    </template>
+
+    <template v-if="phase === 'fonbnk' && tab === 'send' && !txHash">
       <div class="fy-content" style="gap: 18px">
         <div class="flex flex-col gap-1.5">
           <label class="fy-label" for="fonbnk-address">{{ t('fonbnk.addressLabel') }}</label>
@@ -518,7 +600,7 @@ function onBack() {
             <button
               type="button"
               class="fy-btn fy-btn--text fy-btn--sm"
-              style="min-height: 36px; padding: 0 10px"
+              style="padding: 0 10px"
               @click="paste"
             >
               {{ t('fonbnk.paste') }}
@@ -606,16 +688,46 @@ function onBack() {
           </span>
         </div>
 
-        <Banner
-          v-if="!confirmed && !problem"
-          tone="brand"
-          icon="clock"
-          :body="slow ? t('fonbnk.slow') : t('fonbnk.confirming')"
-        />
         <Banner v-if="problem" tone="danger" :body="problem" />
 
+        <ol class="s-how s-steps">
+          <li :class="{ 's-done': confirmed }">
+            <span
+              ><Icon v-if="confirmed" name="check" :size="14" :stroke="3" /><template v-else
+                >1</template
+              ></span
+            >
+            <div>
+              <strong>{{ t('fonbnk.step1') }}</strong>
+              <div class="fy-caption">
+                {{
+                  confirmed
+                    ? t('fonbnk.step1Done')
+                    : slow
+                      ? t('fonbnk.slow')
+                      : t('fonbnk.confirming')
+                }}
+              </div>
+            </div>
+          </li>
+          <li>
+            <span>2</span>
+            <div>
+              <strong>{{ t('fonbnk.step2') }}</strong>
+              <div class="fy-caption">{{ t('fonbnk.step2Note') }}</div>
+            </div>
+          </li>
+          <li>
+            <span>3</span>
+            <div>
+              <strong>{{ t('fonbnk.step3') }}</strong>
+              <div class="fy-caption">{{ t('fonbnk.doneNote') }}</div>
+            </div>
+          </li>
+        </ol>
+
         <section v-if="txHash" class="flex flex-col gap-2">
-          <span class="fy-section-label">{{ t('fonbnk.doneLast') }}</span>
+          <span class="fy-section-label">{{ t('fonbnk.txHash') }}</span>
           <div class="fy-panel s-hash">
             <span>{{ txHash }}</span>
             <button type="button" class="fy-btn fy-btn--secondary fy-btn--sm" @click="copyHash">
@@ -624,8 +736,6 @@ function onBack() {
             </button>
           </div>
         </section>
-
-        <p class="fy-caption" style="margin: 0">{{ t('fonbnk.doneNote') }}</p>
         <a
           v-if="txHash"
           class="fy-btn fy-btn--text fy-btn--sm self-start"
@@ -637,15 +747,65 @@ function onBack() {
         </a>
       </div>
       <div class="fy-bottom">
-        <button
-          v-if="amountUnits"
-          type="button"
-          class="fy-btn fy-btn--primary"
-          @click="backToFonbnk"
-        >
-          {{ widgetMounted ? t('fonbnk.backToFonbnk') : t('fonbnk.openFonbnk') }}
+        <button v-if="amountUnits" type="button" class="fy-btn fy-btn--primary" @click="copyAndGo">
+          {{ widgetMounted ? t('fonbnk.copyAndBack') : t('fonbnk.copyAndOpen') }}
         </button>
-        <RouterLink to="/" class="fy-btn fy-btn--secondary">{{ t('fonbnk.home') }}</RouterLink>
+        <button
+          type="button"
+          class="fy-btn fy-btn--secondary"
+          :disabled="!confirmed"
+          @click="markPaid"
+        >
+          {{ t('fonbnk.gotMoney') }}
+        </button>
+      </div>
+    </template>
+
+    <!-- Paid: the user confirmed the money arrived -->
+    <template v-if="phase === 'paid'">
+      <AppHeader close="/" />
+      <div class="fy-content" style="gap: 18px">
+        <div class="fy-now fy-now--mint" style="margin-top: 4px">
+          <div class="fy-now__top">
+            <span class="fy-eyebrow">{{ title }}</span>
+            <Icon name="check" :size="18" :stroke="3" />
+          </div>
+          <span class="fy-now__title">{{ t('fonbnk.paidTitle') }}</span>
+          <span style="font: 600 16px var(--fy-font-body)">{{
+            t(`fonbnk.channels.${currency}.${channel}`)
+          }}</span>
+        </div>
+        <dl class="fy-panel" style="margin: 0">
+          <div class="fy-row">
+            <dt class="fy-row__k">{{ t('fonbnk.youSent') }}</dt>
+            <dd class="fy-row__v" style="font-weight: 700">
+              {{ amountUnits ? usdtDisplay(amountUnits) : '' }} USDT
+            </dd>
+          </div>
+          <div class="fy-row">
+            <dt class="fy-row__k">{{ t('fonbnk.paidBy') }}</dt>
+            <dd class="fy-row__v">Fonbnk</dd>
+          </div>
+          <div v-if="tookText" class="fy-row">
+            <dt class="fy-row__k">{{ t('fonbnk.took') }}</dt>
+            <dd class="fy-row__v">{{ tookText }}</dd>
+          </div>
+          <div v-if="txHash" class="fy-row">
+            <dt class="fy-row__k">{{ t('fonbnk.transfer') }}</dt>
+            <dd class="fy-row__v">
+              <a :href="polygonscanTx(txHash)" target="_blank" rel="noopener" class="s-link"
+                >{{ txHash.slice(0, 8) }}…{{ txHash.slice(-6) }} <Icon name="external" :size="14"
+              /></a>
+            </dd>
+          </div>
+        </dl>
+        <p class="fy-caption" style="margin: 0">{{ t('fonbnk.paidNote') }}</p>
+      </div>
+      <div class="fy-bottom">
+        <RouterLink to="/" class="fy-btn fy-btn--primary">{{ t('fonbnk.home') }}</RouterLink>
+        <button type="button" class="fy-btn fy-btn--secondary" @click="cashOutAgain">
+          {{ t('fonbnk.again') }}
+        </button>
       </div>
     </template>
   </main>
@@ -710,6 +870,22 @@ function onBack() {
 .s-address span:last-child {
   color: var(--fy-brand-text);
   font-weight: 800;
+}
+.s-steps li > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.s-steps li.s-done > span {
+  background: var(--fy-success);
+  color: #fff;
+}
+.s-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fy-brand-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .s-hash {
   display: flex;

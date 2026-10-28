@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { FONBNK_CHANNELS, FONBNK_MIN_USDT, fonbnkOfframpUrl, parseUsdt } from '../src'
+import {
+  FONBNK_CHANNELS,
+  FONBNK_MIN_USDT,
+  FONBNK_ONRAMP_CHANNELS,
+  fonbnkOfframpUrl,
+  fonbnkOnrampUrl,
+  parseUsdt,
+} from '../src'
 
 /** Splits a link into its base and decoded query, without relying on DOM or Node globals. */
 function parse(link: string) {
@@ -50,6 +57,27 @@ describe('fonbnkOfframpUrl', () => {
     for (const c of ['NGN', 'KES', 'UGX', 'TZS'] as const) {
       expect(FONBNK_CHANNELS[c].length).toBeGreaterThan(0)
       expect(parseUsdt(FONBNK_MIN_USDT[c])).toBeGreaterThan(0n)
+    }
+  })
+})
+
+describe('fonbnkOnrampUrl', () => {
+  it('builds a public Polygon USDT buy link with no merchant-only parameter', () => {
+    const { base, params } = parse(fonbnkOnrampUrl({ currency: 'KES', channel: 'mobile_money' }))
+    expect(base).toBe('https://pay.fonbnk.com/')
+    expect(params).toEqual({
+      network: 'POLYGON',
+      asset: 'USDT',
+      currency: 'local',
+      hideSwitch: 'true',
+      countryIsoCode: 'KE',
+      paymentChannel: 'mobile_money',
+    })
+  })
+
+  it('offers a deposit route in every corridor', () => {
+    for (const c of ['NGN', 'KES', 'UGX', 'TZS'] as const) {
+      expect(FONBNK_ONRAMP_CHANNELS[c].length).toBeGreaterThan(0)
     }
   })
 })

@@ -48,6 +48,43 @@ export interface FonbnkOfframpLink {
   base?: string
 }
 
+/** How people pay in for a top-up. Fonbnk offered only these deposit routes on 2026-10-28. */
+export const FONBNK_ONRAMP_CHANNELS: Record<CorridorCurrency, readonly FonbnkChannel[]> = {
+  NGN: ['bank'],
+  KES: ['mobile_money'],
+  UGX: ['mobile_money'],
+  TZS: ['mobile_money'],
+}
+
+export interface FonbnkOnrampLink {
+  currency: CorridorCurrency
+  channel: FonbnkChannel
+  callbackUrl?: string
+  base?: string
+}
+
+/**
+ * A public buy link: USDT on Polygon, amount chosen in Fonbnk. Prefilling the wallet address needs
+ * a verified merchant, so the user pastes their own address in Fonbnk.
+ */
+export function fonbnkOnrampUrl(link: FonbnkOnrampLink): string {
+  const params: [string, string][] = [
+    ['network', 'POLYGON'],
+    ['asset', 'USDT'],
+    ['currency', 'local'],
+    ['hideSwitch', 'true'],
+    ['countryIsoCode', FONBNK_COUNTRY[link.currency]],
+    ['paymentChannel', link.channel],
+  ]
+  if (link.callbackUrl) {
+    params.push(['callbackUrl', link.callbackUrl], ['callbackBtnText', 'Back to Ferry'])
+  }
+  return `${link.base ?? FONBNK_WIDGET.production}/?${query(params)}`
+}
+
+const query = (params: [string, string][]) =>
+  params.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
+
 /** A public widget link: no merchant key, amount locked so it matches what Ferry sends. */
 export function fonbnkOfframpUrl(link: FonbnkOfframpLink): string {
   const params: [string, string][] = [
@@ -63,6 +100,5 @@ export function fonbnkOfframpUrl(link: FonbnkOfframpLink): string {
   if (link.callbackUrl) {
     params.push(['callbackUrl', link.callbackUrl], ['callbackBtnText', 'Back to Ferry'])
   }
-  const query = params.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
-  return `${link.base ?? FONBNK_WIDGET.production}/offramp?${query}`
+  return `${link.base ?? FONBNK_WIDGET.production}/offramp?${query(params)}`
 }

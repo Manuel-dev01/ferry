@@ -798,6 +798,12 @@ a {
   font: 600 14px var(--fy-font-body);
   color: var(--fy-brand-text);
   min-height: 32px;
+  position: relative;
+}
+.fy-banner__action::after {
+  content: '';
+  position: absolute;
+  inset: -6px -8px;
 }
 .fy-banner--success {
   background: var(--fy-success-soft);

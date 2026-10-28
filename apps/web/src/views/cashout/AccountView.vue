@@ -121,7 +121,7 @@ async function check() {
         <RouterLink
           to="/cashout/bank"
           class="fy-btn fy-btn--text fy-btn--sm"
-          style="min-height: 36px; padding: 0 12px; font-size: 14px"
+          style="padding: 0 12px; font-size: 14px"
         >
           {{ t('common.change') }}
         </RouterLink>
