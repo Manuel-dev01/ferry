@@ -49,6 +49,10 @@ export function entryTitle(
 ) {
   if (e.kind === 'topup') return t('history.topupTitle')
   if (e.kind === 'nim') return t('history.nimTitle')
+  if (e.provider === 'fonbnk' && e.channel === 'airtime') return t('history.airtimeTitle')
+  if (e.provider === 'fonbnk' && (e.channel === 'buy_goods' || e.channel === 'paybill')) {
+    return t('history.payTitle', { method: channelLabel(t, te, 'KE', e.channel) })
+  }
   if (e.provider === 'fonbnk') {
     const method = channelLabel(t, te, recordCountry(e) ?? '', e.channel ?? '')
     return t('history.cashoutTitle', { method })

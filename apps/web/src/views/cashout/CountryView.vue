@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import {
   CORRIDORS,
+  FONBNK_AIRTIME_COUNTRIES,
   FONBNK_COUNTRIES,
   FONBNK_COUNTRY_CODES,
   recordCountry,
   type CorridorCurrency,
   type FonbnkCountry,
+  type FonbnkCountryInfo,
 } from '@ferry/shared'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '../../components/AppHeader.vue'
 import Banner from '../../components/Banner.vue'
 import Icon from '../../components/Icon.vue'
@@ -19,11 +21,14 @@ import { useCashoutStore } from '../../stores/cashout'
 import { useSessionStore } from '../../stores/session'
 
 const { t, te } = useI18n()
+const route = useRoute()
 const router = useRouter()
 const draft = useCashoutStore()
 const session = useSessionStore()
 
 const viaFonbnk = computed(() => session.meta?.payoutRoute === 'fonbnk')
+/** The same list picks a country for airtime: only where Fonbnk sells it. */
+const airtime = computed(() => route.query.mode === 'airtime')
 
 // ---- Fonbnk: every country it pays out in ----
 
@@ -32,22 +37,26 @@ const homeCountry = computed(() =>
   recordCountry({ currency: draft.currency ?? session.host.fiat ?? '' }),
 )
 const fonbnkRows = computed(() => {
-  const codes = [...FONBNK_COUNTRY_CODES]
+  const codes = [...(airtime.value ? FONBNK_AIRTIME_COUNTRIES : FONBNK_COUNTRY_CODES)]
   const home = homeCountry.value
   if (home) codes.sort((a, b) => Number(b === home) - Number(a === home))
   return codes.map((code) => {
-    const info = FONBNK_COUNTRIES[code]
+    const info: FonbnkCountryInfo = FONBNK_COUNTRIES[code]
     return {
       code,
       name: info.name,
       currency: info.currency,
-      methods: info.cashout.map((c) => channelLabel(t, te, code, c)).join(' · '),
+      methods:
+        airtime.value && info.airtime
+          ? t('country.airtimeUpTo', { amount: info.airtime.maxUsdt })
+          : info.cashout.map((c) => channelLabel(t, te, code, c)).join(' · '),
     }
   })
 })
 
 function chooseCountry(country: FonbnkCountry) {
-  void router.push({ path: '/cashout/fonbnk', query: { country } })
+  const query = airtime.value ? { country, mode: 'airtime' } : { country }
+  void router.push({ path: '/cashout/fonbnk', query })
 }
 
 // ---- Paycrest: the original four corridors ----
@@ -71,12 +80,22 @@ function choose(currency: CorridorCurrency) {
     <AppHeader back="/">{{ t('common.step', { step: 1, steps: viaFonbnk ? 3 : 4 }) }}</AppHeader>
     <div class="fy-content">
       <div class="flex flex-col gap-2">
-        <h1 class="fy-display">{{ t('country.title') }}</h1>
-        <p class="fy-lede">{{ viaFonbnk ? t('country.fonbnkLede') : t('country.lede') }}</p>
+        <h1 class="fy-display">
+          {{ airtime ? t('country.airtimeTitle') : t('country.title') }}
+        </h1>
+        <p class="fy-lede">
+          {{
+            airtime
+              ? t('country.airtimeLede')
+              : viaFonbnk
+                ? t('country.fonbnkLede')
+                : t('country.lede')
+          }}
+        </p>
       </div>
 
       <ul
-        v-if="viaFonbnk"
+        v-if="viaFonbnk || airtime"
         class="flex flex-col gap-2"
         role="list"
         style="margin: 0; padding: 0; list-style: none"

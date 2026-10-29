@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   countryFromLegacyCurrency,
+  FONBNK_AIRTIME_COUNTRIES,
   FONBNK_COUNTRIES,
   FONBNK_COUNTRY_CODES,
   FONBNK_TOPUP_COUNTRIES,
   fonbnkOfframpUrl,
   fonbnkOnrampUrl,
+  fonbnkPayoutChannels,
   handoffRequestSchema,
+  type FonbnkCountryInfo,
   isFonbnkCountry,
   parseUsdt,
   recordCountry,
@@ -87,6 +90,17 @@ describe('Fonbnk countries', () => {
     expect(isFonbnkCountry('SN') && isFonbnkCountry('CI')).toBe(true)
     expect(isFonbnkCountry('XX')).toBe(false)
     expect(isFonbnkCountry('toString')).toBe(false)
+  })
+
+  it('sells airtime only where Fonbnk does, within its caps', () => {
+    expect(FONBNK_AIRTIME_COUNTRIES).toContain('NG')
+    expect(FONBNK_AIRTIME_COUNTRIES).not.toContain('GM')
+    expect(fonbnkPayoutChannels('NG')).toEqual(['bank', 'airtime'])
+    expect(fonbnkPayoutChannels('GM')).toEqual(['mobile_money'])
+    for (const c of FONBNK_AIRTIME_COUNTRIES) {
+      const a = (FONBNK_COUNTRIES[c] as FonbnkCountryInfo).airtime!
+      expect(parseUsdt(a.maxUsdt)).toBeGreaterThan(parseUsdt(a.minUsdt))
+    }
   })
 
   it('offers top-ups only where a route exists', () => {

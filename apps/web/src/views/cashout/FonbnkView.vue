@@ -12,6 +12,7 @@ import {
   usdtToFiatMinor,
   type FonbnkChannel,
   type FonbnkCountry,
+  type FonbnkCountryInfo,
 } from '@ferry/shared'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -55,19 +56,52 @@ const country = ref<FonbnkCountry>(
     ? queryCountry
     : (recordCountry({ currency: draft.currency ?? '' }) ?? 'NG'),
 )
-const info = computed(() => FONBNK_COUNTRIES[country.value])
+const info = computed<FonbnkCountryInfo>(() => FONBNK_COUNTRIES[country.value])
 /** The payout currency; Ferry only has rates (for the estimate) for the first four. */
 const currency = computed(() => info.value.currency)
-const channels = computed<readonly FonbnkChannel[]>(() => info.value.cashout)
+
+/**
+ * The same Fonbnk sell flow serves three jobs: cash out to yourself or someone, buy airtime, or
+ * pay a Kenyan till or Paybill. Reopened cash-outs infer it from their payout method.
+ */
+type Mode = 'cashout' | 'airtime' | 'pay'
+const PAY_CHANNELS: readonly FonbnkChannel[] = ['buy_goods', 'paybill']
+const mode = ref<Mode>(
+  route.query.mode === 'airtime' && info.value.airtime
+    ? 'airtime'
+    : route.query.mode === 'pay' && country.value === 'KE'
+      ? 'pay'
+      : 'cashout',
+)
+const channels = computed<readonly FonbnkChannel[]>(() =>
+  mode.value === 'airtime'
+    ? ['airtime']
+    : mode.value === 'pay'
+      ? PAY_CHANNELS
+      : info.value.cashout.filter((c) => !PAY_CHANNELS.includes(c)),
+)
 const channel = ref<FonbnkChannel>(channels.value[0] ?? 'bank')
+/** Copy for the current job, falling back to the cash-out wording. */
+const mt = (key: string, values: Record<string, unknown> = {}) => {
+  const own = `fonbnk.modes.${mode.value}.${key}`
+  return te(own) ? t(own, values) : t(`fonbnk.${key}`, values)
+}
 const methodLabel = (c: FonbnkChannel) => channelLabel(t, te, country.value, c)
 
 // ---- Amount ----
 
 const amountInput = ref('')
-const minUnits = computed(() => parseUsdt(info.value.minUsdt))
+const minUsdt = computed(() =>
+  mode.value === 'airtime' && info.value.airtime ? info.value.airtime.minUsdt : info.value.minUsdt,
+)
+const minUnits = computed(() => parseUsdt(minUsdt.value))
+/** Airtime has its own, much lower, cap. */
+const airtimeMax = computed(() =>
+  mode.value === 'airtime' && info.value.airtime ? info.value.airtime.maxUsdt : null,
+)
 const maxUnits = computed(() => {
-  const limit = session.meta ? parseUsdt(session.meta.limits.maxUsd) : parseUsdt('200')
+  let limit = session.meta ? parseUsdt(session.meta.limits.maxUsd) : parseUsdt('200')
+  if (airtimeMax.value && parseUsdt(airtimeMax.value) < limit) limit = parseUsdt(airtimeMax.value)
   const balance = session.balances?.usdt
   return balance !== undefined && balance < limit ? balance : limit
 })
@@ -83,8 +117,11 @@ const amountUnits = computed<bigint | null>(() => {
 const amountError = computed(() => {
   const units = amountUnits.value
   if (units === null) return ''
-  if (units < minUnits.value) return t('fonbnk.tooLow', { amount: info.value.minUsdt })
+  if (units < minUnits.value) return t('fonbnk.tooLow', { amount: minUsdt.value })
   if (session.balances && units > session.balances.usdt) return t('fonbnk.tooHigh')
+  if (airtimeMax.value && units > parseUsdt(airtimeMax.value)) {
+    return t('fonbnk.airtimeMax', { amount: airtimeMax.value })
+  }
   if (session.meta && units > parseUsdt(session.meta.limits.maxUsd)) {
     return t('fonbnk.overLimit', { amount: session.meta.limits.maxUsd })
   }
@@ -365,7 +402,10 @@ onMounted(() => {
     const entry = history.find(tx)
     if (entry?.provider === 'fonbnk') {
       country.value = recordCountry(entry) ?? country.value
-      channel.value = (entry.channel as FonbnkChannel) ?? channel.value
+      const sent = entry.channel as FonbnkChannel | undefined
+      if (sent === 'airtime') mode.value = 'airtime'
+      else if (sent && PAY_CHANNELS.includes(sent)) mode.value = 'pay'
+      channel.value = sent ?? channel.value
       amountInput.value = usdtDisplay(BigInt(entry.amountUnits ?? '0')).replace(/,/g, '')
       txHash.value = tx as Hex
       sentAt.value = entry.createdAt
@@ -393,7 +433,8 @@ const title = computed(() => `${flagOf(country.value)} ${info.value.name}`)
 function onBack() {
   // Once the USDT is sent, back never leads to a screen that could send it again.
   if (phase.value === 'fonbnk') phase.value = txHash.value ? 'done' : 'amount'
-  else void router.push('/cashout')
+  else if (mode.value === 'pay') void router.push('/')
+  else void router.push(mode.value === 'airtime' ? '/cashout?mode=airtime' : '/cashout')
 }
 </script>
 
@@ -406,20 +447,20 @@ function onBack() {
           <Icon name="back" />
         </button>
         <span class="fy-header__center"
-          ><span class="fy-header__title">{{ title }} · {{ t('fonbnk.step') }}</span></span
+          ><span class="fy-header__title">{{ title }} · {{ mt('step') }}</span></span
         >
         <span class="fy-header__spacer" />
       </header>
       <form class="fy-content" style="gap: 20px" novalidate @submit.prevent="toFonbnk">
-        <h1 class="fy-title" style="font-size: 24px; line-height: 1.15">{{ t('fonbnk.title') }}</h1>
+        <h1 class="fy-title" style="font-size: 24px; line-height: 1.15">{{ mt('title') }}</h1>
 
         <div v-if="channels.length > 1" class="flex flex-col gap-1.5">
-          <span class="fy-label">{{ t('fonbnk.method') }}</span>
+          <span class="fy-label">{{ mt('method') }}</span>
           <div
             class="fy-filters"
             style="flex-wrap: wrap"
             role="radiogroup"
-            :aria-label="t('fonbnk.method')"
+            :aria-label="mt('method')"
           >
             <button
               v-for="c in channels"
@@ -435,8 +476,8 @@ function onBack() {
             </button>
           </div>
         </div>
-        <p v-else class="fy-caption" style="margin: 0">
-          {{ t('fonbnk.method') }}: {{ methodLabel(channel) }}
+        <p v-else-if="mode !== 'airtime'" class="fy-caption" style="margin: 0">
+          {{ mt('method') }}: {{ methodLabel(channel) }}
         </p>
 
         <div class="flex flex-col gap-1.5">
@@ -468,7 +509,11 @@ function onBack() {
             </button>
           </div>
           <span v-if="amountError" class="fy-help fy-help--error">{{ amountError }}</span>
-          <span v-else class="fy-caption">{{ t('fonbnk.min', { amount: info.minUsdt }) }}</span>
+          <span v-else class="fy-caption">{{
+            airtimeMax
+              ? t('fonbnk.airtimeRange', { min: minUsdt, max: airtimeMax })
+              : t('fonbnk.min', { amount: minUsdt })
+          }}</span>
         </div>
 
         <div v-if="estimate" class="fy-panel" style="padding: 14px 16px">
@@ -481,9 +526,9 @@ function onBack() {
         <section class="flex flex-col gap-2">
           <span class="fy-section-label">{{ t('fonbnk.howTitle') }}</span>
           <ol class="s-how">
-            <li><span>1</span>{{ t('fonbnk.how1') }}</li>
-            <li><span>2</span>{{ t('fonbnk.how2') }}</li>
-            <li><span>3</span>{{ t('fonbnk.how3') }}</li>
+            <li><span>1</span>{{ mt('how1') }}</li>
+            <li><span>2</span>{{ mt('how2') }}</li>
+            <li><span>3</span>{{ mt('how3') }}</li>
           </ol>
           <p class="fy-caption" style="margin: 0">{{ t('fonbnk.partner') }}</p>
         </section>
@@ -778,7 +823,7 @@ function onBack() {
             <span class="fy-eyebrow">{{ title }}</span>
             <Icon name="check" :size="18" :stroke="3" />
           </div>
-          <span class="fy-now__title">{{ t('fonbnk.paidTitle') }}</span>
+          <span class="fy-now__title">{{ mt('paidTitle') }}</span>
           <span style="font: 600 16px var(--fy-font-body)">{{ methodLabel(channel) }}</span>
         </div>
         <dl class="fy-panel" style="margin: 0">

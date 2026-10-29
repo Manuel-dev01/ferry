@@ -34,7 +34,12 @@
     "demoBody": "Payouts are simulated while Ferry waits for its payout licence. Nothing leaves your wallet.",
     "addMoney": "Add money",
     "proof": "Proof of Ferry: live numbers",
-    "cashOutNim": "Cash out NIM"
+    "cashOutNim": "Cash out NIM",
+    "quickTitle": "Pay with USDT",
+    "airtime": "Buy airtime",
+    "airtimeNote": "11 countries · any network",
+    "payTill": "Pay a till or Paybill",
+    "payTillNote": "Kenya · M-Pesa"
   },
   "evm": {
     "rejected": "No problem. Connect when you're ready.",
@@ -67,7 +72,10 @@
     "regions": {
       "main": "Most used",
       "more": "More countries"
-    }
+    },
+    "airtimeTitle": "Whose phone are you topping up?",
+    "airtimeLede": "Airtime in 11 countries, paid in USDT from your own wallet.",
+    "airtimeUpTo": "Up to {amount} USDT"
   },
   "institution": {
     "title": "Choose a bank or wallet",
@@ -293,7 +301,9 @@
     },
     "topupTitle": "Added money",
     "cashoutTitle": "Cash-out · {method}",
-    "nimTitle": "NIM → USDT"
+    "nimTitle": "NIM → USDT",
+    "airtimeTitle": "Airtime top-up",
+    "payTitle": "Payment · {method}"
   },
   "settings": {
     "title": "Settings",
@@ -517,7 +527,8 @@
       "bank": "Bank account",
       "mobile_money": "Mobile money",
       "paybill": "Paybill",
-      "buy_goods": "Buy Goods till"
+      "buy_goods": "Buy Goods till",
+      "airtime": "Airtime"
     },
     "channelsByCountry": {
       "KE": {
@@ -531,6 +542,27 @@
       },
       "TZ": {
         "mobile_money": "M-Pesa, Airtel and more"
+      }
+    },
+    "airtimeMax": "Airtime here is up to {amount} USDT at a time.",
+    "airtimeRange": "From {min} to {max} USDT of airtime.",
+    "modes": {
+      "airtime": {
+        "title": "How much airtime?",
+        "method": "Top up",
+        "how1": "Fonbnk asks for the phone number to top up and checks the network.",
+        "how2": "Ferry sends your USDT from your wallet. One approval in Nimiq Pay.",
+        "how3": "The airtime lands on that phone, usually within minutes.",
+        "paidTitle": "Airtime delivered"
+      },
+      "pay": {
+        "title": "Pay a till or Paybill",
+        "method": "Pay to",
+        "how1": "Fonbnk asks for the till or Paybill number and the account, and shows who you are paying.",
+        "how2": "Ferry sends your USDT from your wallet. One approval in Nimiq Pay.",
+        "how3": "Fonbnk pays the business in shillings over M-Pesa.",
+        "paidTitle": "Payment complete",
+        "step": "Step 1 of 2"
       }
     }
   },

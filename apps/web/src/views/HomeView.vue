@@ -192,6 +192,35 @@ function startCashout(kind: 'self' | 'other') {
           @action="session.loadBalances().catch(() => {})"
         />
 
+        <section
+          v-if="session.meta?.payoutRoute === 'fonbnk'"
+          aria-labelledby="home-quick"
+          class="flex flex-col"
+        >
+          <h2 id="home-quick" class="fy-section-label" style="margin: 0 0 2px">
+            {{ t('home.quickTitle') }}
+          </h2>
+          <RouterLink to="/cashout?mode=airtime" class="fy-list-row">
+            <span class="s-quick" aria-hidden="true"><Icon name="phone" :size="20" /></span>
+            <span class="fy-list-row__main">
+              <span class="fy-list-row__name">{{ t('home.airtime') }}</span>
+              <span class="fy-list-row__meta">{{ t('home.airtimeNote') }}</span>
+            </span>
+            <Icon name="forward" :size="18" />
+          </RouterLink>
+          <RouterLink
+            :to="{ path: '/cashout/fonbnk', query: { country: 'KE', mode: 'pay' } }"
+            class="fy-list-row"
+          >
+            <span class="s-quick" aria-hidden="true"><Icon name="wallet" :size="20" /></span>
+            <span class="fy-list-row__main">
+              <span class="fy-list-row__name">{{ t('home.payTill') }}</span>
+              <span class="fy-list-row__meta">{{ t('home.payTillNote') }}</span>
+            </span>
+            <Icon name="forward" :size="18" />
+          </RouterLink>
+        </section>
+
         <section v-if="recent.length" aria-labelledby="home-history" class="flex flex-col">
           <div class="flex items-center justify-between" style="min-height: 32px">
             <h2 id="home-history" style="font: 700 17px var(--fy-font-body); margin: 0">
@@ -248,3 +277,17 @@ function startCashout(kind: 'self' | 'other') {
     </div>
   </main>
 </template>
+
+<style scoped>
+.s-quick {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fy-brand-soft);
+  color: var(--fy-brand-text);
+}
+</style>

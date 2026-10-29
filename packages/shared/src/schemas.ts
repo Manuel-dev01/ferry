@@ -160,7 +160,13 @@ export const gasTopupResponseSchema = z.object({
 })
 export type GasTopupResponse = z.infer<typeof gasTopupResponseSchema>
 
-export const fonbnkChannelSchema = z.enum(['bank', 'mobile_money', 'paybill', 'buy_goods'])
+export const fonbnkChannelSchema = z.enum([
+  'bank',
+  'mobile_money',
+  'paybill',
+  'buy_goods',
+  'airtime',
+])
 
 export const fonbnkCountrySchema = z.enum(
   FONBNK_COUNTRY_CODES as [FonbnkCountry, ...FonbnkCountry[]],

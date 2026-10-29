@@ -1,5 +1,6 @@
 import {
   FONBNK_COUNTRIES,
+  fonbnkPayoutChannels,
   recordCountry,
   gasTopupRequestSchema,
   handoffRequestSchema,
@@ -154,7 +155,7 @@ export function handoffRoutes(deps: Deps) {
     const country = recordCountry(body)
     if (!country) throw new HttpError(400, 'INVALID_REQUEST', 'Unknown country')
     const info = FONBNK_COUNTRIES[country]
-    if (!(info.cashout as readonly string[]).includes(body.channel)) {
+    if (!fonbnkPayoutChannels(country).includes(body.channel)) {
       throw new HttpError(400, 'INVALID_REQUEST', 'That payout method is not offered there')
     }
 
