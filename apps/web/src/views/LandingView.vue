@@ -44,8 +44,11 @@ const statTiles = computed(() => {
       bg: 'cream',
     },
     {
-      v: s?.medianSeconds != null ? roughDurationDisplay(s.medianSeconds * 1000) : dash,
-      k: t('landing.proof.median'),
+      v: s?.medianSeconds != null ? roughDurationDisplay(s.medianSeconds * 1000) : t('proof.soon'),
+      k:
+        s?.medianSeconds != null
+          ? t('landing.proof.median')
+          : `${t('landing.proof.median')} · ${t('proof.afterFirst')}`,
       bg: 'mint',
     },
     {
@@ -1241,11 +1244,13 @@ const countries = [
   font-weight: 700;
   margin-right: 4px;
 }
+/* The countries band is always cream, in light and dark mode alike. */
 .more-countries__chip {
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: 999px;
-  background: var(--fy-surface);
-  box-shadow: inset 0 0 0 1px var(--fy-line);
+  background: #ffffff;
+  color: #0b0e3a;
+  box-shadow: inset 0 0 0 1px rgba(11, 14, 58, 0.14);
   font-size: 15px;
   font-weight: 600;
 }

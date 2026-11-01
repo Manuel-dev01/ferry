@@ -47,8 +47,11 @@ const tiles = computed(() => {
     { v: s.uniqueWallets.toLocaleString('en'), k: t('proof.wallets'), tone: 'mint' },
     { v: String(s.countries), k: t('proof.countries'), tone: 'mint' },
     {
-      v: s.medianSeconds !== null ? roughDurationDisplay(s.medianSeconds * 1000) : '—',
-      k: t('proof.median'),
+      v: s.medianSeconds !== null ? roughDurationDisplay(s.medianSeconds * 1000) : t('proof.soon'),
+      k:
+        s.medianSeconds !== null
+          ? t('proof.median')
+          : `${t('proof.median')} · ${t('proof.afterFirst')}`,
       tone: 'tangerine',
     },
     { v: s.confirmedPaid.toLocaleString('en'), k: t('proof.confirmed'), tone: 'tangerine' },
