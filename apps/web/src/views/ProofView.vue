@@ -8,7 +8,6 @@ import { api } from '../lib/api'
 import { channelLabel, flagOf } from '../lib/fonbnk'
 import {
   durationDisplay,
-  polygonscanTx,
   roughDurationDisplay,
   shortTimeDisplay,
   timeDisplay,
@@ -117,9 +116,9 @@ const maxCountry = computed(() =>
           <h2 class="fy-section-label" style="margin: 0 0 4px">{{ t('proof.latest') }}</h2>
           <a
             v-for="p in stats.latest"
-            :key="p.txHash"
+            :key="p.link"
             class="fy-list-row"
-            :href="polygonscanTx(p.txHash)"
+            :href="p.link"
             target="_blank"
             rel="noopener"
           >

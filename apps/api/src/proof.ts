@@ -1,10 +1,13 @@
 import {
+  isFonbnkCountry,
+  mpesaReceiptUrl,
+  POLYGONSCAN_TX,
   recordCountry,
   type FonbnkChannel,
   type FonbnkCountry,
   type StatsResponse,
 } from '@ferry/shared'
-import { getAddress, type Hex } from 'viem'
+import { getAddress } from 'viem'
 
 export interface ProofRow {
   txHash: string
@@ -15,6 +18,27 @@ export interface ProofRow {
   channel: string
   createdAt: Date
   receivedAt: Date | null
+}
+
+/** An M-Pesa Direct payout Ferry issued the invoice for; it counts once delivered. */
+export interface LnProofRow {
+  paymentHash: string
+  country: string
+  channel: string
+  amountUnits: bigint
+  createdAt: Date
+  deliveredAt: Date | null
+}
+
+interface Counted {
+  route: 'fonbnk' | 'mpesa_ln'
+  country: FonbnkCountry
+  channel: string
+  amountUnits: bigint
+  wallet: string | null
+  link: string
+  createdAt: Date
+  doneAt: Date | null
 }
 
 const LATEST = 20
@@ -28,22 +52,62 @@ function median(values: number[]): number | null {
   return sorted.length % 2 ? sorted[mid]! : Math.round((sorted[mid - 1]! + sorted[mid]!) / 2)
 }
 
-const secondsToConfirm = (row: ProofRow) => {
-  if (!row.receivedAt) return null
-  const s = Math.round((row.receivedAt.getTime() - row.createdAt.getTime()) / 1000)
+const secondsToDone = (row: { createdAt: Date; doneAt: Date | null }) => {
+  if (!row.doneAt) return null
+  const s = Math.round((row.doneAt.getTime() - row.createdAt.getTime()) / 1000)
   return s >= 0 && s <= MAX_CONFIRM_SECONDS ? s : null
 }
 
-/** Proof of Ferry from the on-chain hand-off records, leaving out the builder's own wallets. */
-export function computeStats(rows: ProofRow[], exclude: string[], now = Date.now()): StatsResponse {
+/**
+ * Proof of Ferry: Fonbnk hand-offs seen on-chain (minus the builder's wallets), plus M-Pesa
+ * Direct payouts that Tando confirmed with an M-Pesa receipt. Unique wallets counts on-chain
+ * senders only: a Lightning payout doesn't reveal the paying wallet.
+ */
+export function computeStats(
+  rows: ProofRow[],
+  exclude: string[],
+  now = Date.now(),
+  lnRows: LnProofRow[] = [],
+): StatsResponse {
   const skip = new Set(exclude.map((a) => getAddress(a)))
-  const counted = rows
+  const fromChain: Counted[] = rows
     .filter((r) => !skip.has(getAddress(r.fromAddress)))
     .flatMap((r) => {
       const country = recordCountry(r)
-      return country ? [{ ...r, country }] : []
+      return country
+        ? [
+            {
+              route: 'fonbnk' as const,
+              country,
+              channel: r.channel,
+              amountUnits: r.amountUnits,
+              wallet: getAddress(r.fromAddress),
+              link: POLYGONSCAN_TX(r.txHash),
+              createdAt: r.createdAt,
+              doneAt: r.receivedAt,
+            },
+          ]
+        : []
     })
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  const fromLightning: Counted[] = lnRows.flatMap((r) =>
+    r.deliveredAt && isFonbnkCountry(r.country)
+      ? [
+          {
+            route: 'mpesa_ln' as const,
+            country: r.country,
+            channel: r.channel,
+            amountUnits: r.amountUnits,
+            wallet: null,
+            link: mpesaReceiptUrl(r.paymentHash),
+            createdAt: r.createdAt,
+            doneAt: r.deliveredAt,
+          },
+        ]
+      : [],
+  )
+  const counted = [...fromChain, ...fromLightning].sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  )
 
   const byCountry = new Map<FonbnkCountry, { cashouts: number; volume: bigint }>()
   let volume = 0n
@@ -54,14 +118,14 @@ export function computeStats(rows: ProofRow[], exclude: string[], now = Date.now
     c.volume += r.amountUnits
     byCountry.set(r.country, c)
     volume += r.amountUnits
-    const s = secondsToConfirm(r)
+    const s = secondsToDone(r)
     if (s !== null) seconds.push(s)
   }
 
   return {
     cashouts: counted.length,
-    confirmedPaid: counted.filter((r) => r.receivedAt).length,
-    uniqueWallets: new Set(counted.map((r) => getAddress(r.fromAddress))).size,
+    confirmedPaid: counted.filter((r) => r.doneAt).length,
+    uniqueWallets: new Set(counted.flatMap((r) => (r.wallet ? [r.wallet] : []))).size,
     countries: byCountry.size,
     volumeUnits: volume.toString(),
     medianSeconds: median(seconds),
@@ -76,9 +140,10 @@ export function computeStats(rows: ProofRow[], exclude: string[], now = Date.now
       country: r.country,
       channel: r.channel as FonbnkChannel,
       amountUnits: r.amountUnits.toString(),
-      txHash: r.txHash as Hex,
+      route: r.route,
+      link: r.link,
       at: r.createdAt.getTime(),
-      seconds: secondsToConfirm(r),
+      seconds: secondsToDone(r),
     })),
     updatedAt: now,
   }

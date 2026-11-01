@@ -210,3 +210,26 @@ export const handoffs = pgTable(
   },
   (t) => [index('handoffs_from_idx').on(t.fromAddress)],
 )
+
+/**
+ * A Lightning cash-out whose invoice Ferry fetched for the user (M-Pesa Direct). It counts on
+ * Proof of Ferry only once the partner reports it delivered, with the M-Pesa receipt.
+ */
+export const lnPayouts = pgTable(
+  'ln_payouts',
+  {
+    paymentHash: text('payment_hash').primaryKey(),
+    route: text('route').notNull(),
+    country: text('country').notNull(),
+    channel: text('channel').notNull(),
+    /** Whole units of local currency asked to arrive. */
+    fiatAmount: bigint('fiat_amount', { mode: 'bigint' }).notNull(),
+    sats: bigint('sats', { mode: 'bigint' }).notNull(),
+    /** USDT value at issue time, for volume: sats at the BTC price then. */
+    amountUnits: usdtUnits('amount_units').notNull(),
+    createdAt: createdAt(),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    receipt: text('receipt'),
+  },
+  (t) => [index('ln_payouts_pending_idx').on(t.deliveredAt, t.createdAt)],
+)

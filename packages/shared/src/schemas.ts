@@ -298,7 +298,10 @@ export const statsResponseSchema = z.object({
       country: fonbnkCountrySchema,
       channel: fonbnkChannelSchema,
       amountUnits: unitsSchema,
-      txHash: hexSchema,
+      /** How it was delivered: an on-chain Fonbnk hand-off or an M-Pesa Direct payout. */
+      route: z.enum(['fonbnk', 'mpesa_ln']),
+      /** The proof: a Polygonscan transaction or the M-Pesa receipt page. */
+      link: z.string().url(),
       at: z.number().int(),
       seconds: z.number().nullable(),
     }),

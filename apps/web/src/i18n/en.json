@@ -626,9 +626,9 @@
     "sent": "Sent",
     "empty": "No public cash-outs yet. The first ones will show here the moment they happen.",
     "howTitle": "How we count",
-    "how1": "A cash-out counts once Ferry sees the user's own USDT transfer to the payout partner on Polygon. Each row links to it.",
-    "how2": "“Confirmed received” and the median time come from senders tapping “I've got my money” in Ferry. The payout partner doesn't report back.",
-    "how3": "The builder's own wallets and test cash-outs are left out."
+    "how1": "A cash-out counts once Ferry can prove it: the user’s own USDT transfer to Fonbnk on Polygon, or an M-Pesa receipt for an M-Pesa Direct payout. Each row links to its proof.",
+    "how2": "The median time and “Confirmed received” use M-Pesa receipts where there is one, and otherwise senders tapping “I’ve got my money” in Ferry.",
+    "how3": "Unique wallets counts on-chain senders only: a Lightning payout doesn’t reveal the paying wallet."
   },
   "nimSwap": {
     "header": "Cash out NIM",

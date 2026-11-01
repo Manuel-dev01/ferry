@@ -10,13 +10,7 @@ import { useLandingMotion } from '../composables/useLandingMotion'
 import { api } from '../lib/api'
 import { FLAGS } from '../lib/corridors'
 import { channelLabel, flagOf } from '../lib/fonbnk'
-import {
-  durationDisplay,
-  polygonscanTx,
-  roughDurationDisplay,
-  usdHeadline,
-  usdtDisplay,
-} from '../lib/format'
+import { durationDisplay, roughDurationDisplay, usdHeadline, usdtDisplay } from '../lib/format'
 import { openInNimiqPayUrl } from '../providers/host'
 
 const { t, te } = useI18n()
@@ -407,9 +401,9 @@ const countries = [
         <template v-if="stats?.latest.length">
           <a
             v-for="p in stats.latest.slice(0, 6)"
-            :key="p.txHash"
+            :key="p.link"
             class="payouts__row"
-            :href="polygonscanTx(p.txHash)"
+            :href="p.link"
             target="_blank"
             rel="noopener"
           >

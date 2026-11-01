@@ -20,9 +20,10 @@ import { Hono } from 'hono'
 import { getAddress } from 'viem'
 import { z } from 'zod'
 import type { AppEnv, Deps } from '../app'
-import { handoffs } from '../db/schema'
+import { handoffs, lnPayouts } from '../db/schema'
 import { HttpError } from '../errors'
 import { ORDER_VALID_MS } from '../orders/mock-engine'
+import { reconcileMpesa } from '../mpesa'
 import { computeStats } from '../proof'
 import { parseJson, parseValue } from './validate'
 
@@ -130,7 +131,22 @@ export function v1Routes(deps: Deps) {
           receivedAt: handoffs.receivedAt,
         })
         .from(handoffs)
-      statsCache = { body: computeStats(rows, env.PROOF_EXCLUDE_ADDRESSES), at: Date.now() }
+      // Payouts whose sender closed Ferry before the receipt came still get counted.
+      await reconcileMpesa(db, deps.fetch).catch(() => undefined)
+      const lnRows = await db
+        .select({
+          paymentHash: lnPayouts.paymentHash,
+          country: lnPayouts.country,
+          channel: lnPayouts.channel,
+          amountUnits: lnPayouts.amountUnits,
+          createdAt: lnPayouts.createdAt,
+          deliveredAt: lnPayouts.deliveredAt,
+        })
+        .from(lnPayouts)
+      statsCache = {
+        body: computeStats(rows, env.PROOF_EXCLUDE_ADDRESSES, Date.now(), lnRows),
+        at: Date.now(),
+      }
     }
     return c.json(statsCache.body)
   })

@@ -7,13 +7,13 @@ import {
   offersQuerySchema,
   type FonbnkCountry,
   type LnInvoiceResponse,
-  type MpesaStatusResponse,
   type Offer,
   type OffersResponse,
 } from '@ferry/shared'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import type { AppEnv, Deps } from '../app'
+import { lnPayouts } from '../db/schema'
 import { HttpError } from '../errors'
 import {
   requestInvoice,
@@ -33,7 +33,9 @@ import {
   rateFor,
   recommend,
   satsForUnits,
+  unitsForSats,
 } from '../payouts'
+import { recordDelivery, tandoStatus } from '../mpesa'
 import { parseJson, parseValue } from './validate'
 
 const TIMEOUT_MS = 8_000
@@ -67,18 +69,6 @@ const fonbnkQuoteSchema = z.object({
   }),
 })
 
-const tandoStatusSchema = z.object({
-  success: z.boolean(),
-  transaction: z
-    .object({
-      status: z.string(),
-      isPaid: z.boolean().optional(),
-      paymentNetworkReceipt: z.string().nullish(),
-      currencyAmountSent: z.number().nullish(),
-    })
-    .nullish(),
-})
-
 /** A tiny time-boxed cache, so a busy page doesn't hammer partners. */
 function cached<T>(ttl: number) {
   const store = new Map<string, { at: number; value: Promise<T> }>()
@@ -110,6 +100,7 @@ const wholeString = (n: number) => String(Math.floor(n))
  */
 export function payoutRoutes(deps: Deps) {
   const { fetch: fetchImpl } = deps
+  const db = deps.db?.db ?? null
   const r = new Hono<AppEnv>()
 
   const priceCache = cached<bigint>(PRICE_TTL_MS)
@@ -281,6 +272,29 @@ export function payoutRoutes(deps: Deps) {
       nowSeconds: Math.floor(Date.now() / 1000),
     })
     c.get('log').info({ route: 'mpesa_ln', kes: body.kes, hash: v.paymentHash }, 'invoice issued')
+    if (db) {
+      const sats = amountMsat / 1000n
+      const units = await btcUsdCents()
+        .then((cents) => unitsForSats(sats, cents))
+        .catch(() => null)
+      if (units !== null) {
+        await db
+          .insert(lnPayouts)
+          .values({
+            paymentHash: v.paymentHash,
+            route: 'mpesa_ln',
+            country: 'KE',
+            channel: 'mobile_money',
+            fiatAmount: BigInt(body.kes),
+            sats,
+            amountUnits: units,
+          })
+          .onConflictDoNothing()
+          .catch((err: unknown) =>
+            c.get('log').warn({ err: String(err) }, 'ln payout not recorded'),
+          )
+      }
+    }
     const res: LnInvoiceResponse = {
       invoice: invoice.pr,
       paymentHash: v.paymentHash,
@@ -296,23 +310,8 @@ export function payoutRoutes(deps: Deps) {
   r.get('/ln/mpesa/:hash', async (c) => {
     const hash = c.req.param('hash').toLowerCase()
     if (!/^[0-9a-f]{64}$/.test(hash)) throw new HttpError(400, 'INVALID_REQUEST', 'Bad hash')
-    const res = await fetchImpl(
-      `https://api.tando.ltd/v1/transactions/btcpay/payment-hash/${hash}`,
-      { signal: AbortSignal.timeout(TIMEOUT_MS) },
-    )
-    let body: MpesaStatusResponse = { status: 'unknown', receipt: null, kes: null }
-    if (res.ok) {
-      const parsed = tandoStatusSchema.safeParse(await res.json())
-      const tx = parsed.success ? parsed.data.transaction : null
-      if (tx) {
-        const done = tx.status === 'completed' && tx.isPaid === true
-        body = {
-          status: done ? 'completed' : 'pending',
-          receipt: done ? (tx.paymentNetworkReceipt ?? null) : null,
-          kes: tx.currencyAmountSent ?? null,
-        }
-      }
-    }
+    const body = await tandoStatus(fetchImpl, hash)
+    if (db) await recordDelivery(db, hash, body).catch(() => undefined)
     return c.json(body)
   })
 

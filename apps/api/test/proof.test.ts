@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeStats, type ProofRow } from '../src/proof'
+import { computeStats, type LnProofRow, type ProofRow } from '../src/proof'
 import { json, makeApp } from './helpers'
 
 const BUILDER = '0x358bC84A34Df878A5497DFc01D14D6AaFe7E8A76'
@@ -57,7 +57,7 @@ describe('computeStats', () => {
     expect(s.volumeUnits).toBe('11500000')
     expect(s.byCountry[0]).toEqual({ country: 'NG', cashouts: 2, volumeUnits: '6500000' })
     expect(s.byCountry[1]?.country).toBe('GM')
-    expect(s.latest.map((l) => l.txHash)).not.toContain('0x04')
+    expect(s.latest.map((l) => l.link)).not.toContain('https://polygonscan.com/tx/0x04')
   })
 
   it('takes the median over confirmed cash-outs and ignores implausible confirmations', () => {
@@ -86,8 +86,37 @@ describe('computeStats', () => {
       [],
       T0,
     )
-    expect(s.latest.map((l) => l.txHash)).toEqual(['0x02', '0x01'])
+    expect(s.latest.map((l) => l.link)).toEqual([
+      'https://polygonscan.com/tx/0x02',
+      'https://polygonscan.com/tx/0x01',
+    ])
     expect(JSON.stringify(s)).not.toContain(ALICE.slice(2, 12))
+  })
+})
+
+describe('computeStats with M-Pesa Direct payouts', () => {
+  const ln = (over: Partial<LnProofRow>): LnProofRow => ({
+    paymentHash: 'ab'.repeat(32),
+    country: 'KE',
+    channel: 'mobile_money',
+    amountUnits: 2_000_000n,
+    createdAt: new Date(T0),
+    deliveredAt: null,
+    ...over,
+  })
+
+  it('counts a payout only once Tando confirmed it, linking the M-Pesa receipt', () => {
+    const s = computeStats([row({ txHash: '0x01' })], [], T0, [
+      ln({ deliveredAt: new Date(T0 + 50_000) }),
+      ln({ paymentHash: 'cd'.repeat(32) }),
+    ])
+    expect(s.cashouts).toBe(2)
+    expect(s.countries).toBe(2)
+    expect(s.uniqueWallets).toBe(1) // a Lightning payout doesn't reveal the wallet
+    expect(s.volumeUnits).toBe('7000000')
+    const mpesa = s.latest.find((l) => l.route === 'mpesa_ln')
+    expect(mpesa?.link).toBe(`https://bitcoin.co.ke/receipt/${'ab'.repeat(32)}`)
+    expect(mpesa?.seconds).toBe(50)
   })
 })
 

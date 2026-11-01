@@ -19,6 +19,10 @@ export const priceToCents = (price: number): bigint => BigInt(Math.round(price *
 export const satsForUnits = (units: bigint, btcUsdCents: bigint): bigint =>
   (units * SATS_PER_BTC * 100n) / (USDT_SCALE * btcUsdCents)
 
+/** USDT base units that sats were worth at a BTC/USD price in cents. */
+export const unitsForSats = (sats: bigint, btcUsdCents: bigint): bigint =>
+  (sats * btcUsdCents * USDT_SCALE) / (SATS_PER_BTC * 100n)
+
 /** Sats after Ferry's allowance for Nimiq Pay's swap fee. */
 export const afterSwapAllowance = (sats: bigint): bigint =>
   (sats * (10_000n - SWAP_ALLOWANCE_BPS)) / 10_000n
