@@ -6,6 +6,9 @@ import type {
   GasTopupResponse,
   HandoffResponse,
   Institution,
+  LnInvoiceResponse,
+  MpesaStatusResponse,
+  OffersResponse,
   OrderView,
   QuoteResponse,
   VerifyAccountResponse,
@@ -47,6 +50,25 @@ export const ferryApi = {
   /** The sender says the payout arrived; feeds the median time on Proof of Ferry. */
   handoffReceived: (txHash: Hex) =>
     api<HandoffResponse>(`/v1/handoffs/${txHash}/received`, { method: 'POST' }),
+
+  /** Every route that can deliver this cash-out, each with its own quote. */
+  offers: (country: FonbnkCountry, channel: string, units: bigint) =>
+    api<OffersResponse>(
+      `/v1/offers?${new URLSearchParams({ country, channel, units: units.toString() }).toString()}`,
+    ),
+
+  /** An invoice from a Kenyan number's M-Pesa Lightning address; `kes` is what arrives. */
+  mpesaInvoice: (phone: string, kes: number) =>
+    api<LnInvoiceResponse>('/v1/ln/mpesa', { method: 'POST', body: { phone, kes } }),
+
+  mpesaStatus: (paymentHash: string) => api<MpesaStatusResponse>(`/v1/ln/mpesa/${paymentHash}`),
+
+  /** An invoice from the user's own Mavapay Money address, sized from a USDT amount. */
+  mavapayInvoice: (address: string, units: bigint) =>
+    api<LnInvoiceResponse>('/v1/ln/mavapay', {
+      method: 'POST',
+      body: { address, units: units.toString() },
+    }),
 
   order: (orderId: string, clientSecret: string) =>
     api<OrderView>(`/v1/orders/${orderId}`, { headers: { 'X-Client-Secret': clientSecret } }),

@@ -13,6 +13,8 @@ import {
   type FonbnkChannel,
   type FonbnkCountry,
   type FonbnkCountryInfo,
+  type Offer,
+  type PayoutRoute,
 } from '@ferry/shared'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -24,7 +26,7 @@ import Icon from '../../components/Icon.vue'
 import { ApiRequestError } from '../../lib/api'
 import { channelLabel, flagOf } from '../../lib/fonbnk'
 import { ferryApi } from '../../lib/ferryApi'
-import { fiatDisplay, polygonscanTx, usdtDisplay } from '../../lib/format'
+import { fiatDisplay, polygonscanTx, usdtDisplay, wholeFiatDisplay } from '../../lib/format'
 import {
   classifyEvmError,
   currentChainId,
@@ -46,7 +48,7 @@ const history = useHistoryStore()
 const HANDOFF_POLL_MS = 4_000
 const HANDOFF_POLL_MAX = 45 // 3 minutes, then the page says it's safe to leave
 
-type Phase = 'amount' | 'fonbnk' | 'done' | 'paid'
+type Phase = 'amount' | 'offers' | 'fonbnk' | 'done' | 'paid'
 const phase = ref<Phase>('amount')
 const tab = ref<'details' | 'send'>('details')
 
@@ -165,6 +167,54 @@ const widgetUrl = computed(() =>
 )
 /** The widget keeps its own state, so it is mounted once and only hidden between tabs. */
 const widgetMounted = ref(false)
+
+// ---- Offers: every route that can deliver this cash-out ----
+
+const offers = ref<Offer[]>([])
+const loadingOffers = ref(false)
+const OFFER_NAMES: Record<PayoutRoute, string> = {
+  fonbnk: 'Fonbnk',
+  mpesa_ln: 'M-Pesa Direct',
+  mavapay_ln: 'Mavapay Money',
+}
+const savedMavapay = (() => {
+  try {
+    return localStorage.getItem('ferry.mavapay.address')
+  } catch {
+    return null
+  }
+})()
+
+/** Continue: compare routes when there is more than one, otherwise straight to Fonbnk. */
+async function chooseRoute() {
+  if (!amountOk.value || amountUnits.value === null) return
+  if (mode.value !== 'cashout') return toFonbnk()
+  loadingOffers.value = true
+  try {
+    const res = await ferryApi.offers(country.value, channel.value, amountUnits.value)
+    offers.value = res.offers
+  } catch {
+    offers.value = []
+  } finally {
+    loadingOffers.value = false
+  }
+  if (offers.value.filter((o) => o.route !== 'fonbnk').length === 0) return toFonbnk()
+  phase.value = 'offers'
+}
+
+function pickOffer(o: Offer) {
+  if (o.route === 'fonbnk') return toFonbnk()
+  void router.push({
+    path: '/cashout/lightning',
+    query: {
+      route: o.route,
+      units: amountUnits.value?.toString(),
+      receive: o.receive,
+      currency: o.currency,
+      rate: o.rate,
+    },
+  })
+}
 
 function toFonbnk() {
   if (!amountOk.value) return
@@ -432,7 +482,9 @@ const title = computed(() => `${flagOf(country.value)} ${info.value.name}`)
 
 function onBack() {
   // Once the USDT is sent, back never leads to a screen that could send it again.
-  if (phase.value === 'fonbnk') phase.value = txHash.value ? 'done' : 'amount'
+  if (phase.value === 'offers') phase.value = 'amount'
+  else if (phase.value === 'fonbnk')
+    phase.value = txHash.value ? 'done' : offers.value.length > 1 ? 'offers' : 'amount'
   else if (mode.value === 'pay') void router.push('/')
   else void router.push(mode.value === 'airtime' ? '/cashout?mode=airtime' : '/cashout')
 }
@@ -537,11 +589,59 @@ function onBack() {
         <button
           type="button"
           class="fy-btn fy-btn--primary"
-          :disabled="!amountOk"
-          @click="toFonbnk"
+          :class="{ 'fy-btn--busy': loadingOffers }"
+          :disabled="!amountOk || loadingOffers"
+          @click="chooseRoute"
         >
-          {{ t('fonbnk.continue') }}
+          {{ loadingOffers ? t('offers.loading') : t('fonbnk.continue') }}
         </button>
+      </div>
+    </template>
+
+    <!-- Offers: compare every route, like Nimiq Pay's own sell screen -->
+    <template v-if="phase === 'offers'">
+      <header class="fy-header">
+        <button type="button" class="fy-iconbtn" :aria-label="t('common.back')" @click="onBack">
+          <Icon name="back" />
+        </button>
+        <span class="fy-header__center"
+          ><span class="fy-header__title">{{ title }}</span></span
+        >
+        <span class="fy-header__spacer" />
+      </header>
+      <div class="fy-content" style="gap: 14px">
+        <h1 class="fy-display">{{ t('offers.title') }}</h1>
+        <div class="s-divider">
+          <span>{{
+            t('offers.forAmount', { amount: amountUnits ? usdtDisplay(amountUnits) : '' })
+          }}</span>
+        </div>
+        <button
+          v-for="o in offers"
+          :key="o.route"
+          type="button"
+          class="s-offer"
+          :class="{ 's-offer--best': o.recommended }"
+          @click="pickOffer(o)"
+        >
+          <span v-if="o.recommended" class="s-offer__badge">{{ t('offers.recommended') }}</span>
+          <span class="s-offer__from"
+            >{{ t('offers.from') }} <strong>{{ OFFER_NAMES[o.route] }}</strong></span
+          >
+          <span class="s-offer__amount"
+            >{{ o.estimate ? '≈ ' : '' }}{{ wholeFiatDisplay(o.receive, o.currency) }}</span
+          >
+          <span class="s-offer__meta">{{ t(`offers.how.${o.route}`) }}</span>
+          <span class="s-offer__foot">
+            <Icon name="swap" :size="14" />
+            {{ t('offers.rate', { rate: o.rate, currency: o.currency }) }}
+            <template v-if="o.fee"> · {{ t('offers.fee', { fee: o.fee }) }}</template>
+            <template v-if="o.route === 'mavapay_ln'">
+              · {{ savedMavapay ? savedMavapay : t('offers.needsAccount') }}</template
+            >
+          </span>
+        </button>
+        <p class="fy-caption" style="margin: 0">{{ t('offers.note') }}</p>
       </div>
     </template>
 
@@ -953,5 +1053,66 @@ function onBack() {
     SFMono-Regular,
     Menlo,
     monospace;
+}
+.s-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font: 600 14px var(--fy-font-body);
+  color: var(--fy-ink-2);
+}
+.s-divider::before,
+.s-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--fy-line);
+}
+.s-offer {
+  position: relative;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 16px 14px;
+  border-radius: 20px;
+  background: var(--fy-surface);
+  box-shadow: inset 0 0 0 1px var(--fy-line);
+}
+.s-offer--best {
+  box-shadow: inset 0 0 0 2px var(--fy-success);
+  margin-top: 10px;
+}
+.s-offer__badge {
+  position: absolute;
+  top: -12px;
+  left: 14px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--fy-card-mint);
+  color: var(--fy-card-ink);
+  font: 700 12.5px var(--fy-font-body);
+}
+.s-offer__from {
+  font-size: 15px;
+}
+.s-offer__amount {
+  font: 800 30px/1.1 var(--fy-font-display);
+  letter-spacing: -0.03em;
+}
+.s-offer__meta {
+  font-size: 13.5px;
+  color: var(--fy-ink-2);
+}
+.s-offer__foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--fy-line);
+  font-size: 13px;
 }
 </style>

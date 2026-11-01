@@ -147,9 +147,21 @@ export function validateInvoice(
   if (amount === undefined || BigInt(String(amount)) !== expected.amountMsat) {
     throw new HttpError(502, 'LN_AMOUNT_MISMATCH', 'The invoice amount differs from the request')
   }
+  // LUD-06 wants sha256(metadata) as the description hash. Some services (Tando's M-Pesa
+  // addresses) put a plain description instead; that is accepted only if it names the exact
+  // address from the metadata, so the invoice is still bound to the recipient we resolved.
   const descriptionHash = get('description_hash')
+  const description = get('description')
   const metadataHash = bytesToHex(sha256(utf8ToBytes(expected.metadata)))
-  if (typeof descriptionHash !== 'string' || descriptionHash.toLowerCase() !== metadataHash) {
+  const identifier = metadataIdentifier(expected.metadata)
+  const boundByHash =
+    typeof descriptionHash === 'string' && descriptionHash.toLowerCase() === metadataHash
+  const boundByText =
+    descriptionHash === undefined &&
+    typeof description === 'string' &&
+    identifier !== null &&
+    new RegExp(`(^|\\s)${escapeRegExp(identifier)}($|\\s)`, 'i').test(description)
+  if (!boundByHash && !boundByText) {
     throw new HttpError(502, 'LN_DESCRIPTION_MISMATCH', 'The invoice does not match the address')
   }
   const timestamp = Number(get('timestamp'))
@@ -199,3 +211,20 @@ export function summarizeMetadata(metadata: string): Record<string, string> {
     return {}
   }
 }
+
+/** The `text/identifier` entry of LNURL metadata: the address an invoice should pay. */
+function metadataIdentifier(metadata: string): string | null {
+  try {
+    const entries = JSON.parse(metadata) as unknown
+    if (!Array.isArray(entries)) return null
+    const found = entries.find(
+      (e): e is [string, string] =>
+        Array.isArray(e) && e[0] === 'text/identifier' && typeof e[1] === 'string',
+    )
+    return found ? found[1] : null
+  } catch {
+    return null
+  }
+}
+
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

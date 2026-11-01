@@ -29,6 +29,12 @@ const routes: RouteRecordRaw[] = [
         : { path: '/cashout' },
     meta: app,
   },
+  // One-screen Lightning cash-outs (M-Pesa direct, Mavapay Money); ?hash= reopens one.
+  {
+    path: '/cashout/lightning',
+    component: () => import('./views/cashout/LightningPayoutView.vue'),
+    meta: app,
+  },
   {
     path: '/cashout/bank',
     component: () => import('./views/cashout/InstitutionView.vue'),

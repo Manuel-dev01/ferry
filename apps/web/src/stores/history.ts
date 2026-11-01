@@ -20,8 +20,15 @@ export interface HistoryEntry {
   theyReceiveMinor: string
   status: string
   mock: boolean
-  /** Set for cash-outs a partner pays out: the user's own transfer to the partner. */
-  provider?: 'fonbnk'
+  /**
+   * Set for cash-outs a partner pays out. fonbnk: the user's own transfer to Fonbnk; mpesa_ln and
+   * mavapay_ln: a Lightning invoice the user paid from Nimiq Pay (id is its payment hash).
+   */
+  provider?: 'fonbnk' | 'mpesa_ln' | 'mavapay_ln'
+  /** M-Pesa confirmation code, once Tando reports the payout delivered. */
+  receipt?: string
+  /** Who was paid, for display: a masked phone number or a Lightning address. */
+  payee?: string
   /** A top-up (USDT bought through the partner) or a NIM → USDT swap, into the user's wallet. */
   kind?: 'topup' | 'nim'
   txHash?: string
@@ -37,9 +44,11 @@ export interface HistoryEntry {
 export const entryAmount = (e: HistoryEntry) =>
   e.kind === 'topup' || e.kind === 'nim'
     ? `+${usdtDisplay(BigInt(e.amountUnits ?? '0'))} USDT`
-    : e.provider === 'fonbnk'
-      ? `${usdtDisplay(BigInt(e.amountUnits ?? '0'))} USDT`
-      : fiatDisplay(e.theyReceiveMinor, e.currency)
+    : e.provider === 'mpesa_ln'
+      ? fiatDisplay(e.theyReceiveMinor, e.currency)
+      : e.provider === 'fonbnk' || e.provider === 'mavapay_ln'
+        ? `${usdtDisplay(BigInt(e.amountUnits ?? '0'))} USDT`
+        : fiatDisplay(e.theyReceiveMinor, e.currency)
 
 /** A history row's title: who was paid, or what happened. */
 export function entryTitle(
@@ -49,6 +58,8 @@ export function entryTitle(
 ) {
   if (e.kind === 'topup') return t('history.topupTitle')
   if (e.kind === 'nim') return t('history.nimTitle')
+  if (e.provider === 'mpesa_ln') return t('history.mpesaTitle', { to: e.payee ?? '' })
+  if (e.provider === 'mavapay_ln') return t('history.mavapayTitle')
   if (e.provider === 'fonbnk' && e.channel === 'airtime') return t('history.airtimeTitle')
   if (e.provider === 'fonbnk' && (e.channel === 'buy_goods' || e.channel === 'paybill')) {
     return t('history.payTitle', { method: channelLabel(t, te, 'KE', e.channel) })
@@ -66,9 +77,11 @@ export const entryLink = (e: HistoryEntry) =>
     ? `/topup?id=${e.id}`
     : e.kind === 'nim'
       ? `/nim?swap=${e.id}`
-      : e.provider === 'fonbnk' && e.txHash
-        ? `/cashout/fonbnk?tx=${e.txHash}`
-        : `/orders/${e.id}`
+      : e.provider === 'mpesa_ln' || e.provider === 'mavapay_ln'
+        ? `/cashout/lightning?hash=${e.id}`
+        : e.provider === 'fonbnk' && e.txHash
+          ? `/cashout/fonbnk?tx=${e.txHash}`
+          : `/orders/${e.id}`
 
 function load(): HistoryEntry[] {
   try {
@@ -124,5 +137,13 @@ export const useHistoryStore = defineStore('history', () => {
     }
   }
 
-  return { entries, add, updateFrom, find, setStatus, markPaid }
+  /** Saves extra details learned later, such as an M-Pesa receipt. */
+  function update(id: string, patch: Partial<HistoryEntry>) {
+    const entry = entries.value.find((e) => e.id === id)
+    if (!entry) return
+    Object.assign(entry, patch)
+    persist()
+  }
+
+  return { entries, add, updateFrom, find, setStatus, markPaid, update }
 })

@@ -34,6 +34,17 @@ export function fiatDisplay(minor: bigint | string, currency: string, locale = '
   return fmt.format(decimal as unknown as number)
 }
 
+/** "KSh 642", "₦6,831": a whole-unit amount from a partner quote, without decimals. */
+export function wholeFiatDisplay(whole: string, currency: string, locale = 'en'): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    currencyDisplay: 'narrowSymbol',
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  }).format(BigInt(whole.split('.')[0] ?? '0') as unknown as number)
+}
+
 /** "1 USDT = ₦1,353.05" (rate truncated to two decimals for display). */
 export const rateDisplay = (rate: string, currency: string) =>
   `1 USDT = ${fiatDisplay(rateToMinor(rate), currency)}`
