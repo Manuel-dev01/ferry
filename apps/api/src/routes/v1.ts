@@ -16,6 +16,7 @@ import {
   type QuoteResponse,
   type StatsResponse,
 } from '@ferry/shared'
+import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { getAddress } from 'viem'
 import { z } from 'zod'
@@ -141,8 +142,10 @@ export function v1Routes(deps: Deps) {
           amountUnits: lnPayouts.amountUnits,
           createdAt: lnPayouts.createdAt,
           deliveredAt: lnPayouts.deliveredAt,
+          timed: lnPayouts.timed,
         })
         .from(lnPayouts)
+        .where(eq(lnPayouts.route, 'mpesa_ln'))
       statsCache = {
         body: computeStats(rows, env.PROOF_EXCLUDE_ADDRESSES, Date.now(), lnRows),
         at: Date.now(),

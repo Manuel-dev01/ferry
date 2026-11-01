@@ -7,6 +7,7 @@ import type {
   HandoffResponse,
   Institution,
   LnInvoiceResponse,
+  MavapayStatusResponse,
   MpesaStatusResponse,
   OffersResponse,
   OrderView,
@@ -41,7 +42,8 @@ export const ferryApi = {
     }),
 
   gasTopup: (address: string) =>
-    api<GasTopupResponse>('/v1/gas', { method: 'POST', body: { address } }),
+    // The server waits for the top-up's receipt (up to 60 s) before answering.
+    api<GasTopupResponse>('/v1/gas', { method: 'POST', body: { address }, timeoutMs: 75_000 }),
 
   /** Records the user's transfer to Fonbnk once it is on-chain; 'pending' until then. */
   handoff: (body: { txHash: Hex; country: FonbnkCountry; channel: string }) =>
@@ -69,6 +71,9 @@ export const ferryApi = {
       method: 'POST',
       body: { address, units: units.toString() },
     }),
+
+  mavapayStatus: (paymentHash: string) =>
+    api<MavapayStatusResponse>(`/v1/ln/mavapay/${paymentHash}`),
 
   order: (orderId: string, clientSecret: string) =>
     api<OrderView>(`/v1/orders/${orderId}`, { headers: { 'X-Client-Secret': clientSecret } }),

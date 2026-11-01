@@ -11,7 +11,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '../../components/AppHeader.vue'
 import Banner from '../../components/Banner.vue'
 import Icon from '../../components/Icon.vue'
-import { ApiRequestError } from '../../lib/api'
+import { friendlyError } from '../../lib/errors'
 import { ferryApi } from '../../lib/ferryApi'
 import { usdtDisplay, wholeFiatDisplay } from '../../lib/format'
 import { classifyNimiqError, initNimiq } from '../../providers/nimiq'
@@ -45,7 +45,7 @@ const KES_MIN = 15
 const KES_MAX = 49_000
 const ADDRESS_KEY = 'ferry.mavapay.address'
 
-type Phase = 'details' | 'progress' | 'done'
+type Phase = 'details' | 'progress' | 'done' | 'failed'
 const phase = ref<Phase>('details')
 const busy = ref(false)
 const status = ref('')
@@ -106,8 +106,7 @@ const canSend = computed(() =>
     : addressOk.value && units > 0n,
 )
 
-const describe = (err: unknown) =>
-  err instanceof ApiRequestError ? err.message : t('ln.payFailed')
+const describe = (err: unknown) => friendlyError(err, t)
 
 function remember(inv: LnInvoiceResponse, statusName: string) {
   if (history.find(inv.paymentHash)) {
@@ -130,10 +129,15 @@ function remember(inv: LnInvoiceResponse, statusName: string) {
     provider: kind.value,
     amountUnits: units.toString(),
     payee: isMpesa && phone.value ? maskedPhone(phone.value) : address.value,
+    expiresAt: inv.expiresAt,
   })
 }
 
-/** One tap: fetch the invoice, then Nimiq Pay's single approval. Never paid twice. */
+/**
+ * One tap: fetch the invoice, then Nimiq Pay's single approval. The payment is in History
+ * before the approval opens, and any outcome other than a clear "you cancelled" is followed up
+ * by reading its status. Send is never re-armed for an invoice that may have been paid.
+ */
 async function send() {
   if (!canSend.value || busy.value) return
   busy.value = true
@@ -158,71 +162,112 @@ async function send() {
       }
     }
     invoice.value = inv
+    remember(inv, 'awaiting')
     status.value = t('ln.confirmInWallet')
+    let ambiguous = false
     try {
       const nimiq = await initNimiq()
       await nimiq.payLightningInvoice({ invoice: inv.invoice })
     } catch (err) {
       const e = classifyNimiqError(err)
-      if (e.kind === 'rejected') {
-        problem.value = t('ln.cancelled')
-        return
+      const settled = (message: string) => {
+        history.setStatus(inv.paymentHash, 'failed')
+        problem.value = message
       }
-      if (e.kind === 'invalid') {
-        problem.value = t('ln.expired')
-        return
-      }
-      if (e.kind === 'unsupported') {
-        problem.value = t('ln.unsupported')
-        return
-      }
-      if (e.kind !== 'duplicate' && e.kind !== 'outcome_unknown' && e.kind !== 'network') {
-        problem.value = t('ln.payFailed')
-        return
-      }
-      // It may have gone through: never pay again; read the status instead.
+      if (e.kind === 'rejected') return settled(t('ln.cancelled'))
+      if (e.kind === 'invalid') return settled(t('ln.invalid'))
+      if (e.kind === 'unsupported') return settled(t('ln.unsupported'))
+      // duplicate, outcome unknown, network, wallet or unknown errors: it may have gone out.
+      ambiguous = true
     }
-    remember(inv, 'sending')
-    if (kind.value === 'mpesa_ln') {
-      phase.value = 'progress'
-      void follow(inv.paymentHash)
-    } else {
-      phase.value = 'done'
-    }
+    history.setStatus(inv.paymentHash, 'sending')
+    uncertain.value = ambiguous
+    phase.value = 'progress'
+    void follow(inv.paymentHash)
   } finally {
     busy.value = false
     status.value = ''
   }
 }
 
-// ---- Progress (M-Pesa only: Tando reports the receipt) ----
+// ---- Progress: read the partner's status until there's an answer ----
 
 const receipt = ref<string | null>(null)
 const deliveredKes = ref<number | null>(null)
+/** Tando has seen the payment (it knows the hash), so "Paid from Nimiq Pay" is true. */
+const seenByPartner = ref(false)
+/** The payment outcome was ambiguous in Nimiq Pay; done screens must not claim it was sent. */
+const uncertain = ref(false)
 const slow = ref(false)
+const stoppedChecking = ref(false)
+const failedReason = ref('')
 let stopped = false
+let following = false
 onUnmounted(() => (stopped = true))
 
+/** An unpaid invoice is dead a minute after it expires: nothing left the wallet. */
+const expiredUnpaid = (expiresAt: number) => expiresAt > 0 && Date.now() / 1000 > expiresAt + 60
+
+function fail(hash: string, reason: string) {
+  history.setStatus(hash, 'failed')
+  failedReason.value = reason
+  phase.value = 'failed'
+}
+
 async function follow(hash: string) {
+  if (following) return
+  following = true
   slow.value = false
-  for (let i = 0; i < STATUS_POLL_MAX && !stopped; i++) {
-    try {
-      const s = await ferryApi.mpesaStatus(hash)
-      if (s.kes !== null) deliveredKes.value = s.kes
-      if (s.status === 'completed') {
-        receipt.value = s.receipt
-        history.markPaid(hash)
-        if (s.receipt) history.update(hash, { receipt: s.receipt })
-        phase.value = 'done'
-        return
+  stoppedChecking.value = false
+  const expiresAt = invoice.value?.expiresAt || history.find(hash)?.expiresAt || 0
+  try {
+    for (let i = 0; i < STATUS_POLL_MAX && !stopped; i++) {
+      try {
+        if (kind.value === 'mpesa_ln') {
+          const s = await ferryApi.mpesaStatus(hash)
+          if (s.kes !== null) deliveredKes.value = s.kes
+          if (s.paid) seenByPartner.value = true
+          if (s.status === 'completed') {
+            receipt.value = s.receipt
+            history.markPaid(hash)
+            if (s.receipt) history.update(hash, { receipt: s.receipt })
+            phase.value = 'done'
+            return
+          }
+          if (s.status === 'failed') return fail(hash, t('ln.mpesaFailed'))
+          if (!s.paid && expiredUnpaid(expiresAt)) {
+            return fail(hash, t('ln.notPaid'))
+          }
+        } else {
+          const s = await ferryApi.mavapayStatus(hash)
+          if (s.status === 'paid') {
+            seenByPartner.value = true
+            uncertain.value = false
+            phase.value = 'done'
+            return
+          }
+          // No status link: Ferry can't confirm. A clean payment shows done; an ambiguous one
+          // says so plainly.
+          if (s.status === 'unknown') {
+            phase.value = 'done'
+            return
+          }
+          if (expiredUnpaid(expiresAt)) return fail(hash, t('ln.notPaid'))
+        }
+      } catch {
+        // a failed read is not an outcome
       }
-    } catch {
-      // a failed read is not an outcome
+      if (i === 20) slow.value = true
+      await new Promise((r) => setTimeout(r, STATUS_POLL_MS))
     }
-    if (i === 20) slow.value = true
-    await new Promise((r) => setTimeout(r, STATUS_POLL_MS))
+    if (!stopped) stoppedChecking.value = true
+  } finally {
+    following = false
   }
-  slow.value = true
+}
+
+function checkAgain() {
+  if (invoice.value) void follow(invoice.value.paymentHash)
 }
 
 const paidByUser = ref(false)
@@ -230,6 +275,12 @@ function markPaid() {
   if (!invoice.value) return
   history.markPaid(invoice.value.paymentHash)
   paidByUser.value = true
+}
+
+function tryAgain() {
+  invoice.value = null
+  problem.value = ''
+  phase.value = 'details'
 }
 
 // ---- Entry: reopen from history ----
@@ -256,13 +307,19 @@ onMounted(() => {
         : `${usdtDisplay(BigInt(entry.amountUnits ?? '0'))} USDT`,
     payee: entry.payee ?? '',
   }
+  invoice.value.expiresAt = entry.expiresAt ?? 0
   receipt.value = entry.receipt ?? null
   paidByUser.value = entry.status === 'settled'
-  if (entry.provider === 'mpesa_ln' && entry.status !== 'settled') {
+  if (entry.status === 'failed') {
+    failedReason.value = t('ln.notPaid')
+    phase.value = 'failed'
+  } else if (entry.status === 'settled' && (entry.provider === 'mavapay_ln' || entry.receipt)) {
+    phase.value = 'done'
+  } else {
+    // awaiting (the app closed during approval) or sending: read the status, never pay again
+    uncertain.value = entry.status === 'awaiting'
     phase.value = 'progress'
     void follow(hash)
-  } else {
-    phase.value = 'done'
   }
 })
 
@@ -402,22 +459,56 @@ const header = computed(() =>
       </div>
     </template>
 
-    <!-- M-Pesa: waiting for Tando's receipt -->
+    <!-- Waiting for the partner's answer -->
     <template v-if="phase === 'progress'">
       <AppHeader close="/">{{ header }}</AppHeader>
       <div class="fy-content" style="gap: 18px">
         <div class="fy-now" style="margin-top: 4px">
-          <span class="fy-eyebrow">{{ t('ln.sending') }}</span>
+          <span class="fy-eyebrow">{{ uncertain ? t('ln.checking') : t('ln.sending') }}</span>
           <span class="fy-now__title">{{ sentAmount }}</span>
-          <span style="font: 600 15px var(--fy-font-body)">{{ sentTo }}</span>
+          <span class="s-wrap" style="font: 600 15px var(--fy-font-body)">{{ sentTo }}</span>
         </div>
         <ol class="s-steps">
-          <li class="s-done">
-            <span><Icon name="check" :size="14" :stroke="3" /></span>{{ t('ln.stepPaid') }}
+          <li :class="{ 's-done': seenByPartner }">
+            <span
+              ><Icon v-if="seenByPartner" name="check" :size="14" :stroke="3" /><template v-else
+                >1</template
+              ></span
+            >{{ t('ln.stepPaid') }}
           </li>
-          <li><span>2</span>{{ t('ln.stepMpesa') }}</li>
+          <li><span>2</span>{{ kind === 'mpesa_ln' ? t('ln.stepMpesa') : t('ln.stepMavapay') }}</li>
         </ol>
-        <Banner tone="brand" icon="clock" :body="slow ? t('ln.slow') : t('ln.waiting')" />
+        <Banner
+          v-if="stoppedChecking"
+          tone="warning"
+          icon="clock"
+          :body="t('ln.stoppedChecking')"
+        />
+        <Banner
+          v-else
+          tone="brand"
+          icon="clock"
+          :body="uncertain ? t('ln.uncertain') : slow ? t('ln.slow') : t('ln.waiting')"
+        />
+      </div>
+      <div v-if="stoppedChecking" class="fy-bottom">
+        <button type="button" class="fy-btn fy-btn--primary" @click="checkAgain">
+          {{ t('ln.checkAgain') }}
+        </button>
+      </div>
+    </template>
+
+    <!-- It didn't go through -->
+    <template v-if="phase === 'failed'">
+      <AppHeader close="/">{{ header }}</AppHeader>
+      <div class="fy-content" style="gap: 18px">
+        <Banner tone="danger" :title="t('ln.failedTitle')" :body="failedReason" />
+      </div>
+      <div class="fy-bottom">
+        <button type="button" class="fy-btn fy-btn--primary" @click="tryAgain">
+          {{ t('ln.tryAgain') }}
+        </button>
+        <RouterLink to="/" class="fy-btn fy-btn--secondary">{{ t('fonbnk.home') }}</RouterLink>
       </div>
     </template>
 
@@ -431,10 +522,14 @@ const header = computed(() =>
             <Icon v-if="receipt || paidByUser" name="check" :size="18" :stroke="3" />
           </div>
           <span class="fy-now__title">{{
-            kind === 'mpesa_ln' ? t('ln.mpesaDone') : t('ln.mavapayDone')
+            kind === 'mpesa_ln'
+              ? t('ln.mpesaDone')
+              : uncertain
+                ? t('ln.mavapayUnconfirmed')
+                : t('ln.mavapayDone')
           }}</span>
           <span style="font: 700 18px var(--fy-font-body)">{{ sentAmount }}</span>
-          <span style="font: 600 14px var(--fy-font-body)">{{ sentTo }}</span>
+          <span class="s-wrap" style="font: 600 14px var(--fy-font-body)">{{ sentTo }}</span>
         </div>
         <dl v-if="receipt" class="fy-panel" style="margin: 0">
           <div class="fy-row">
@@ -445,7 +540,13 @@ const header = computed(() =>
           </div>
         </dl>
         <p v-if="kind === 'mavapay_ln'" class="fy-caption" style="margin: 0">
-          {{ paidByUser ? t('ln.mavapayThanks') : t('ln.mavapayNote') }}
+          {{
+            paidByUser
+              ? t('ln.mavapayThanks')
+              : uncertain
+                ? t('ln.mavapayUnconfirmedNote')
+                : t('ln.mavapayNote')
+          }}
         </p>
         <a
           v-if="kind === 'mpesa_ln' && invoice"
@@ -552,5 +653,9 @@ const header = computed(() =>
 .s-steps li.s-done > span {
   background: var(--fy-success);
   color: #fff;
+}
+.s-wrap {
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 </style>

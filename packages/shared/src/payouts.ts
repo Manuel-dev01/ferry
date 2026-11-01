@@ -54,6 +54,12 @@ export const mavapayInvoiceRequestSchema = z.object({
   units: z.string().regex(/^\d+$/),
 })
 
+/** Whether Mavapay Money received a Lightning payment; unknown when it gives no status link. */
+export const mavapayStatusResponseSchema = z.object({
+  status: z.enum(['unknown', 'pending', 'paid']),
+})
+export type MavapayStatusResponse = z.infer<typeof mavapayStatusResponseSchema>
+
 export const lnInvoiceResponseSchema = z.object({
   invoice: z.string(),
   paymentHash: z.string(),
@@ -67,7 +73,9 @@ export const lnInvoiceResponseSchema = z.object({
 export type LnInvoiceResponse = z.infer<typeof lnInvoiceResponseSchema>
 
 export const mpesaStatusResponseSchema = z.object({
-  status: z.enum(['unknown', 'pending', 'completed']),
+  status: z.enum(['unknown', 'pending', 'completed', 'failed']),
+  /** Tando received the Lightning payment (an issued invoice is "pending" before that). */
+  paid: z.boolean(),
   /** The M-Pesa confirmation code, once delivered. */
   receipt: z.string().nullable(),
   kes: z.number().nullable(),

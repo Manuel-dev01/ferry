@@ -32,6 +32,7 @@ export const TRANSFER_GAS = 120_000n
 const DAY_MS = 24 * 60 * 60_000
 const RECEIPT_TIMEOUT_MS = 60_000
 const RECEIVED_WINDOW_MS = 7 * DAY_MS
+const HANDOFF_MAX_AGE_S = 3 * 24 * 60 * 60
 
 /** POL a wallet needs so the wallet's own check (gas limit × max fee) passes, with 25% margin. */
 export const transferGasNeedWei = (maxFeePerGas: bigint) => (TRANSFER_GAS * maxFeePerGas * 5n) / 4n
@@ -173,6 +174,12 @@ export function handoffRoutes(deps: Deps) {
         'NOT_A_TRANSFER',
         'That transaction is not a USDT transfer from a wallet',
       )
+    }
+    // Only transfers made around the time of a Ferry cash-out count; an old public USDT
+    // transfer posted later can't inflate Proof of Ferry.
+    const block = await polygon.getBlock({ blockNumber: receipt.blockNumber })
+    if (Date.now() / 1000 - Number(block.timestamp) > HANDOFF_MAX_AGE_S) {
+      throw new HttpError(400, 'TOO_OLD', 'That transfer is too old to record as a cash-out')
     }
     const row = {
       txHash,

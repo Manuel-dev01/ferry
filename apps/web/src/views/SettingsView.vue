@@ -79,7 +79,7 @@ const appearanceLabel = () =>
             v-if="session.evmAddress"
             type="button"
             class="fy-btn fy-btn--secondary fy-btn--sm"
-            style="min-height: 40px; font-size: 14px"
+            style="font-size: 14px"
             @click="session.disconnectEvm()"
           >
             {{ t('settings.disconnect') }}

@@ -59,12 +59,21 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
-  async function loadMeta() {
+  /** Retries a few times: without meta the gas top-up is skipped. Screens assume Fonbnk. */
+  async function loadMeta(attempt = 0): Promise<void> {
     try {
       meta.value = await api<MetaResponse>('/v1/meta')
     } catch {
-      meta.value = null // screens fall back to built-in defaults
+      if (attempt < 4) {
+        await new Promise((r) => setTimeout(r, 2_000 * 2 ** attempt))
+        return loadMeta(attempt + 1)
+      }
     }
+  }
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !meta.value) void loadMeta()
+    })
   }
 
   async function loadBalances() {

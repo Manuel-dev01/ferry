@@ -273,7 +273,7 @@
     "title": "History",
     "all": "All",
     "inProgress": "In progress",
-    "refunded": "Refunded",
+    "refunded": "Failed",
     "today": "Today",
     "thisWeek": "This week",
     "earlier": "Earlier",
@@ -293,11 +293,12 @@
       "settled": "Paid",
       "refunded": "Refunded",
       "expired": "Expired",
-      "failed": "Failed · refunded",
+      "failed": "Failed · nothing moved",
       "sending": "Sending",
       "handed_off": "Sent to Fonbnk",
       "received": "Added",
-      "swapping": "Swapping…"
+      "swapping": "Swapping…",
+      "awaiting": "Checking…"
     },
     "topupTitle": "Added money",
     "cashoutTitle": "Cash-out · {method}",
@@ -316,7 +317,7 @@
     "appearanceLight": "Light",
     "appearanceDark": "Dark",
     "support": "Support",
-    "supportValue": "Help with a payout",
+    "supportValue": "Report a problem (public GitHub)",
     "privacy": "Privacy",
     "terms": "Terms",
     "openSource": "Open source",
@@ -335,8 +336,12 @@
   },
   "errors": {
     "generic": "Something went wrong. Nothing was sent.",
-    "offline": "You're offline. Check your connection and try again.",
-    "ref": "Ref {ref}"
+    "offline": "You’re offline. Connect and try again.",
+    "ref": "ref {ref}",
+    "timeout": "That took too long. Check your connection and try again. Nothing was sent.",
+    "network": "We couldn’t reach Ferry. Check your connection and try again.",
+    "partner": "The payout partner isn’t answering right now. Try again in a minute, or pick another offer.",
+    "server": "Something went wrong on our side. Try again in a minute."
   },
   "landing": {
     "nav": {
@@ -380,10 +385,10 @@
     "countries": {
       "title": "Cash out in 13 countries. Send from anywhere.",
       "lede": "Pay yourself in Lagos, family in Nairobi or a friend in Banjul. Every offer shows the amount in their currency before you approve.",
-      "ng": "174 banks and fintechs, including OPay, PalmPay, Kuda, Moniepoint and GTBank.",
-      "ke": "M-Pesa, Airtel Money and banks.",
-      "ug": "MTN and Airtel mobile money.",
-      "tz": "M-Pesa, Airtel Money and more.",
+      "ng": "Bank transfers to Nigerian banks and fintechs, plus airtime.",
+      "ke": "M-Pesa Direct in about a minute, banks, tills, Paybills and airtime.",
+      "ug": "MTN and Airtel mobile money, plus airtime.",
+      "tz": "M-Pesa, Airtel Money and more, plus airtime.",
       "ngCur": "Naira · ₦",
       "keCur": "Shilling · KSh",
       "ugCur": "Shilling · USh",
@@ -395,7 +400,7 @@
       "custodyTitle": "Self-custodial",
       "custodyBody": "Money goes straight from your wallet to the payout partner. Ferry never holds it, and never sees a key.",
       "namesTitle": "Compare before you send",
-      "namesBody": "Every route shows what arrives and what it costs before you approve. No hidden Ferry fee.",
+      "namesBody": "Every route shows what arrives before you approve. Ferry adds no fee of its own.",
       "partnersTitle": "Established partners",
       "partnersBody": "Payouts are made by Fonbnk, by Tando over M-Pesa, and by Mavapay. Lightning routes are atomic: if the payout fails, so does the payment.",
       "openTitle": "Open source",
@@ -428,7 +433,7 @@
     "faq": {
       "title": "Questions, answered.",
       "q1": "What does it cost?",
-      "a1": "Ferry adds no fee of its own. Each offer shows the partner’s rate and fee before you approve, and Lightning routes add Nimiq Pay’s swap fee, which it shows you too. Ferry tops up Polygon gas for USDT transfers, so you don’t need a gas token.",
+      "a1": "Ferry adds no fee of its own. Fonbnk offers show its rate and fee; M-Pesa Direct already includes Tando’s fee of about 1% in the amount shown; Lightning routes add Nimiq Pay’s swap fee, which it shows before you approve. Ferry tops up Polygon gas for USDT transfers, so you don’t need a gas token.",
       "q2": "How much can I send?",
       "a2": "From about 1 USDT up to 200 USDT per cash-out. M-Pesa Direct goes up to KSh 49,000 at a time, and airtime has lower caps per country.",
       "q3": "How fast is it?",
@@ -569,7 +574,12 @@
         "paidTitle": "Payment complete",
         "step": "Step 1 of 2"
       }
-    }
+    },
+    "connectToSend": "Connect your wallet to send",
+    "sendUncertain": "We can’t tell whether the transfer went out ({reason}). Check Nimiq Pay’s activity before sending again.",
+    "checkedRetry": "I checked: it didn’t go out. Try again",
+    "gasReverted": "the gas top-up failed on the network",
+    "startAgain": "Start a new cash-out"
   },
   "topup": {
     "header": "Add money",
@@ -607,12 +617,13 @@
       "TZ": "With M-Pesa, Airtel Money and more.",
       "GH": "With mobile money.",
       "ZA": "By bank transfer in rand."
-    }
+    },
+    "watchAgain": "Ferry stopped watching. Tap to check for your USDT again"
   },
   "proof": {
     "header": "Proof of Ferry",
     "title": "Proof of Ferry",
-    "lede": "Every cash-out Ferry sees on-chain, counted in public. No names, no account numbers.",
+    "lede": "Every cash-out Ferry can prove, on-chain or by M-Pesa receipt, counted in public. No names, no account numbers.",
     "live": "Live · updated {time}",
     "loading": "Loading live numbers…",
     "failed": "We couldn't load the numbers. Check your connection and try again.",
@@ -672,11 +683,14 @@
     "step2": "USDT locked for you on Polygon",
     "step3": "USDT released to your wallet",
     "waiting": "This usually takes under a minute. It's safe to leave; Ferry picks up where it left off.",
-    "slow": "Taking longer than usual. Ferry keeps checking; you can leave and come back.",
+    "slow": "Taking longer than usual. Ferry keeps checking for a while; you can leave and come back.",
     "failed": "The swap didn't complete, so no USDT was sent. Your NIM comes back when the Lightning payment times out.",
     "doneTitle": "USDT arrived",
     "doneNote": "It's in your Nimiq Pay wallet. Cash it out now, or keep it as USDT.",
-    "cashOutNow": "Cash out now"
+    "cashOutNow": "Cash out now",
+    "quoteFailed": "We couldn’t get a price from the swap service just now.",
+    "stoppedChecking": "Ferry stopped checking for now. Check again; the swap is also in History.",
+    "checkAgain": "Check again"
   },
   "offers": {
     "loading": "Finding the best rate…",
@@ -692,7 +706,8 @@
       "mpesa_ln": "One screen: enter the number, approve once. Arrives in about a minute, with an M-Pesa receipt. Pay with NIM or USDT.",
       "mavapay_ln": "One screen to your own bank via your Mavapay Money address. Pay with NIM or USDT."
     },
-    "note": "≈ marks Ferry’s estimate: Nimiq Pay shows its swap fee before you approve. These services are run by third parties under their own terms."
+    "note": "≈ marks Ferry’s estimate. It already includes the partner’s fee (about 1% for M-Pesa Direct); Nimiq Pay shows its swap fee before you approve. These services are run by third parties under their own terms.",
+    "needsUsdt": "Fonbnk is paid in USDT, and you have {have} USDT. Lower the amount, or pick an offer you can pay with NIM."
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",
@@ -712,7 +727,7 @@
     "bankGets": "Your bank gets",
     "address": "Your Mavapay Money address",
     "addressHelp": "Ferry remembers it on this phone.",
-    "badAddress": "It should look like yourname@mavapay.money.",
+    "badAddress": "It should look like yourname{'@'}mavapay.money.",
     "howTitle": "How to get a Mavapay Money address",
     "how1": "Open app.mavapay.money and sign up.",
     "how2": "Verify your identity (BVN in Nigeria, ID elsewhere).",
@@ -731,12 +746,24 @@
     "stepPaid": "Paid from Nimiq Pay",
     "stepMpesa": "M-Pesa payout",
     "waiting": "Usually about a minute. It’s safe to leave; History keeps it.",
-    "slow": "Taking longer than usual. Ferry keeps checking; the recipient also gets an M-Pesa SMS.",
+    "slow": "Taking longer than usual. Ferry keeps checking for a few more minutes; it’s also in History.",
     "mpesaDone": "Delivered to M-Pesa",
-    "mavapayDone": "Sent to your bank",
+    "mavapayDone": "Sent to Mavapay Money",
     "receipt": "M-Pesa receipt",
     "viewReceipt": "View the M-Pesa receipt",
     "mavapayNote": "Mavapay Money pays it into your linked bank account, usually within minutes. Tap below once it’s there.",
-    "mavapayThanks": "Marked as received. Thanks!"
+    "mavapayThanks": "Marked as received. Thanks!",
+    "invalid": "Nimiq Pay couldn’t make this payment. Check your balance and try again. Nothing was sent.",
+    "checking": "Checking",
+    "stepMavapay": "Mavapay Money receives it",
+    "uncertain": "Nimiq Pay didn’t confirm the payment, so Ferry is checking whether it went out. Don’t pay again meanwhile.",
+    "stoppedChecking": "Ferry stopped checking for now. Tap below to check again; it’s also in History.",
+    "checkAgain": "Check again",
+    "mpesaFailed": "The M-Pesa payout failed, so the Lightning payment fails back to your wallet.",
+    "notPaid": "This payment didn’t go through. Nothing left your wallet.",
+    "failedTitle": "Didn’t go through",
+    "tryAgain": "Try again",
+    "mavapayUnconfirmed": "Payment not confirmed",
+    "mavapayUnconfirmedNote": "Nimiq Pay didn’t confirm this payment and Mavapay gives no status. Check Nimiq Pay’s activity before paying again."
   }
 }

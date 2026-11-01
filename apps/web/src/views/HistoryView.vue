@@ -30,9 +30,14 @@ const filtered = computed(() =>
       ? true
       : filter.value === 'refunded'
         ? e.status === 'refunded' || e.status === 'failed'
-        : !(isOfframpStatus(e.status) && isTerminal(e.status)),
+        : !isFinished(e.status),
   ),
 )
+
+/** Partner flows end in their own statuses: received (top-up, NIM swap) or failed. */
+const PARTNER_FINAL = new Set(['received', 'settled', 'failed', 'expired'])
+const isFinished = (status: string) =>
+  PARTNER_FINAL.has(status) || (isOfframpStatus(status) && isTerminal(status))
 
 const DAY = 86_400_000
 function bucket(at: number): 'today' | 'thisWeek' | 'earlier' {

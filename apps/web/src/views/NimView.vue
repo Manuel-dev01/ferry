@@ -72,9 +72,12 @@ const amountError = computed(() => {
 
 const quote = ref<NimSwapQuote | null>(null)
 const quoting = ref(false)
+const quoteFailed = ref(false)
+const quoteRetry = ref(0)
 let quoteSeq = 0
 let quoteTimer: ReturnType<typeof setTimeout> | undefined
-watch(amountUnits, (u) => {
+watch([amountUnits, quoteRetry], ([u]) => {
+  quoteFailed.value = false
   clearTimeout(quoteTimer)
   quote.value = null
   if (u === null || amountError.value) return
@@ -85,7 +88,10 @@ watch(amountUnits, (u) => {
       const q = await quoteNimSwap(u)
       if (seq === quoteSeq) quote.value = q
     } catch {
-      if (seq === quoteSeq) quote.value = null
+      if (seq === quoteSeq) {
+        quote.value = null
+        quoteFailed.value = true
+      }
     } finally {
       if (seq === quoteSeq) quoting.value = false
     }
@@ -116,11 +122,15 @@ async function prepare() {
 
 const now = ref(Math.floor(Date.now() / 1000))
 const clock = setInterval(() => (now.value = Math.floor(Date.now() / 1000)), 1000)
+/** null when LendaSwap gave no expiry: Pay stays available and no countdown is shown. */
 const secondsLeft = computed(() =>
-  swap.value ? Math.max(0, swap.value.invoiceExpiresAt - now.value) : 0,
+  swap.value && swap.value.invoiceExpiresAt > 0
+    ? Math.max(0, swap.value.invoiceExpiresAt - now.value)
+    : null,
 )
 const countdown = computed(() => {
   const s = secondsLeft.value
+  if (s === null) return '—'
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 })
 
@@ -155,6 +165,7 @@ async function pay() {
   if (!s || payLocked.value) return
   busy.value = true
   problem.value = ''
+  remember('awaiting')
   try {
     const nimiq = await initNimiq()
     await nimiq.payLightningInvoice({ invoice: s.invoice })
@@ -166,9 +177,11 @@ async function pay() {
     const e = classifyNimiqError(err)
     switch (e.kind) {
       case 'rejected':
+        history.setStatus(s.id, 'failed')
         problem.value = t('nimSwap.cancelled')
         break
       case 'invalid':
+        history.setStatus(s.id, 'failed')
         problem.value = t('nimSwap.expired')
         swap.value = null
         phase.value = 'amount'
@@ -183,10 +196,15 @@ async function pay() {
         void follow()
         break
       case 'unsupported':
+        history.setStatus(s.id, 'failed')
         problem.value = t('nimSwap.unsupported')
         break
       default:
-        problem.value = t('nimSwap.payFailed')
+        // wallet or unknown errors: it may still have gone out, so follow the swap instead
+        payLocked.value = true
+        remember('swapping')
+        phase.value = 'progress'
+        void follow()
     }
   } finally {
     busy.value = false
@@ -241,9 +259,15 @@ async function follow() {
       slow.value = Date.now() - started > 5 * 60_000
       await new Promise((r) => setTimeout(r, POLL_MS))
     }
+    if (!stopped) stoppedChecking.value = true
   } finally {
     following = false
   }
+}
+const stoppedChecking = ref(false)
+function checkAgain() {
+  stoppedChecking.value = false
+  void follow()
 }
 
 const steps = computed(() => {
@@ -309,6 +333,14 @@ function cashOut() {
           }}</span>
         </div>
 
+        <Banner
+          v-if="quoteFailed && !quoting"
+          tone="warning"
+          icon="alert"
+          :body="t('nimSwap.quoteFailed')"
+          :action="t('common.tryAgain')"
+          @action="quoteRetry++"
+        />
         <div v-if="quote || quoting" class="fy-panel" style="padding: 14px 16px">
           <template v-if="quote">
             <div style="font: 700 18px var(--fy-font-body)">
@@ -437,10 +469,18 @@ function cashOut() {
         </ol>
         <Banner v-if="problem" tone="danger" :body="problem" />
         <Banner
-          v-else
+          v-else-if="!stoppedChecking"
           tone="brand"
           icon="clock"
           :body="slow ? t('nimSwap.slow') : t('nimSwap.waiting')"
+        />
+        <Banner
+          v-if="stoppedChecking && !problem"
+          tone="warning"
+          icon="clock"
+          :body="t('nimSwap.stoppedChecking')"
+          :action="t('nimSwap.checkAgain')"
+          @action="checkAgain"
         />
       </div>
     </template>

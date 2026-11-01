@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { FONBNK_COUNTRIES, FONBNK_COUNTRY_CODES, type StatsResponse } from '@ferry/shared'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { renderSVG } from 'uqr'
 import FerryLogo from '../components/FerryLogo.vue'
@@ -21,13 +21,19 @@ const openUrl = openInNimiqPayUrl()
 const qrSvg = renderSVG(openUrl, { border: 1, whiteColor: '#FFFFFF', blackColor: '#0B0E3A' })
 
 const stats = ref<StatsResponse | null>(null)
-onMounted(async () => {
+async function loadStats() {
   try {
     stats.value = await api<StatsResponse>('/v1/stats')
   } catch {
-    stats.value = null
+    // keep the last numbers; the tiles show dashes until the first load
   }
+}
+let statsTimer: ReturnType<typeof setInterval> | undefined
+onMounted(() => {
+  void loadStats()
+  statsTimer = setInterval(() => void loadStats(), 60_000)
 })
+onUnmounted(() => clearInterval(statsTimer))
 const hasStats = computed(() => !!stats.value && stats.value.cashouts > 0)
 const statTiles = computed(() => {
   const s = stats.value
@@ -713,6 +719,7 @@ const countries = [
   font-size: 17px;
   text-decoration: none;
   white-space: nowrap;
+  max-width: 100%;
   transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .cta:active {
@@ -748,6 +755,7 @@ const countries = [
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100svh;
   overflow: hidden;
   display: flex;
   flex-wrap: wrap;
@@ -968,8 +976,9 @@ const countries = [
   gap: 6px;
 }
 .stat__v {
-  font: 800 clamp(40px, 4.4vw, 56px) / 1 var(--fy-font-display);
+  font: 800 clamp(26px, 7.5vw, 56px) / 1 var(--fy-font-display);
   letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
 }
 .payouts {
   border-radius: 24px;
@@ -1253,5 +1262,24 @@ const countries = [
   box-shadow: inset 0 0 0 1px rgba(11, 14, 58, 0.14);
   font-size: 15px;
   font-weight: 600;
+}
+@media (max-width: 480px) {
+  .cta {
+    white-space: normal;
+    height: auto;
+    min-height: 60px;
+    padding-block: 10px;
+    line-height: 1.2;
+  }
+  .payouts__row {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    row-gap: 2px;
+    padding: 10px 18px;
+  }
+  .payouts__to {
+    grid-column: 2;
+    grid-row: 2;
+  }
 }
 </style>

@@ -7,15 +7,18 @@ import {
   offersQuerySchema,
   type FonbnkCountry,
   type LnInvoiceResponse,
+  type MavapayStatusResponse,
   type Offer,
   type OffersResponse,
 } from '@ferry/shared'
+import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import type { AppEnv, Deps } from '../app'
 import { lnPayouts } from '../db/schema'
 import { HttpError } from '../errors'
 import {
+  checkVerifyUrl,
   requestInvoice,
   resolveLightningAddress,
   validateInvoice,
@@ -272,28 +275,26 @@ export function payoutRoutes(deps: Deps) {
       nowSeconds: Math.floor(Date.now() / 1000),
     })
     c.get('log').info({ route: 'mpesa_ln', kes: body.kes, hash: v.paymentHash }, 'invoice issued')
+    // Bookkeeping for Proof of Ferry must not delay the user's approval sheet.
     if (db) {
       const sats = amountMsat / 1000n
-      const units = await btcUsdCents()
+      void btcUsdCents()
         .then((cents) => unitsForSats(sats, cents))
-        .catch(() => null)
-      if (units !== null) {
-        await db
-          .insert(lnPayouts)
-          .values({
-            paymentHash: v.paymentHash,
-            route: 'mpesa_ln',
-            country: 'KE',
-            channel: 'mobile_money',
-            fiatAmount: BigInt(body.kes),
-            sats,
-            amountUnits: units,
-          })
-          .onConflictDoNothing()
-          .catch((err: unknown) =>
-            c.get('log').warn({ err: String(err) }, 'ln payout not recorded'),
-          )
-      }
+        .then((units) =>
+          db
+            .insert(lnPayouts)
+            .values({
+              paymentHash: v.paymentHash,
+              route: 'mpesa_ln',
+              country: 'KE',
+              channel: 'mobile_money',
+              fiatAmount: BigInt(body.kes),
+              sats,
+              amountUnits: units,
+            })
+            .onConflictDoNothing(),
+        )
+        .catch((err: unknown) => c.get('log').warn({ err: String(err) }, 'ln payout not recorded'))
     }
     const res: LnInvoiceResponse = {
       invoice: invoice.pr,
@@ -311,7 +312,7 @@ export function payoutRoutes(deps: Deps) {
     const hash = c.req.param('hash').toLowerCase()
     if (!/^[0-9a-f]{64}$/.test(hash)) throw new HttpError(400, 'INVALID_REQUEST', 'Bad hash')
     const body = await tandoStatus(fetchImpl, hash)
-    if (db) await recordDelivery(db, hash, body).catch(() => undefined)
+    if (db) await recordDelivery(db, hash, body, true).catch(() => undefined)
     return c.json(body)
   })
 
@@ -321,7 +322,8 @@ export function payoutRoutes(deps: Deps) {
     const address = body.address.toLowerCase()
     const units = BigInt(body.units)
     const { payRequest } = await resolveLightningAddress(fetchImpl, address)
-    const sats = satsForUnits(units, await btcUsdCents())
+    // Same allowance as the offer, so the user pays what the offer showed (A5).
+    const sats = afterSwapAllowance(satsForUnits(units, await btcUsdCents()))
     const amountMsat = sats * 1000n
     const { invoice } = await requestInvoice(fetchImpl, payRequest, amountMsat)
     const v = validateInvoice(invoice.pr, {
@@ -330,6 +332,23 @@ export function payoutRoutes(deps: Deps) {
       nowSeconds: Math.floor(Date.now() / 1000),
     })
     c.get('log').info({ route: 'mavapay_ln', sats: sats.toString() }, 'invoice issued')
+    if (db) {
+      // Kept only so Ferry can read the payment status later; Mavapay isn't counted on Proof.
+      void db
+        .insert(lnPayouts)
+        .values({
+          paymentHash: v.paymentHash,
+          route: 'mavapay_ln',
+          country: 'NG',
+          channel: 'bank',
+          fiatAmount: 0n,
+          sats,
+          amountUnits: units,
+          verifyUrl: invoice.verify ?? null,
+        })
+        .onConflictDoNothing()
+        .catch((err: unknown) => c.get('log').warn({ err: String(err) }, 'ln payout not recorded'))
+    }
     const res: LnInvoiceResponse = {
       invoice: invoice.pr,
       paymentHash: v.paymentHash,
@@ -339,6 +358,28 @@ export function payoutRoutes(deps: Deps) {
       currency: 'BTC',
     }
     return c.json(res)
+  })
+
+  // Whether Mavapay Money received the payment, through the invoice's LUD-21 status link.
+  r.get('/ln/mavapay/:hash', async (c) => {
+    const hash = c.req.param('hash').toLowerCase()
+    if (!/^[0-9a-f]{64}$/.test(hash)) throw new HttpError(400, 'INVALID_REQUEST', 'Bad hash')
+    let body: MavapayStatusResponse = { status: 'unknown' }
+    const row = db
+      ? (
+          await db
+            .select({ verifyUrl: lnPayouts.verifyUrl })
+            .from(lnPayouts)
+            .where(eq(lnPayouts.paymentHash, hash))
+            .limit(1)
+            .catch(() => [])
+        )[0]
+      : undefined
+    if (row?.verifyUrl) {
+      const paid = await checkVerifyUrl(fetchImpl, row.verifyUrl).catch(() => null)
+      body = { status: paid === null ? 'unknown' : paid ? 'paid' : 'pending' }
+    }
+    return c.json(body)
   })
 
   return r

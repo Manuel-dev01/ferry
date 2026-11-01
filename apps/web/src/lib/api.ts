@@ -18,27 +18,39 @@ export class ApiRequestError extends Error {
   }
 }
 
+/** No request may hang a screen: a stalled network becomes a TIMEOUT error the UI can show. */
+const DEFAULT_TIMEOUT_MS = 20_000
+
 export async function api<T>(
   path: string,
-  init?: { method?: 'GET' | 'POST'; body?: unknown; headers?: Record<string, string> },
+  init?: {
+    method?: 'GET' | 'POST'
+    body?: unknown
+    headers?: Record<string, string>
+    timeoutMs?: number
+  },
 ): Promise<T> {
   const headers: Record<string, string> = { ...init?.headers }
   if (init?.body !== undefined) headers['Content-Type'] = 'application/json'
+  const signal = AbortSignal.timeout(init?.timeoutMs ?? DEFAULT_TIMEOUT_MS)
   let res: Response
+  let json: unknown
   try {
     res = await fetch(`${API_URL}${path}`, {
       method: init?.method ?? 'GET',
       headers,
       body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
+      signal,
     })
+    json = await res.json().catch(() => null)
   } catch {
+    if (signal.aborted) throw new ApiRequestError(0, 'TIMEOUT', 'The request took too long')
     throw new ApiRequestError(
       0,
       navigator.onLine === false ? 'OFFLINE' : 'NETWORK',
       'Network request failed',
     )
   }
-  const json: unknown = await res.json().catch(() => null)
   if (!res.ok) {
     const parsed = apiErrorSchema.safeParse(json)
     if (parsed.success) {

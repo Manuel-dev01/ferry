@@ -2,14 +2,13 @@
 import {
   FONBNK_COUNTRIES,
   fonbnkOfframpUrl,
-  isCorridorCurrency,
+  formatUsdt,
   isFonbnkCountry,
   MoneyFormatError,
   parseUsdt,
   POLYGON_CHAIN_ID_HEX,
   USDT0_ADDRESS,
   recordCountry,
-  usdtToFiatMinor,
   type FonbnkChannel,
   type FonbnkCountry,
   type FonbnkCountryInfo,
@@ -24,9 +23,10 @@ import AppHeader from '../../components/AppHeader.vue'
 import Banner from '../../components/Banner.vue'
 import Icon from '../../components/Icon.vue'
 import { ApiRequestError } from '../../lib/api'
+import { friendlyError } from '../../lib/errors'
 import { channelLabel, flagOf } from '../../lib/fonbnk'
 import { ferryApi } from '../../lib/ferryApi'
-import { fiatDisplay, polygonscanTx, usdtDisplay, wholeFiatDisplay } from '../../lib/format'
+import { polygonscanTx, rateDisplay, usdtDisplay, wholeFiatDisplay } from '../../lib/format'
 import {
   classifyEvmError,
   currentChainId,
@@ -120,7 +120,9 @@ const amountError = computed(() => {
   const units = amountUnits.value
   if (units === null) return ''
   if (units < minUnits.value) return t('fonbnk.tooLow', { amount: minUsdt.value })
-  if (session.balances && units > session.balances.usdt) return t('fonbnk.tooHigh')
+  if (session.balances && units > session.balances.usdt && !nimPossible.value) {
+    return t('fonbnk.tooHigh')
+  }
   if (airtimeMax.value && units > parseUsdt(airtimeMax.value)) {
     return t('fonbnk.airtimeMax', { amount: airtimeMax.value })
   }
@@ -131,27 +133,19 @@ const amountError = computed(() => {
 })
 const amountOk = computed(() => amountUnits.value !== null && !amountError.value)
 
+/** M-Pesa Direct (Kenya mobile money) and Mavapay Money (NG, KE, ZA banks) accept NIM too. */
+const nimPossible = computed(
+  () =>
+    mode.value === 'cashout' &&
+    ((country.value === 'KE' && channel.value === 'mobile_money') ||
+      (['NG', 'KE', 'ZA'].includes(country.value) && channel.value === 'bank')),
+)
+/** Fonbnk is paid in USDT from this wallet, so it needs the balance. */
+const routeProblem = ref('')
+
 function useMax() {
   amountInput.value = usdtDisplay(maxUnits.value).replace(/,/g, '')
 }
-
-// Indicative only: Fonbnk quotes the exact payout on its own screen.
-const rate = ref<string | null>(null)
-async function loadRate() {
-  rate.value = null
-  const c = currency.value
-  if (!isCorridorCurrency(c)) return
-  try {
-    rate.value = (await ferryApi.quote(c, '10', 'usdt')).rate
-  } catch {
-    // no estimate is fine; Fonbnk shows the real number
-  }
-}
-const estimate = computed(() =>
-  rate.value && amountUnits.value
-    ? fiatDisplay(usdtToFiatMinor(amountUnits.value, rate.value), currency.value)
-    : null,
-)
 
 // ---- Fonbnk ----
 
@@ -218,6 +212,12 @@ function pickOffer(o: Offer) {
 
 function toFonbnk() {
   if (!amountOk.value) return
+  routeProblem.value = ''
+  const units = amountUnits.value
+  if (session.balances && units !== null && units > session.balances.usdt) {
+    routeProblem.value = t('offers.needsUsdt', { have: usdtDisplay(session.balances.usdt) })
+    return
+  }
   phase.value = 'fonbnk'
   tab.value = 'details'
   widgetMounted.value = true
@@ -260,7 +260,29 @@ let stopped = false
 onUnmounted(() => (stopped = true))
 
 const describe = (err: unknown) =>
-  err instanceof ApiRequestError ? err.message : evmErrorText(err)
+  err instanceof ApiRequestError ? friendlyError(err, t) : evmErrorText(err)
+
+// A1: Fonbnk is paid from the connected wallet; connecting is its own tap.
+async function connectWallet() {
+  problem.value = ''
+  busy.value = true
+  status.value = t('fonbnk.confirmInWallet')
+  const result = await session.connectEvm()
+  busy.value = false
+  status.value = ''
+  if (result === 'rejected') problem.value = t('evm.rejected')
+  else if (result !== 'ok') problem.value = t('evm.unavailable')
+}
+
+/**
+ * A15: after an error the wallet may still have broadcast the transfer. Send stays locked until
+ * the user has checked Nimiq Pay's activity and says it didn't go out.
+ */
+const sendUncertain = ref(false)
+function retryAfterCheck() {
+  sendUncertain.value = false
+  problem.value = ''
+}
 
 // The wallet sends on whatever network it is set to, and the USDT is on Polygon. Switching is its
 // own tap and approval, never chained onto the send.
@@ -309,7 +331,20 @@ async function send() {
     if (session.meta?.gasTopup) {
       status.value = t('fonbnk.gettingGas')
       try {
-        await ferryApi.gasTopup(session.evmAddress)
+        const before = session.balances?.pol ?? 0n
+        const gas = await ferryApi.gasTopup(session.evmAddress)
+        if (gas.status === 'reverted') {
+          problem.value = t('fonbnk.gasFailed', { reason: t('fonbnk.gasReverted') })
+          return
+        }
+        if (gas.status === 'pending' || gas.status === 'unknown') {
+          // Wait (up to 30 s) for the POL to show, so the wallet sheet doesn't open without gas.
+          for (let i = 0; i < 10; i++) {
+            await new Promise((r) => setTimeout(r, 3_000))
+            await session.loadBalances().catch(() => undefined)
+            if ((session.balances?.pol ?? 0n) > before) break
+          }
+        }
       } catch (err) {
         // Not fatal: the wallet may already hold enough POL. Its own sheet will say if not.
         problem.value = t('fonbnk.gasFailed', { reason: describe(err) })
@@ -324,10 +359,18 @@ async function send() {
         data: encodeFunctionData({ abi: erc20Abi, functionName: 'transfer', args: [to, units] }),
       })
     } catch (err) {
-      problem.value =
-        classifyEvmError(err) === 'rejected'
-          ? t('fonbnk.cancelled')
-          : t('fonbnk.sendFailed', { reason: describe(err) })
+      if (classifyEvmError(err) === 'rejected') {
+        problem.value = t('fonbnk.cancelled')
+        return
+      }
+      const reason = describe(err)
+      // Errors raised before broadcast are certain; anything else may have gone out.
+      if (/not enough gas|insufficient funds|execution reverted/i.test(reason)) {
+        problem.value = t('fonbnk.sendFailed', { reason })
+      } else {
+        sendUncertain.value = true
+        problem.value = t('fonbnk.sendUncertain', { reason })
+      }
       return
     }
     problem.value = ''
@@ -376,17 +419,34 @@ async function follow(hash: Hex) {
       }
       if (res.status === 'reverted') {
         history.setStatus(hash, 'failed')
+        reverted.value = true
         problem.value = t('fonbnk.reverted')
         return
       }
-    } catch {
-      // a failed read is not an outcome
+    } catch (err) {
+      // A read that fails for good (not a transfer, too old) ends the wait; others retry.
+      if (
+        err instanceof ApiRequestError &&
+        err.status >= 400 &&
+        err.status < 500 &&
+        err.status !== 404 &&
+        err.status !== 429
+      ) {
+        problem.value = friendlyError(err, t)
+        slow.value = true
+        return
+      }
     }
     await new Promise((r) => setTimeout(r, HANDOFF_POLL_MS))
   }
   slow.value = true
 }
 const confirmed = ref(false)
+const reverted = ref(false)
+/** "I've got my money" is offered once the transfer is confirmed, or Ferry stopped checking. */
+const canMarkPaid = computed(
+  () => !!txHash.value && !reverted.value && (confirmed.value || slow.value),
+)
 
 const copied = ref(false)
 async function copyHash() {
@@ -416,7 +476,7 @@ async function copyAndGo() {
 const sentAt = ref<number | null>(null)
 const paidAt = ref<number | null>(null)
 function markPaid() {
-  if (!txHash.value) return
+  if (!txHash.value || !canMarkPaid.value) return
   history.markPaid(txHash.value)
   void ferryApi.handoffReceived(txHash.value).catch(() => undefined) // stats only; never blocks
   paidAt.value = history.find(txHash.value)?.paidAt ?? Date.now()
@@ -456,7 +516,7 @@ onMounted(() => {
       if (sent === 'airtime') mode.value = 'airtime'
       else if (sent && PAY_CHANNELS.includes(sent)) mode.value = 'pay'
       channel.value = sent ?? channel.value
-      amountInput.value = usdtDisplay(BigInt(entry.amountUnits ?? '0')).replace(/,/g, '')
+      amountInput.value = formatUsdt(BigInt(entry.amountUnits ?? '0'))
       txHash.value = tx as Hex
       sentAt.value = entry.createdAt
       if (entry.status === 'settled') {
@@ -467,15 +527,14 @@ onMounted(() => {
       }
       phase.value = 'done'
       confirmed.value = entry.status === 'handed_off'
-      if (!confirmed.value) void follow(tx as Hex)
+      reverted.value = entry.status === 'failed'
+      if (!confirmed.value && !reverted.value) void follow(tx as Hex)
       return
     }
   }
-  void loadRate()
 })
 watch(country, () => {
   if (!channels.value.includes(channel.value)) channel.value = channels.value[0] ?? 'bank'
-  void loadRate()
 })
 
 const title = computed(() => `${flagOf(country.value)} ${info.value.name}`)
@@ -503,7 +562,7 @@ function onBack() {
         >
         <span class="fy-header__spacer" />
       </header>
-      <form class="fy-content" style="gap: 20px" novalidate @submit.prevent="toFonbnk">
+      <form class="fy-content" style="gap: 20px" novalidate @submit.prevent="chooseRoute">
         <h1 class="fy-title" style="font-size: 24px; line-height: 1.15">{{ mt('title') }}</h1>
 
         <div v-if="channels.length > 1" class="flex flex-col gap-1.5">
@@ -568,12 +627,7 @@ function onBack() {
           }}</span>
         </div>
 
-        <div v-if="estimate" class="fy-panel" style="padding: 14px 16px">
-          <div style="font: 700 20px var(--fy-font-body)">
-            {{ t('fonbnk.estimate', { amount: estimate }) }}
-          </div>
-          <div class="fy-caption">{{ t('fonbnk.estimateNote') }}</div>
-        </div>
+        <Banner v-if="routeProblem" tone="warning" icon="alert" :body="routeProblem" />
 
         <section class="flex flex-col gap-2">
           <span class="fy-section-label">{{ t('fonbnk.howTitle') }}</span>
@@ -634,13 +688,20 @@ function onBack() {
           <span class="s-offer__meta">{{ t(`offers.how.${o.route}`) }}</span>
           <span class="s-offer__foot">
             <Icon name="swap" :size="14" />
-            {{ t('offers.rate', { rate: o.rate, currency: o.currency }) }}
-            <template v-if="o.fee"> · {{ t('offers.fee', { fee: o.fee }) }}</template>
+            {{
+              o.estimate
+                ? rateDisplay(o.rate, o.currency).replace('=', '≈')
+                : rateDisplay(o.rate, o.currency)
+            }}
+            <template v-if="o.fee">
+              · {{ t('offers.fee', { fee: wholeFiatDisplay(o.fee, o.currency) }) }}</template
+            >
             <template v-if="o.route === 'mavapay_ln'">
               · {{ savedMavapay ? savedMavapay : t('offers.needsAccount') }}</template
             >
           </span>
         </button>
+        <Banner v-if="routeProblem" tone="warning" icon="alert" :body="routeProblem" />
         <p class="fy-caption" style="margin: 0">{{ t('offers.note') }}</p>
       </div>
     </template>
@@ -694,7 +755,12 @@ function onBack() {
 
     <template v-if="phase === 'fonbnk' && tab === 'details'">
       <div v-if="txHash" class="fy-bottom">
-        <button type="button" class="fy-btn fy-btn--primary" @click="markPaid">
+        <button
+          type="button"
+          class="fy-btn fy-btn--primary"
+          :disabled="!canMarkPaid"
+          @click="markPaid"
+        >
           {{ t('fonbnk.gotMoney') }}
         </button>
         <button type="button" class="fy-btn fy-btn--text" @click="copyHash">
@@ -798,7 +864,23 @@ function onBack() {
       </div>
       <div class="fy-bottom">
         <button
-          v-if="onPolygon === false"
+          v-if="!session.evmAddress"
+          type="button"
+          class="fy-btn fy-btn--primary"
+          :class="{ 'fy-btn--busy': busy }"
+          :disabled="busy"
+          @click="connectWallet"
+        >
+          {{ busy ? status : t('fonbnk.connectToSend') }}
+          <span v-if="busy" class="fy-btn__progress" />
+        </button>
+        <template v-else-if="sendUncertain">
+          <button type="button" class="fy-btn fy-btn--secondary" @click="retryAfterCheck">
+            {{ t('fonbnk.checkedRetry') }}
+          </button>
+        </template>
+        <button
+          v-else-if="onPolygon === false"
           type="button"
           class="fy-btn fy-btn--primary"
           :class="{ 'fy-btn--busy': busy }"
@@ -844,7 +926,7 @@ function onBack() {
         <Banner v-if="problem" tone="danger" :body="problem" />
 
         <ol class="s-how s-steps">
-          <li :class="{ 's-done': confirmed }">
+          <li :class="{ 's-done': confirmed, 's-failed': reverted }">
             <span
               ><Icon v-if="confirmed" name="check" :size="14" :stroke="3" /><template v-else
                 >1</template
@@ -856,9 +938,11 @@ function onBack() {
                 {{
                   confirmed
                     ? t('fonbnk.step1Done')
-                    : slow
-                      ? t('fonbnk.slow')
-                      : t('fonbnk.confirming')
+                    : reverted
+                      ? t('fonbnk.reverted')
+                      : slow
+                        ? t('fonbnk.slow')
+                        : t('fonbnk.confirming')
                 }}
               </div>
             </div>
@@ -899,14 +983,19 @@ function onBack() {
           {{ t('fonbnk.viewTx') }} <Icon name="external" :size="16" />
         </a>
       </div>
-      <div class="fy-bottom">
+      <div v-if="reverted" class="fy-bottom">
+        <button type="button" class="fy-btn fy-btn--primary" @click="cashOutAgain">
+          {{ t('fonbnk.startAgain') }}
+        </button>
+      </div>
+      <div v-else class="fy-bottom">
         <button v-if="amountUnits" type="button" class="fy-btn fy-btn--primary" @click="copyAndGo">
           {{ widgetMounted ? t('fonbnk.copyAndBack') : t('fonbnk.copyAndOpen') }}
         </button>
         <button
           type="button"
           class="fy-btn fy-btn--secondary"
-          :disabled="!confirmed"
+          :disabled="!canMarkPaid"
           @click="markPaid"
         >
           {{ t('fonbnk.gotMoney') }}
@@ -997,7 +1086,8 @@ function onBack() {
 .s-widget iframe {
   flex: 1;
   width: 100%;
-  min-height: 560px;
+  height: calc(100svh - 250px);
+  min-height: 400px;
   border: 0;
   background: #fff;
 }
@@ -1026,6 +1116,10 @@ function onBack() {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.s-steps li.s-failed > span {
+  background: var(--fy-danger);
+  color: #fff;
 }
 .s-steps li.s-done > span {
   background: var(--fy-success);
@@ -1106,6 +1200,7 @@ function onBack() {
   color: var(--fy-ink-2);
 }
 .s-offer__foot {
+  overflow-wrap: anywhere;
   display: flex;
   align-items: center;
   flex-wrap: wrap;

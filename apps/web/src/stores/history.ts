@@ -29,6 +29,8 @@ export interface HistoryEntry {
   receipt?: string
   /** Who was paid, for display: a masked phone number or a Lightning address. */
   payee?: string
+  /** Lightning invoice expiry (unix seconds): unpaid after this, nothing left the wallet. */
+  expiresAt?: number
   /** A top-up (USDT bought through the partner) or a NIM → USDT swap, into the user's wallet. */
   kind?: 'topup' | 'nim'
   txHash?: string
@@ -121,6 +123,8 @@ export const useHistoryStore = defineStore('history', () => {
 
   function setStatus(id: string, status: string) {
     const entry = entries.value.find((e) => e.id === id)
+    // A late poll must not undo "I've got my money" or a confirmed arrival.
+    if (entry && (entry.status === 'settled' || entry.status === 'received')) return
     if (entry && entry.status !== status) {
       entry.status = status
       persist()

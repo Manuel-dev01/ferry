@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { isCorridorCurrency, type QuoteResponse } from '@ferry/shared'
+import { FONBNK_COUNTRIES, FONBNK_COUNTRY_CODES } from '@ferry/shared'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -8,9 +8,8 @@ import FerryLogo from '../components/FerryLogo.vue'
 import Icon from '../components/Icon.vue'
 import Monogram from '../components/Monogram.vue'
 import StatusChip from '../components/StatusChip.vue'
-import { formatUsdt } from '@ferry/shared'
 import { ferryApi } from '../lib/ferryApi'
-import { fiatDisplay, shortTimeDisplay, usdtDisplay } from '../lib/format'
+import { shortTimeDisplay, usdtDisplay, wholeFiatDisplay } from '../lib/format'
 import { tinyAddress } from '../lib/names'
 import { useCashoutStore } from '../stores/cashout'
 import { useHistoryStore, entryAmount, entryLink, entryTitle } from '../stores/history'
@@ -35,18 +34,23 @@ async function connect() {
   else if (result !== 'ok') msg.value = { tone: 'danger', text: t('errors.generic') }
 }
 
-// "≈ ₦336,233 at today's rate" in the host's currency, when it's one of ours.
-const approx = ref<QuoteResponse | null>(null)
-const approxCurrency = computed(() =>
-  isCorridorCurrency(session.host.fiat) ? session.host.fiat : 'NGN',
+// "≈ D 4,050 at today's rate", from Fonbnk's live quote, when the host's currency is one Ferry
+// pays out in. Otherwise no estimate: a guess in another currency would mislead.
+const approxCountry = computed(
+  () =>
+    FONBNK_COUNTRY_CODES.find((c) => FONBNK_COUNTRIES[c].currency === session.host.fiat) ?? null,
 )
+const approx = ref<{ receive: string; currency: string } | null>(null)
 watch(
   () => session.balances?.usdt,
   async (usdt) => {
     approx.value = null
-    if (!usdt || usdt <= 0n) return
+    const country = approxCountry.value
+    if (!usdt || usdt <= 0n || !country) return
     try {
-      approx.value = await ferryApi.quote(approxCurrency.value, formatUsdt(usdt), 'usdt')
+      const { offers } = await ferryApi.offers(country, FONBNK_COUNTRIES[country].cashout[0], usdt)
+      const fonbnk = offers.find((o) => o.route === 'fonbnk')
+      approx.value = fonbnk ? { receive: fonbnk.receive, currency: fonbnk.currency } : null
     } catch {
       approx.value = null // the estimate is a nice-to-have
     }
@@ -153,11 +157,9 @@ function startCashout(kind: 'self' | 'other') {
               style="width: 200px; height: 40px; opacity: 0.35"
             />
             <span v-if="approx" style="font-size: 15px; color: #e4e8ff">
-              {{
-                t('home.approx', { amount: fiatDisplay(approx.theyReceiveMinor, approxCurrency) })
-              }}
+              {{ t('home.approx', { amount: wholeFiatDisplay(approx.receive, approx.currency) }) }}
             </span>
-            <div v-if="session.meta?.payoutRoute === 'fonbnk'" class="flex flex-wrap gap-2">
+            <div v-if="session.meta?.payoutRoute !== 'paycrest'" class="flex flex-wrap gap-2">
               <RouterLink
                 to="/topup"
                 class="fy-btn fy-btn--cream fy-btn--sm"
@@ -193,7 +195,7 @@ function startCashout(kind: 'self' | 'other') {
         />
 
         <section
-          v-if="session.meta?.payoutRoute === 'fonbnk'"
+          v-if="session.meta?.payoutRoute !== 'paycrest'"
           aria-labelledby="home-quick"
           class="flex flex-col"
         >
@@ -226,11 +228,7 @@ function startCashout(kind: 'self' | 'other') {
             <h2 id="home-history" style="font: 700 17px var(--fy-font-body); margin: 0">
               {{ t('home.history') }}
             </h2>
-            <RouterLink
-              to="/history"
-              class="fy-btn fy-btn--text fy-btn--sm"
-              style="min-height: 40px; padding: 0 4px"
-            >
+            <RouterLink to="/history" class="fy-btn fy-btn--text fy-btn--sm" style="padding: 0 4px">
               {{ t('common.seeAll') }}
             </RouterLink>
           </div>

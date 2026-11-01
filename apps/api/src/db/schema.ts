@@ -230,6 +230,10 @@ export const lnPayouts = pgTable(
     createdAt: createdAt(),
     deliveredAt: timestamp('delivered_at', { withTimezone: true }),
     receipt: text('receipt'),
+    /** True when Ferry saw the delivery live, so deliveredAt is a real delivery time. */
+    timed: boolean('timed').notNull().default(false),
+    /** LUD-21 status URL from the partner's invoice, when it gives one (Mavapay Money). */
+    verifyUrl: text('verify_url'),
   },
   (t) => [index('ln_payouts_pending_idx').on(t.deliveredAt, t.createdAt)],
 )

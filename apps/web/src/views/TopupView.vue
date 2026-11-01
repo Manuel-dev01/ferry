@@ -126,9 +126,15 @@ async function watchBalance() {
         return
       }
     }
+    if (!stopped && phase.value === 'fonbnk') stoppedWatching.value = true
   } finally {
     watching = false
   }
+}
+const stoppedWatching = ref(false)
+function watchAgain() {
+  stoppedWatching.value = false
+  void watchBalance()
 }
 
 function arrived(units: bigint) {
@@ -302,7 +308,15 @@ onMounted(() => {
         <Banner tone="brand" icon="clock" :body="t('topup.waitingLong')" />
       </div>
       <div class="fy-bottom" style="padding-top: 10px">
-        <p class="s-watch" role="status">
+        <button
+          v-if="stoppedWatching"
+          type="button"
+          class="fy-btn fy-btn--secondary"
+          @click="watchAgain"
+        >
+          {{ t('topup.watchAgain') }}
+        </button>
+        <p v-else class="s-watch" role="status">
           <span class="s-dot" aria-hidden="true" />
           {{
             session.balances
@@ -418,7 +432,8 @@ onMounted(() => {
 .s-widget iframe {
   flex: 1;
   width: 100%;
-  min-height: 520px;
+  height: calc(100svh - 230px);
+  min-height: 400px;
   border: 0;
   background: #fff;
 }

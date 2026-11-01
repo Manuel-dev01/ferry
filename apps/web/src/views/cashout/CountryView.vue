@@ -26,7 +26,8 @@ const router = useRouter()
 const draft = useCashoutStore()
 const session = useSessionStore()
 
-const viaFonbnk = computed(() => session.meta?.payoutRoute === 'fonbnk')
+// Only an explicit 'paycrest' route shows the retired corridor list; missing meta means Fonbnk.
+const viaFonbnk = computed(() => session.meta?.payoutRoute !== 'paycrest')
 /** The same list picks a country for airtime: only where Fonbnk sells it. */
 const airtime = computed(() => route.query.mode === 'airtime')
 
@@ -49,7 +50,10 @@ const fonbnkRows = computed(() => {
       methods:
         airtime.value && info.airtime
           ? t('country.airtimeUpTo', { amount: info.airtime.maxUsdt })
-          : info.cashout.map((c) => channelLabel(t, te, code, c)).join(' · '),
+          : info.cashout
+              .filter((c) => c !== 'paybill' && c !== 'buy_goods')
+              .map((c) => channelLabel(t, te, code, c))
+              .join(' · '),
     }
   })
 })

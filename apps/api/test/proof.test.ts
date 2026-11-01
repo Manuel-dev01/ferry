@@ -102,6 +102,7 @@ describe('computeStats with M-Pesa Direct payouts', () => {
     amountUnits: 2_000_000n,
     createdAt: new Date(T0),
     deliveredAt: null,
+    timed: true,
     ...over,
   })
 
@@ -117,6 +118,15 @@ describe('computeStats with M-Pesa Direct payouts', () => {
     const mpesa = s.latest.find((l) => l.route === 'mpesa_ln')
     expect(mpesa?.link).toBe(`https://bitcoin.co.ke/receipt/${'ab'.repeat(32)}`)
     expect(mpesa?.seconds).toBe(50)
+  })
+
+  it('counts a payout noticed late, but leaves it out of the median', () => {
+    const s = computeStats([], [], T0, [
+      ln({ deliveredAt: new Date(T0 + 5 * 60 * 60_000), timed: false }),
+    ])
+    expect(s.cashouts).toBe(1)
+    expect(s.confirmedPaid).toBe(1)
+    expect(s.medianSeconds).toBeNull()
   })
 })
 

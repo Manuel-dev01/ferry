@@ -28,6 +28,8 @@ export interface LnProofRow {
   amountUnits: bigint
   createdAt: Date
   deliveredAt: Date | null
+  /** Seen live, so deliveredAt is a real delivery time and can feed the median. */
+  timed: boolean
 }
 
 interface Counted {
@@ -39,6 +41,8 @@ interface Counted {
   link: string
   createdAt: Date
   doneAt: Date | null
+  /** False when the finish time is only when Ferry happened to notice it. */
+  timedDone?: boolean
 }
 
 const LATEST = 20
@@ -52,8 +56,8 @@ function median(values: number[]): number | null {
   return sorted.length % 2 ? sorted[mid]! : Math.round((sorted[mid - 1]! + sorted[mid]!) / 2)
 }
 
-const secondsToDone = (row: { createdAt: Date; doneAt: Date | null }) => {
-  if (!row.doneAt) return null
+const secondsToDone = (row: { createdAt: Date; doneAt: Date | null; timedDone?: boolean }) => {
+  if (!row.doneAt || row.timedDone === false) return null
   const s = Math.round((row.doneAt.getTime() - row.createdAt.getTime()) / 1000)
   return s >= 0 && s <= MAX_CONFIRM_SECONDS ? s : null
 }
@@ -101,6 +105,7 @@ export function computeStats(
             link: mpesaReceiptUrl(r.paymentHash),
             createdAt: r.createdAt,
             doneAt: r.deliveredAt,
+            timedDone: r.timed,
           },
         ]
       : [],

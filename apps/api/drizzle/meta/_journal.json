@@ -36,6 +36,13 @@
       "when": 1793544512560,
       "tag": "0004_ln_payouts",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793562212554,
+      "tag": "0005_ln_timed_verify",
+      "breakpoints": true
     }
   ]
 }
