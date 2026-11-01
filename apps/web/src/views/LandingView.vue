@@ -123,7 +123,7 @@ const countries = [
           <a href="#proof">{{ t('landing.nav.proof') }}</a>
           <a href="#faq">{{ t('landing.nav.faq') }}</a>
         </div>
-        <a href="#test" class="hero__test">{{ t('landing.nav.testDrive') }}</a>
+        <a href="#nim" class="hero__test">{{ t('landing.nav.testDrive') }}</a>
       </nav>
 
       <h1 class="hero__title">{{ t('landing.hero.title') }}</h1>
@@ -135,16 +135,16 @@ const countries = [
               <div class="deal-card c-cream" style="transform: translate3d(-70px, 70px, 0)">
                 <div class="flex items-center justify-between">
                   <span class="fy-eyebrow">{{ t('landing.cards.account') }}</span>
-                  <span class="lmono">OP</span>
+                  <span class="lmono">KE</span>
                 </div>
-                <span class="deal-card__num">812 345 6789</span>
-                <span class="deal-card__meta">OPay · Nigeria</span>
+                <span class="deal-card__num">0712 345 678</span>
+                <span class="deal-card__meta">{{ t('landing.cards.accountMeta') }}</span>
               </div>
               <div class="deal-card c-tangerine land-1" style="transform: translate3d(0, 0, 70px)">
                 <span class="fy-eyebrow">{{ t('landing.cards.verified') }}</span>
-                <span class="deal-card__name">ADA OBI</span>
+                <span class="deal-card__name">KSh 635</span>
                 <span class="deal-card__meta flex items-center justify-between gap-2">
-                  <span>OPay · ••••6789</span>
+                  <span>{{ t('landing.cards.offerMeta') }}</span>
                   <span class="deal-card__pill">{{ t('landing.cards.yes') }}</span>
                 </span>
               </div>
@@ -153,7 +153,7 @@ const countries = [
                 style="transform: translate3d(70px, -70px, 140px)"
               >
                 <span class="fy-eyebrow">{{ t('landing.cards.paid') }}</span>
-                <span class="deal-card__amt">₦27,061.00</span>
+                <span class="deal-card__amt">KSh 635</span>
                 <span class="deal-card__meta">{{ t('landing.cards.sent') }}</span>
               </div>
             </div>
@@ -230,9 +230,9 @@ const countries = [
               >
                 <div class="flex items-center justify-between">
                   <span class="fy-eyebrow">{{ t('landing.how.cardAccount') }}</span
-                  ><span class="lmono">OP</span>
+                  ><span class="lmono">KE</span>
                 </div>
-                <span class="deal-card__num" style="font-size: 28px">812 345 6789</span>
+                <span class="deal-card__num" style="font-size: 28px">0712 345 678</span>
                 <span class="deal-card__meta">{{ t('landing.how.cardDigits') }}</span>
               </div>
               <div
@@ -244,9 +244,9 @@ const countries = [
                 "
               >
                 <span class="fy-eyebrow">{{ t('landing.how.cardWho') }}</span>
-                <span class="deal-card__name" style="font-size: 38px">ADA OBI</span>
+                <span class="deal-card__name" style="font-size: 38px">KSh 635</span>
                 <span class="deal-card__meta flex items-center justify-between gap-2">
-                  <span>OPay ••••6789</span
+                  <span>{{ t('landing.how.cardOffer') }}</span
                   ><span class="deal-card__pill">{{ t('landing.how.cardYes') }}</span>
                 </span>
               </div>
@@ -263,7 +263,7 @@ const countries = [
                 "
               >
                 <span class="fy-eyebrow">{{ t('landing.how.cardPaid') }}</span>
-                <span class="deal-card__amt" style="font-size: 42px">₦27,061.00</span>
+                <span class="deal-card__amt" style="font-size: 42px">KSh 635</span>
                 <span class="deal-card__meta">{{ t('landing.how.cardPaidSub') }}</span>
               </div>
             </div>
@@ -423,7 +423,7 @@ const countries = [
     </section>
 
     <!-- 06 Test drive -->
-    <section id="test" class="band band--cream2">
+    <section id="nim" class="band band--cream2">
       <div class="test">
         <div class="test__deco" aria-hidden="true" />
         <div class="test__copy">
