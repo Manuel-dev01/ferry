@@ -86,6 +86,19 @@ export async function setLocale(locale: Locale, remember = true) {
   }
 }
 
+/** True when the user picked a language in Settings, rather than following Nimiq Pay. */
+export const localeIsChosen = () => storedLocale() !== null
+
+/** Forgets the user's pick and follows Nimiq Pay's language again. */
+export async function followHostLocale(hostLanguage: string) {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+    // storage unavailable: nothing was stored
+  }
+  await setLocale(pickLocale(hostLanguage), false)
+}
+
 export const currentLocale = (): Locale => {
   const v = i18n ? global().locale.value : 'en'
   return isLocale(v) ? v : 'en'
