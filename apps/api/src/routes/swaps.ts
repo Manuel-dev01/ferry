@@ -78,7 +78,10 @@ export function swapRoutes(deps: Deps) {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     }).catch(() => null)
     if (!res) throw new HttpError(502, 'PARTNER_HTTP_ERROR', "LendaSwap isn't answering")
-    if (res.status === 404) throw new HttpError(404, 'NOT_FOUND', 'No swap with that ID')
+    // LendaSwap answers an unknown or malformed ID with 400 (verified 2026-11-02), not 404.
+    if (res.status === 404 || res.status === 400) {
+      throw new HttpError(404, 'NOT_FOUND', 'No swap with that ID')
+    }
     if (!res.ok) throw new HttpError(502, 'PARTNER_HTTP_ERROR', `LendaSwap replied ${res.status}`)
     const parsed = swapSchema.safeParse(await res.json().catch(() => null))
     if (!parsed.success) {
