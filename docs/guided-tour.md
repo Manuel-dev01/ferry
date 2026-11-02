@@ -57,7 +57,7 @@ For the full picture, including a sequence diagram for every flow, read the [arc
 ```sh
 git clone https://github.com/Manuel-dev01/ferry.git && cd ferry
 pnpm install
-pnpm test          # 134 tests, no network or wallet needed
+pnpm test          # 147 tests, no network or wallet needed
 pnpm typecheck && pnpm lint
 ```
 

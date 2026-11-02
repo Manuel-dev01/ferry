@@ -24,7 +24,7 @@ import Banner from '../../components/Banner.vue'
 import Icon from '../../components/Icon.vue'
 import { ApiRequestError } from '../../lib/api'
 import { friendlyError } from '../../lib/errors'
-import { channelLabel, flagOf } from '../../lib/fonbnk'
+import { channelLabel, countryName, flagOf } from '../../lib/fonbnk'
 import { ferryApi } from '../../lib/ferryApi'
 import {
   polygonscanTx,
@@ -510,7 +510,7 @@ async function share() {
   await shareResult({
     amount,
     eyebrow: time ? t('share.eyebrowTimed', { time }) : t('share.eyebrow'),
-    place: t('share.place', { country: info.value.name, flag: flagOf(country.value) }),
+    place: t('share.place', { country: countryName(country.value), flag: flagOf(country.value) }),
     text: time ? t('share.textTimed', { amount, time }) : t('share.text', { amount }),
     headline: t('home.title'),
     sub: t('share.sub', { site: publicSite() }),
@@ -565,7 +565,7 @@ watch(country, () => {
   if (!channels.value.includes(channel.value)) channel.value = channels.value[0] ?? 'bank'
 })
 
-const title = computed(() => `${flagOf(country.value)} ${info.value.name}`)
+const title = computed(() => `${flagOf(country.value)} ${countryName(country.value)}`)
 
 function onBack() {
   // Once the USDT is sent, back never leads to a screen that could send it again.

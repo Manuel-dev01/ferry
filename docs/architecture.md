@@ -88,7 +88,7 @@ Three facts hold in every flow:
 
 ### 3.1 Web app: `apps/web`
 
-Vite + Vue 3 + TypeScript, with Pinia for state, vue-i18n for every string (`src/i18n/en.json`) and UnoCSS for layout. Ferry's look comes from its own design tokens in `src/styles/tokens.css`.
+Vite + Vue 3 + TypeScript, with Pinia for state, vue-i18n for every string (`src/i18n/`: English, French, Portuguese and Swahili; the non-English files load only when needed) and UnoCSS for layout. Ferry's look comes from its own design tokens in `src/styles/tokens.css`.
 
 | Area             | Files                                                                        | Responsibility                                                                                                                                                                                                                                    |
 | ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -12,8 +12,7 @@ import { router } from './router'
 
 applyStoredTheme()
 
-createApp(App)
-  .use(createPinia())
-  .use(router)
-  .use(createAppI18n(readHostContext().language))
-  .mount('#app')
+// The language loads first, so a French, Portuguese or Swahili user never sees English flash by.
+const i18n = await createAppI18n(readHostContext().language)
+
+createApp(App).use(createPinia()).use(router).use(i18n).mount('#app')

@@ -14,7 +14,8 @@ export function readHostContext(): HostContext {
   if (MOCK_WALLET) {
     // ?fiat=KES lets you preview another corridor's defaults in the browser.
     const fiat = new URLSearchParams(window.location.search).get('fiat') ?? 'NGN'
-    return { language: 'en', fiat, network: 'mainnet', inHost: true }
+    const language = navigator.language.split('-')[0] ?? 'en'
+    return { language, fiat, network: 'mainnet', inHost: true }
   }
   const hostLanguage = getHostLanguage()
   return {

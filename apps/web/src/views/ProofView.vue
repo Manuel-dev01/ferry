@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { FONBNK_COUNTRIES, type StatsResponse } from '@ferry/shared'
+import type { StatsResponse } from '@ferry/shared'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppHeader from '../components/AppHeader.vue'
 import Banner from '../components/Banner.vue'
 import { api } from '../lib/api'
-import { channelLabel, flagOf } from '../lib/fonbnk'
+import { channelLabel, countryName, flagOf } from '../lib/fonbnk'
 import {
   durationDisplay,
   roughDurationDisplay,
@@ -115,7 +115,7 @@ const maxCountry = computed(() =>
             <span style="font-size: 24px" aria-hidden="true">{{ flagOf(c.country) }}</span>
             <span class="flex-1 flex flex-col gap-1.5" style="min-width: 0">
               <span class="flex justify-between gap-2">
-                <strong>{{ FONBNK_COUNTRIES[c.country].name }}</strong>
+                <strong>{{ countryName(c.country) }}</strong>
                 <span class="fy-caption">{{
                   t('proof.countryLine', { n: c.cashouts, amount: usd(c.volumeUnits) })
                 }}</span>
@@ -141,7 +141,7 @@ const maxCountry = computed(() =>
             <span class="fy-list-row__main">
               <span class="fy-list-row__name">{{ channelLabel(t, te, p.country, p.channel) }}</span>
               <span class="fy-list-row__meta"
-                >{{ FONBNK_COUNTRIES[p.country].name }} · {{ shortTimeDisplay(p.at) }}</span
+                >{{ countryName(p.country) }} · {{ shortTimeDisplay(p.at) }}</span
               >
             </span>
             <span class="fy-list-row__end">

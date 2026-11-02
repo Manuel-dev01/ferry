@@ -129,7 +129,7 @@ API tests use an injected `fetch` and in-memory fakes, so they never call partne
 
 **Add a payout partner.** Add a route name to `payoutRouteSchema` in `packages/shared/src/payouts.ts`, add its quote to `GET /v1/offers` in `apps/api/src/routes/payouts.ts` (wrapped so a failure only drops that offer), and handle the new route in the offer picker in `FonbnkView.vue`. Keep the rules in [the last section](#rules-for-changes-that-touch-money).
 
-**Change copy.** Every user-facing string is in `apps/web/src/i18n/en.json`.
+**Change copy.** Every user-facing string is in `apps/web/src/i18n/en.json`, with translations in `fr.json`, `pt.json` and `sw.json`. A new string needs all four: `apps/web/test/i18n.test.ts` fails if a live screen's string is missing in a language or a translation drops a `{placeholder}`. The app picks the language from Nimiq Pay (`pt-BR` counts as `pt`), and Settings can override it.
 
 ## Deploy
 

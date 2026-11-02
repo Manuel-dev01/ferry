@@ -16,7 +16,7 @@ import AppHeader from '../../components/AppHeader.vue'
 import Banner from '../../components/Banner.vue'
 import Icon from '../../components/Icon.vue'
 import { FLAGS } from '../../lib/corridors'
-import { channelLabel, flagOf } from '../../lib/fonbnk'
+import { channelLabel, countryName, flagOf } from '../../lib/fonbnk'
 import { useCashoutStore } from '../../stores/cashout'
 import { useSessionStore } from '../../stores/session'
 
@@ -45,7 +45,7 @@ const fonbnkRows = computed(() => {
     const info: FonbnkCountryInfo = FONBNK_COUNTRIES[code]
     return {
       code,
-      name: info.name,
+      name: countryName(code),
       currency: info.currency,
       methods:
         airtime.value && info.airtime

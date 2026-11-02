@@ -13,7 +13,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '../components/AppHeader.vue'
 import Banner from '../components/Banner.vue'
 import Icon from '../components/Icon.vue'
-import { flagOf } from '../lib/fonbnk'
+import { countryName, flagOf } from '../lib/fonbnk'
 import { usdtDisplay } from '../lib/format'
 import { useCashoutStore } from '../stores/cashout'
 import { useHistoryStore } from '../stores/history'
@@ -220,7 +220,7 @@ onMounted(() => {
               :aria-pressed="country === c"
               @click="country = c"
             >
-              {{ flagOf(c) }} {{ FONBNK_COUNTRIES[c].name }}
+              {{ flagOf(c) }} {{ countryName(c) }}
             </button>
           </div>
           <span class="fy-caption">{{ methodText }}</span>

@@ -68,6 +68,7 @@ New here? The **[guided tour](docs/guided-tour.md)** walks through the app and t
 | **Airtime**               | 11 countries                                          | The same flow with airtime as the payout method.                                                                                                                  |
 | **Pay a till or Paybill** | Kenya                                                 | M-Pesa Buy Goods and Paybill numbers as payout methods.                                                                                                           |
 | **Add money**             | Nigeria, Kenya, Ghana, South Africa, Uganda, Tanzania | Fonbnk's buy flow, embedded. Ferry watches the wallet and shows the USDT when it lands.                                                                           |
+| **Four languages**        | Every screen                                          | English, French, Portuguese and Swahili, picked from Nimiq Pay's language and changeable in Settings. Country names follow the chosen language.                   |
 | **History and receipts**  | On the device                                         | Every cash-out is kept locally with its status, receipt and links, and can be reopened to resume checking.                                                        |
 | **Proof of Ferry**        | Public page                                           | Usage numbers built only from what Ferry can prove: USDT transfers seen on Polygon and M-Pesa receipts. Anyone can click through to the evidence.                 |
 
@@ -153,7 +154,7 @@ To click through every screen in a desktop browser, create `apps/web/.env.local`
 
 | Command          | What it runs                                      |
 | ---------------- | ------------------------------------------------- |
-| `pnpm test`      | 134 Vitest tests across `shared`, `api` and `web` |
+| `pnpm test`      | 147 Vitest tests across `shared`, `api` and `web` |
 | `pnpm lint`      | ESLint and Prettier                               |
 | `pnpm typecheck` | TypeScript (and `vue-tsc`) in every package       |
 | `pnpm build`     | Production builds of all three packages           |

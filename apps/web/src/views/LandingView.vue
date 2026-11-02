@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FONBNK_COUNTRIES, FONBNK_COUNTRY_CODES, type StatsResponse } from '@ferry/shared'
+import { FONBNK_COUNTRY_CODES, type StatsResponse } from '@ferry/shared'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { renderSVG } from 'uqr'
@@ -9,7 +9,7 @@ import { REPO_URL } from '../config'
 import { useLandingMotion } from '../composables/useLandingMotion'
 import { api } from '../lib/api'
 import { FLAGS } from '../lib/corridors'
-import { channelLabel, flagOf } from '../lib/fonbnk'
+import { channelLabel, countryName, flagOf } from '../lib/fonbnk'
 import { durationDisplay, roughDurationDisplay, usdHeadline, usdtDisplay } from '../lib/format'
 import { openInNimiqPayUrl } from '../providers/host'
 
@@ -81,12 +81,12 @@ const faqs = [1, 2, 3, 4, 5, 6].map((n) => ({
 }))
 const MAIN_COUNTRIES = ['NG', 'KE', 'UG', 'TZ']
 const moreCountries = FONBNK_COUNTRY_CODES.filter((c) => !MAIN_COUNTRIES.includes(c)).map(
-  (code) => ({ code, name: FONBNK_COUNTRIES[code].name }),
+  (code) => ({ code, name: countryName(code) }),
 )
 const countries = [
   {
     flag: FLAGS.NGN,
-    name: 'Nigeria',
+    name: countryName('NG'),
     cur: t('landing.countries.ngCur'),
     body: t('landing.countries.ng'),
     cls: 'c-cobalt',
@@ -94,7 +94,7 @@ const countries = [
   },
   {
     flag: FLAGS.KES,
-    name: 'Kenya',
+    name: countryName('KE'),
     cur: t('landing.countries.keCur'),
     body: t('landing.countries.ke'),
     cls: 'c-mint',
@@ -102,7 +102,7 @@ const countries = [
   },
   {
     flag: FLAGS.UGX,
-    name: 'Uganda',
+    name: countryName('UG'),
     cur: t('landing.countries.ugCur'),
     body: t('landing.countries.ug'),
     cls: 'c-tangerine',
@@ -110,7 +110,7 @@ const countries = [
   },
   {
     flag: FLAGS.TZS,
-    name: 'Tanzania',
+    name: countryName('TZ'),
     cur: t('landing.countries.tzCur'),
     body: t('landing.countries.tz'),
     cls: 'c-ink',
