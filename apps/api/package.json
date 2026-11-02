@@ -19,7 +19,6 @@
   "dependencies": {
     "@ferry/shared": "workspace:*",
     "@hono/node-server": "2.1.5",
-    "@noble/curves": "2.4.0",
     "@noble/hashes": "2.4.0",
     "drizzle-orm": "0.45.4",
     "hono": "4.13.13",

@@ -84,15 +84,6 @@ const routes: RouteRecordRaw[] = [
   { path: '/terms', component: () => import('./views/LegalView.vue'), props: { doc: 'terms' } },
 ]
 
-if (import.meta.env.VITE_SPIKES === 'true') {
-  routes.push(
-    { path: '/spike/s2', component: () => import('./views/spike/S2View.vue') },
-    { path: '/spike/s3', component: () => import('./views/spike/S3View.vue') },
-    { path: '/spike/s4', component: () => import('./views/spike/S4View.vue') },
-    { path: '/spike/s5', component: () => import('./views/spike/S5View.vue') },
-  )
-}
-
 routes.push({ path: '/:pathMatch(.*)*', redirect: '/' })
 
 export const router = createRouter({

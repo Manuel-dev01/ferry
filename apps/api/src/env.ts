@@ -71,25 +71,8 @@ const envSchema = z
     // Wallets left out of Proof of Ferry: the builder's own and test wallets.
     PROOF_EXCLUDE_ADDRESSES: csv.pipe(z.array(address)),
 
-    SPIKES_ENABLED: bool('false'),
-    SPIKE_ALLOWED_RECIPIENT: address.optional(),
-    SPIKE_MAX_USDT: z.string().default('1'),
-    SPIKE_MAX_RELAYS: z.coerce.number().int().nonnegative().default(10),
-    SPIKE_LN_MAX_SATS: z.coerce.number().int().positive().default(2000),
-    SPIKE_GATEWAY_MIN_USDT: z
-      .string()
-      .regex(/^\d+(\.\d+)?$/)
-      .default('0.5'),
-    SPIKE_GATEWAY_MAX_USDT: z
-      .string()
-      .regex(/^\d+(\.\d+)?$/)
-      .default('2'),
     /** Hosted demo only: lets the simulated order engine run with NODE_ENV=production. */
     ALLOW_MOCK_ORDERS: bool('false'),
-    GAS_DRIP_ENABLED: bool('false'),
-    GAS_DRIP_AMOUNT_POL: z.string().default('0.2'),
-    GAS_DRIP_CAP_POL: z.string().default('1'),
-    GAS_DRIP_MAX_TOTAL: z.coerce.number().int().nonnegative().default(5),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && !env.DATABASE_URL) {
@@ -112,12 +95,7 @@ const envSchema = z
   })
   .transform((env) => ({
     ...env,
-    spikeMaxUsdtUnits: parseUnits(env.SPIKE_MAX_USDT, USDT_DECIMALS),
-    gasDripWei: parseUnits(env.GAS_DRIP_AMOUNT_POL, POL_DECIMALS),
-    gasDripCapWei: parseUnits(env.GAS_DRIP_CAP_POL, POL_DECIMALS),
     gasTopupCapWei: parseUnits(env.GAS_TOPUP_CAP_POL, POL_DECIMALS),
-    spikeGatewayMinUnits: parseUnits(env.SPIKE_GATEWAY_MIN_USDT, USDT_DECIMALS),
-    spikeGatewayMaxUnits: parseUnits(env.SPIKE_GATEWAY_MAX_USDT, USDT_DECIMALS),
     ferryFeeBps: percentToBps(env.FERRY_FEE_PERCENT),
     // USDT is treated as 1:1 with USD for limits.
     limits: {

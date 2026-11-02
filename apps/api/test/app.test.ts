@@ -82,17 +82,6 @@ describe('balances', () => {
   })
 })
 
-describe('spikes flag', () => {
-  it('is not mounted unless SPIKES_ENABLED=true', async () => {
-    expect((await makeApp().request('/spike/nim/challenge')).status).toBe(404)
-    const on = makeApp({
-      SPIKES_ENABLED: 'true',
-      SPIKE_ALLOWED_RECIPIENT: '0x1111111111111111111111111111111111111111',
-    })
-    expect((await on.request('/spike/nim/challenge')).status).toBe(200)
-  })
-})
-
 describe('env', () => {
   it('requires a database in production and refuses mock orders there by default', () => {
     expect(() => loadEnv({ NODE_ENV: 'production', DATABASE_URL: 'postgres://x@y/z' })).toThrow(
@@ -102,7 +91,7 @@ describe('env', () => {
   })
 
   it('treats empty values as unset, like a fresh copy of .env.example', () => {
-    const env = loadEnv({ RELAYER_PRIVATE_KEY: '', SPIKE_ALLOWED_RECIPIENT: '', DATABASE_URL: ' ' })
+    const env = loadEnv({ RELAYER_PRIVATE_KEY: '', PAYCREST_API_KEY: '', DATABASE_URL: ' ' })
     expect(env.RELAYER_PRIVATE_KEY).toBeUndefined()
     expect(env.DATABASE_URL).toBeUndefined()
     expect(env.POLYGON_RPC_URLS.length).toBeGreaterThan(0)

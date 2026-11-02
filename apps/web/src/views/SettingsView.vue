@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppHeader from '../components/AppHeader.vue'
 import Icon from '../components/Icon.vue'
-import { REPO_URL, SPIKES_ENABLED, SUPPORT_URL } from '../config'
+import { REPO_URL, SUPPORT_URL } from '../config'
 import { tinyAddress } from '../lib/names'
 import { getAppearance, setAppearance, type Appearance } from '../lib/theme'
 import { useSessionStore } from '../stores/session'
@@ -86,21 +86,6 @@ const appearanceLabel = () =>
           </button>
         </div>
       </div>
-
-      <nav v-if="SPIKES_ENABLED" class="fy-panel" aria-label="Spikes">
-        <RouterLink class="fy-row fy-row--link" to="/spike/s2"
-          ><span class="fy-row__k">S2 · Gasless $1</span></RouterLink
-        >
-        <RouterLink class="fy-row fy-row--link" to="/spike/s3"
-          ><span class="fy-row__k">S3 · Lightning</span></RouterLink
-        >
-        <RouterLink class="fy-row fy-row--link" to="/spike/s4"
-          ><span class="fy-row__k">S4 · Nimiq sign-in</span></RouterLink
-        >
-        <RouterLink class="fy-row fy-row--link" to="/spike/s5"
-          ><span class="fy-row__k">S5 · Real $1 via Gateway</span></RouterLink
-        >
-      </nav>
 
       <p class="fy-caption text-center" style="line-height: 1.5">{{ t('settings.footer') }}</p>
     </div>

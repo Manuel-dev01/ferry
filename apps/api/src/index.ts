@@ -40,7 +40,6 @@ serve({ fetch: app.fetch, port: env.PORT, hostname: env.HOST }, (info) => {
   logger.info(
     {
       port: info.port,
-      spikes: env.SPIKES_ENABLED,
       relayer: relayer?.account.address ?? null,
       db: Boolean(db),
       paycrest: paycrest.keyed.mode,
