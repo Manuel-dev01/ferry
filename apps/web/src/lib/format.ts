@@ -8,6 +8,16 @@ import {
 
 export const usdtDisplay = (units: bigint) => formatUnitsFixed(units, USDT_DECIMALS, 2)
 export const polDisplay = (wei: bigint) => formatUnitsFixed(wei, POL_DECIMALS, 4)
+/** ≈ Luna for a USDT amount at a USD-per-NIM price with 10 decimals ("0.0002478700"). Hints only. */
+export function lunaForUsdt(units: bigint, usdPerNim: string): bigint | null {
+  const e10 = BigInt(usdPerNim.replace('.', ''))
+  return e10 > 0n ? (units * 1_000_000_000n) / e10 : null
+}
+
+/** Whole NIM with thousands separators, rounded: "20,172". */
+export const nimWholeDisplay = (luna: bigint) =>
+  ((luna + 50_000n) / 100_000n).toLocaleString('en-US')
+
 export const nimDisplay = (luna: bigint) => {
   const [whole = '0', frac] = formatUnitsFixed(luna, NIM_DECIMALS, 2).split('.')
   return `${BigInt(whole).toLocaleString('en-US')}.${frac}`

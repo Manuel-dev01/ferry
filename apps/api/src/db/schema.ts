@@ -237,3 +237,16 @@ export const lnPayouts = pgTable(
   },
   (t) => [index('ln_payouts_pending_idx').on(t.deliveredAt, t.createdAt)],
 )
+
+/**
+ * A NIM → USDT swap done in Ferry (LendaSwap), counted on Proof of Ferry once LendaSwap reports it
+ * complete and its claim transaction is read back from Polygon.
+ */
+export const nimSwaps = pgTable('nim_swaps', {
+  swapId: text('swap_id').primaryKey(),
+  claimTx: text('claim_tx').notNull().unique(),
+  toAddress: text('to_address').notNull(),
+  amountUnits: usdtUnits('amount_units').notNull(),
+  blockNumber: bigint('block_number', { mode: 'bigint' }).notNull(),
+  createdAt: createdAt(),
+})

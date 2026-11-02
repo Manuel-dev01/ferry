@@ -97,6 +97,18 @@ const maxCountry = computed(() =>
           </div>
         </div>
 
+        <div v-if="stats.nimSwaps.count" class="s-country">
+          <span class="flex-1 flex justify-between gap-2">
+            <strong>{{ t('proof.nimSwaps') }}</strong>
+            <span class="fy-caption">{{
+              t('proof.countryLine', {
+                n: stats.nimSwaps.count,
+                amount: usd(stats.nimSwaps.volumeUnits),
+              })
+            }}</span>
+          </span>
+        </div>
+
         <section v-if="stats.byCountry.length" class="flex flex-col gap-2.5">
           <h2 class="fy-section-label" style="margin: 0">{{ t('proof.byCountry') }}</h2>
           <div v-for="c in stats.byCountry" :key="c.country" class="s-country">
@@ -156,6 +168,7 @@ const maxCountry = computed(() =>
           <p>{{ t('proof.how1') }}</p>
           <p>{{ t('proof.how2') }}</p>
           <p>{{ t('proof.how3') }}</p>
+          <p>{{ t('proof.how4') }}</p>
         </section>
       </template>
     </div>

@@ -15,6 +15,7 @@ Request and response shapes are defined once, as zod schemas in [`packages/share
 - [M-Pesa Direct](#m-pesa-direct)
 - [Mavapay Money](#mavapay-money)
 - [Fonbnk hand-offs](#fonbnk-hand-offs)
+- [NIM swaps](#nim-swaps)
 - [Gas top-up](#gas-top-up)
 - [Wallet and app data](#wallet-and-app-data)
 - [Proof of Ferry](#proof-of-ferry)
@@ -153,6 +154,28 @@ The sender confirms the payout arrived. The first confirmation within 7 days is 
 
 The stored record, or `404`.
 
+## NIM swaps
+
+### `POST /v1/nim-swaps`
+
+```json
+{ "swapId": "b2f6c1d0-1234-4cde-9abc-0123456789ab" }
+```
+
+Counts a finished NIM → USDT swap (LendaSwap) on Proof of Ferry. The app calls it after a swap completes; it never blocks the user. Ferry checks, in order:
+
+1. LendaSwap reports the swap as a Lightning → Polygon swap, completed, with a claim transaction.
+2. The claim transaction succeeded on Polygon and involves the swap's own contracts.
+3. It paid USDT to the swap's own target address.
+4. It is under 3 days old.
+
+| Status | Body                                                | When                                                            |
+| ------ | --------------------------------------------------- | --------------------------------------------------------------- |
+| `200`  | `{"status": "confirmed", "amountUnits": "5000000"}` | Recorded (or already recorded: the call is idempotent)          |
+| `202`  | `{"status": "pending", "amountUnits": null}`        | The swap or its claim isn't finished yet; call again later      |
+| `400`  | `NOT_A_NIM_SWAP`, `TOO_OLD`                         | Not a Polygon swap, the claim didn't pay its target, or too old |
+| `404`  | `NOT_FOUND`                                         | LendaSwap doesn't know that swap                                |
+
 ## Gas top-up
 
 ### `POST /v1/gas`
@@ -175,10 +198,11 @@ Errors: `404 GAS_TOPUP_DISABLED`, `400 NOTHING_TO_SEND` (no USDT to cash out), `
 
 ## Wallet and app data
 
-| Method and path             | Response                                                                                                                               |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /v1/balances/:address` | `{"address", "usdt", "pol"}` in base units, read from Polygon. `503 RPC_UNAVAILABLE` if every RPC fails.                               |
-| `GET /v1/meta`              | What the web app needs at startup: `payoutRoute`, whether `gasTopup` is available, limits, and settings for the dormant Paycrest path. |
+| Method and path             | Response                                                                                                                                                 |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v1/balances/:address` | `{"address", "usdt", "pol"}` in base units, read from Polygon. `503 RPC_UNAVAILABLE` if every RPC fails.                                                 |
+| `GET /v1/prices/nim`        | `{"usd": "0.0002478700"}`: USD per NIM with 10 decimals, cached for a minute. Used only for "≈ NIM" hints; Nimiq Pay shows the exact amount at approval. |
+| `GET /v1/meta`              | What the web app needs at startup: `payoutRoute`, whether `gasTopup` is available, limits, and settings for the dormant Paycrest path.                   |
 
 ## Proof of Ferry
 
@@ -193,6 +217,7 @@ Public usage numbers, cached for 30 seconds (`statsResponseSchema`).
 | `uniqueWallets`, `countries` | Distinct sending wallets (on-chain senders only; a Lightning payment doesn't reveal the wallet) and destination countries |
 | `volumeUnits`                | Total USDT base units                                                                                                     |
 | `medianSeconds`              | Median send-to-delivery time over timed deliveries (2 days at most); `null` until there is one                            |
+| `nimSwaps`                   | `{count, volumeUnits}`: NIM → USDT swaps done in Ferry, shown apart from cash-outs                                        |
 | `byCountry[]`                | `{country, cashouts, volumeUnits}`                                                                                        |
 | `latest[]`                   | `{country, channel, amountUnits, route, link, at, seconds}`; `link` is the Polygonscan transaction or M-Pesa receipt      |
 | `updatedAt`                  | Unix milliseconds                                                                                                         |
@@ -212,13 +237,13 @@ These endpoints serve the Paycrest cash-out path, which runs against a simulated
 
 ## Error codes
 
-| HTTP  | Codes                                                                                                                                                                                                                                    |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `400` | `INVALID_REQUEST`, `INVALID_PHONE`, `INVALID_AMOUNT`, `LN_BAD_ADDRESS`, `NOT_A_TRANSFER`, `TOO_OLD`, `NOTHING_TO_SEND`, `OUTSIDE_LIMITS`                                                                                                 |
-| `404` | `NOT_FOUND`, `GAS_TOPUP_DISABLED`                                                                                                                                                                                                        |
-| `429` | `GAS_LIMIT`, `GAS_BUSY`                                                                                                                                                                                                                  |
-| `502` | A partner misbehaved. `PARTNER_HTTP_ERROR`, `LNURL_*` (unreachable, error, bad response, insecure, no currency), and invoice checks: `LN_BAD_INVOICE`, `LN_WRONG_NETWORK`, `LN_AMOUNT_MISMATCH`, `LN_DESCRIPTION_MISMATCH`, `LN_EXPIRED` |
-| `503` | `DB_UNAVAILABLE`, `RPC_UNAVAILABLE`, `GAS_UNAVAILABLE`                                                                                                                                                                                   |
-| `500` | `INTERNAL` (details only in the server log, under `ref`)                                                                                                                                                                                 |
+| HTTP  | Codes                                                                                                                                                                                                                                                            |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `400` | `INVALID_REQUEST`, `INVALID_PHONE`, `INVALID_AMOUNT`, `LN_BAD_ADDRESS`, `NOT_A_TRANSFER`, `NOT_A_NIM_SWAP`, `TOO_OLD`, `NOTHING_TO_SEND`, `OUTSIDE_LIMITS`                                                                                                       |
+| `404` | `NOT_FOUND`, `GAS_TOPUP_DISABLED`                                                                                                                                                                                                                                |
+| `429` | `GAS_LIMIT`, `GAS_BUSY`                                                                                                                                                                                                                                          |
+| `502` | A partner misbehaved. `PARTNER_HTTP_ERROR`, `PARTNER_BAD_RESPONSE`, `LNURL_*` (unreachable, error, bad response, insecure, no currency), and invoice checks: `LN_BAD_INVOICE`, `LN_WRONG_NETWORK`, `LN_AMOUNT_MISMATCH`, `LN_DESCRIPTION_MISMATCH`, `LN_EXPIRED` |
+| `503` | `DB_UNAVAILABLE`, `RPC_UNAVAILABLE`, `GAS_UNAVAILABLE`                                                                                                                                                                                                           |
+| `500` | `INTERNAL` (details only in the server log, under `ref`)                                                                                                                                                                                                         |
 
 The dormant Paycrest endpoints add `INVALID_ACCOUNT`, `ACCOUNT_NOT_FOUND`, `UNKNOWN_INSTITUTION`, `CORRIDOR_PAUSED`, `NAME_CHECK_UNAVAILABLE`, `ORDER_*` and `METATX_*` codes.

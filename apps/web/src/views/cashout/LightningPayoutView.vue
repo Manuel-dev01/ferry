@@ -13,8 +13,16 @@ import Banner from '../../components/Banner.vue'
 import Icon from '../../components/Icon.vue'
 import { friendlyError } from '../../lib/errors'
 import { ferryApi } from '../../lib/ferryApi'
-import { usdtDisplay, wholeFiatDisplay } from '../../lib/format'
-import { classifyNimiqError, initNimiq } from '../../providers/nimiq'
+import { flagOf } from '../../lib/fonbnk'
+import {
+  lunaForUsdt,
+  nimWholeDisplay,
+  roughDurationDisplay,
+  usdtDisplay,
+  wholeFiatDisplay,
+} from '../../lib/format'
+import { publicSite, shareResult } from '../../lib/share'
+import { classifyNimiqError, initNimiq, lightningIdsFrom } from '../../providers/nimiq'
 import { useHistoryStore } from '../../stores/history'
 
 // One-screen cash-outs over Lightning: the user's Nimiq Pay wallet pays the partner's invoice
@@ -69,14 +77,31 @@ const kesError = computed(() => {
   }
   return ''
 })
-/** ≈ USDT for a shilling amount at the offer's rate (display only). */
-const usdtApprox = computed(() => {
+/** ≈ USDT base units for a shilling amount at the offer's rate (display only). */
+const usdtApproxUnits = computed(() => {
   if (!rate || kes.value === null) return null
   const [whole = '0', frac = ''] = rate.split('.')
   const hundredths = BigInt(whole) * 100n + BigInt((frac + '00').slice(0, 2))
   if (hundredths === 0n) return null
-  return usdtDisplay((BigInt(kes.value) * 1_000_000n * 100n) / hundredths)
+  return (BigInt(kes.value) * 1_000_000n * 100n) / hundredths
 })
+const usdtApprox = computed(() =>
+  usdtApproxUnits.value === null ? null : usdtDisplay(usdtApproxUnits.value),
+)
+
+// The same amount in NIM, so NIM holders see what they'd spend. Nimiq Pay shows the exact amount.
+const nimUsd = ref<string | null>(null)
+onMounted(() => {
+  ferryApi
+    .nimPrice()
+    .then((p) => (nimUsd.value = p.usd))
+    .catch(() => undefined) // the NIM hint is optional
+})
+const nimApprox = (usdtUnits: bigint | null) => {
+  if (usdtUnits === null || !nimUsd.value) return null
+  const luna = lunaForUsdt(usdtUnits, nimUsd.value)
+  return luna === null ? null : nimWholeDisplay(luna)
+}
 const maskedPhone = (p: string) => {
   const local = formatKenyanPhoneLocal(p)
   return `${local.slice(0, 4)} ••• ${local.slice(-3)}`
@@ -167,9 +192,14 @@ async function send() {
     let ambiguous = false
     try {
       const nimiq = await initNimiq()
-      await nimiq.payLightningInvoice({ invoice: inv.invoice })
+      const paid = await nimiq.payLightningInvoice({ invoice: inv.invoice })
+      history.update(inv.paymentHash, { walletTx: paid.hash, walletSwapId: paid.swapId })
     } catch (err) {
       const e = classifyNimiqError(err)
+      const ids = lightningIdsFrom(e.data)
+      if (ids.hash || ids.swapId) {
+        history.update(inv.paymentHash, { walletTx: ids.hash, walletSwapId: ids.swapId })
+      }
       const settled = (message: string) => {
         history.setStatus(inv.paymentHash, 'failed')
         problem.value = message
@@ -229,6 +259,9 @@ async function follow(hash: string) {
           if (s.paid) seenByPartner.value = true
           if (s.status === 'completed') {
             receipt.value = s.receipt
+            // Timed only when paid in this visit; a reopened payout's finish time is just when it was seen.
+            const started = history.find(hash)?.createdAt
+            if (!reopened.value && started) tookMs.value = Date.now() - started
             history.markPaid(hash)
             if (s.receipt) history.update(hash, { receipt: s.receipt })
             phase.value = 'done'
@@ -340,6 +373,25 @@ const sentTo = computed(() =>
 const header = computed(() =>
   kind.value === 'mpesa_ln' ? t('ln.mpesaHeader') : t('ln.mavapayHeader'),
 )
+
+// ---- Share a delivered M-Pesa payout ----
+
+const tookMs = ref<number | null>(null)
+const sharing = ref(false)
+async function share() {
+  sharing.value = true
+  const time = tookMs.value === null ? null : roughDurationDisplay(tookMs.value)
+  const amount = sentAmount.value
+  await shareResult({
+    amount,
+    eyebrow: time ? t('share.eyebrowTimed', { time }) : t('share.eyebrow'),
+    place: t('share.placeMpesa', { flag: flagOf('KE') }),
+    text: time ? t('share.textTimed', { amount, time }) : t('share.text', { amount }),
+    headline: t('home.title'),
+    sub: t('share.sub', { site: publicSite() }),
+  })
+  sharing.value = false
+}
 </script>
 
 <template>
@@ -374,7 +426,9 @@ const header = computed(() =>
             </div>
             <span v-if="kesError" class="fy-help fy-help--error">{{ kesError }}</span>
             <span v-else-if="usdtApprox" class="fy-caption">{{
-              t('ln.usdtApprox', { amount: usdtApprox })
+              nimApprox(usdtApproxUnits)
+                ? t('ln.usdtNimApprox', { amount: usdtApprox, nim: nimApprox(usdtApproxUnits) })
+                : t('ln.usdtApprox', { amount: usdtApprox })
             }}</span>
           </div>
           <ul class="s-points">
@@ -392,6 +446,10 @@ const header = computed(() =>
             <div class="fy-row">
               <dt class="fy-row__k">{{ t('ln.youSend') }}</dt>
               <dd class="fy-row__v" style="font-weight: 700">≈ {{ usdtDisplay(units) }} USDT</dd>
+            </div>
+            <div v-if="nimApprox(units)" class="fy-row">
+              <dt class="fy-row__k">{{ t('ln.orNim') }}</dt>
+              <dd class="fy-row__v">≈ {{ nimApprox(units) }} NIM</dd>
             </div>
             <div v-if="estimate" class="fy-row">
               <dt class="fy-row__k">{{ t('ln.bankGets') }}</dt>
@@ -557,6 +615,15 @@ const header = computed(() =>
         >
           {{ t('ln.viewReceipt') }} <Icon name="external" :size="16" />
         </a>
+        <button
+          v-if="kind === 'mpesa_ln' && receipt"
+          type="button"
+          class="fy-btn fy-btn--text fy-btn--sm self-start"
+          :disabled="sharing"
+          @click="share"
+        >
+          <Icon name="share" :size="16" /> {{ t('share.button') }}
+        </button>
       </div>
       <div class="fy-bottom">
         <button

@@ -9,6 +9,8 @@ import type {
   LnInvoiceResponse,
   MavapayStatusResponse,
   MpesaStatusResponse,
+  NimPriceResponse,
+  NimSwapResponse,
   OffersResponse,
   OrderView,
   QuoteResponse,
@@ -62,6 +64,13 @@ export const ferryApi = {
   /** An invoice from a Kenyan number's M-Pesa Lightning address; `kes` is what arrives. */
   mpesaInvoice: (phone: string, kes: number) =>
     api<LnInvoiceResponse>('/v1/ln/mpesa', { method: 'POST', body: { phone, kes } }),
+
+  /** Asks Ferry to count a finished NIM → USDT swap on Proof of Ferry. Never blocks the user. */
+  recordNimSwap: (swapId: string) =>
+    api<NimSwapResponse>('/v1/nim-swaps', { method: 'POST', body: { swapId } }),
+
+  /** USD per NIM, for "≈ NIM" hints next to USDT amounts. */
+  nimPrice: () => api<NimPriceResponse>('/v1/prices/nim'),
 
   mpesaStatus: (paymentHash: string) => api<MpesaStatusResponse>(`/v1/ln/mpesa/${paymentHash}`),
 

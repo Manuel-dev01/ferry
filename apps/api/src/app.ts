@@ -13,6 +13,7 @@ import { balancesRoutes } from './routes/balances'
 import { healthRoutes } from './routes/health'
 import { handoffRoutes } from './routes/handoffs'
 import { payoutRoutes } from './routes/payouts'
+import { swapRoutes } from './routes/swaps'
 import { v1Routes } from './routes/v1'
 
 export interface Deps {
@@ -90,6 +91,7 @@ export function createApp(deps: Deps) {
   app.route('/v1', v1Routes(deps))
   app.route('/v1', handoffRoutes(deps))
   app.route('/v1', payoutRoutes(deps))
+  app.route('/v1', swapRoutes(deps))
 
   return app
 }

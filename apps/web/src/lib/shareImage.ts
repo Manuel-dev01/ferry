@@ -39,7 +39,8 @@ function card(
     ctx.shadowBlur = 90
     ctx.shadowOffsetY = 50
   }
-  roundRect(ctx, -w / 2, -h / 2, w, h, 64)
+  // 64px suits the big cards; small ones (the logo) keep the same proportion as the app's mark.
+  roundRect(ctx, -w / 2, -h / 2, w, h, Math.min(64, h * 0.27))
   ctx.fillStyle = fill
   ctx.fill()
   ctx.restore()
@@ -47,7 +48,7 @@ function card(
 
 export interface ShareImageInput {
   amount: string // "₦27,061"
-  seconds: string // "31 SECONDS"
+  eyebrow: string // "Paid in 31 s"
   place: string // "landed in Nigeria 🇳🇬"
   headline: string
   sub: string
@@ -87,7 +88,7 @@ export async function renderShareImage(input: ShareImageInput): Promise<Blob> {
   ctx.fillStyle = '#0B0E3A'
   ctx.textBaseline = 'alphabetic'
   ctx.font = '600 32px "Albert Sans"'
-  ctx.fillText(`PAID IN ${input.seconds}`.toUpperCase(), -346, -170)
+  ctx.fillText(input.eyebrow.toUpperCase(), -346, -170)
   let size = 150
   ctx.font = `800 ${size}px Syne`
   while (ctx.measureText(input.amount).width > 690 && size > 70) {
@@ -100,12 +101,28 @@ export async function renderShareImage(input: ShareImageInput): Promise<Blob> {
   ctx.restore()
 
   // Headline
+  // Headline: wrapped onto at most two lines, shrinking until it fits; the last line sits on 1130.
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = '800 84px Syne'
-  ctx.fillText(input.headline, 88, 1130)
+  const maxWidth = W - 176
+  let headSize = 84
+  let lines: string[] = []
+  for (; headSize >= 44; headSize -= 4) {
+    ctx.font = `800 ${headSize}px Syne`
+    lines = []
+    for (const word of input.headline.split(' ')) {
+      const last = lines[lines.length - 1]
+      if (last !== undefined && ctx.measureText(`${last} ${word}`).width <= maxWidth) {
+        lines[lines.length - 1] = `${last} ${word}`
+      } else lines.push(word)
+    }
+    if (lines.length <= 2 && lines.every((l) => ctx.measureText(l).width <= maxWidth)) break
+  }
+  lines.forEach((line, i) =>
+    ctx.fillText(line, 88, 1130 - (lines.length - 1 - i) * headSize * 1.05),
+  )
   ctx.fillStyle = '#DCE1FF'
   ctx.font = '500 34px "Albert Sans"'
-  ctx.fillText(input.sub, 88, 1200)
+  ctx.fillText(input.sub, 88, 1222)
 
   return new Promise((resolve, reject) =>
     canvas.toBlob(

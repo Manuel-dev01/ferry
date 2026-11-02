@@ -94,6 +94,16 @@ export const handoffResponseSchema = z.object({
 })
 export type HandoffResponse = z.infer<typeof handoffResponseSchema>
 
+/** A NIM → USDT swap (LendaSwap) to count on Proof of Ferry, once it completed. */
+export const nimSwapRequestSchema = z.object({
+  swapId: z.string().regex(/^[A-Za-z0-9_-]{8,80}$/),
+})
+export const nimSwapResponseSchema = z.object({
+  status: z.enum(['pending', 'confirmed']),
+  amountUnits: unitsSchema.nullable(),
+})
+export type NimSwapResponse = z.infer<typeof nimSwapResponseSchema>
+
 export const institutionSchema = z.object({
   code: z.string(),
   name: z.string(),
@@ -197,6 +207,8 @@ export const statsResponseSchema = z.object({
       volumeUnits: unitsSchema,
     }),
   ),
+  /** NIM → USDT swaps done in Ferry: NIM turned into money the user can cash out. */
+  nimSwaps: z.object({ count: z.number().int(), volumeUnits: unitsSchema }),
   latest: z.array(
     z.object({
       country: fonbnkCountrySchema,

@@ -246,6 +246,16 @@
     "share": "Share",
     "shareText": "{amount} landed in {seconds} with Ferry, straight from Nimiq Pay."
   },
+  "share": {
+    "button": "Share",
+    "eyebrow": "Paid",
+    "eyebrowTimed": "Paid in {time}",
+    "text": "{amount} landed with Ferry, straight from Nimiq Pay.",
+    "textTimed": "{amount} landed in {time} with Ferry, straight from Nimiq Pay.",
+    "placeMpesa": "on M-Pesa in Kenya {flag}",
+    "place": "landed in {country} {flag}",
+    "sub": "Cash out from Nimiq Pay · {site}"
+  },
   "outcome": {
     "refundedEyebrow": "Refunded · {time}",
     "refundedTitle": "{amount} USDT",
@@ -643,6 +653,8 @@
     "how1": "A cash-out counts once Ferry can prove it: the user’s own USDT transfer to Fonbnk on Polygon, or an M-Pesa receipt for an M-Pesa Direct payout. Each row links to its proof.",
     "how2": "The median time and “Confirmed received” use M-Pesa receipts where there is one, and otherwise senders tapping “I’ve got my money” in Ferry.",
     "how3": "Unique wallets counts on-chain senders only: a Lightning payout doesn’t reveal the paying wallet.",
+    "how4": "NIM turned into USDT counts once LendaSwap reports the swap complete and Ferry sees the USDT reach the swap’s own address on Polygon. It’s shown apart from cash-outs, since the cash-out that follows is counted on its own.",
+    "nimSwaps": "NIM turned into USDT",
     "soon": "Soon",
     "afterFirst": "from the first timed delivery"
   },
@@ -720,6 +732,8 @@
     "badAmount": "Enter whole shillings.",
     "kesRange": "From KSh {min} to KSh {max} at a time.",
     "usdtApprox": "≈ {amount} USDT at this offer’s rate.",
+    "usdtNimApprox": "≈ {amount} USDT or ≈ {nim} NIM at this offer’s rate.",
+    "orNim": "Or with NIM",
     "point1": "Arrives on M-Pesa in about a minute.",
     "point2": "Ferry shows the M-Pesa receipt when it lands.",
     "point3": "Pay with NIM or USDT: Nimiq Pay asks once.",

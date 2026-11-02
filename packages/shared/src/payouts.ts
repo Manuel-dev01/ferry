@@ -60,6 +60,10 @@ export const mavapayStatusResponseSchema = z.object({
 })
 export type MavapayStatusResponse = z.infer<typeof mavapayStatusResponseSchema>
 
+/** USD per NIM as a decimal string with 10 places, for "≈ NIM" hints only; never for payments. */
+export const nimPriceResponseSchema = z.object({ usd: z.string().regex(/^\d+\.\d{10}$/) })
+export type NimPriceResponse = z.infer<typeof nimPriceResponseSchema>
+
 export const lnInvoiceResponseSchema = z.object({
   invoice: z.string(),
   paymentHash: z.string(),

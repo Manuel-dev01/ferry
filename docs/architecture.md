@@ -110,6 +110,7 @@ Node 22, [Hono](https://hono.dev), [Drizzle ORM](https://orm.drizzle.team) on Po
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `routes/payouts.ts`   | `GET /v1/offers` (parallel partner quotes), Lightning invoices and status for M-Pesa Direct and Mavapay Money. Small time-boxed caches protect partners. |
 | `routes/handoffs.ts`  | Gas top-ups and Fonbnk hand-off records, verified against the Polygon receipt.                                                                           |
+| `routes/swaps.ts`     | Records finished NIM → USDT swaps for Proof of Ferry after checking them with LendaSwap and on Polygon.                                                  |
 | `routes/v1.ts`        | `meta` (feature flags for the web app), `stats` (Proof of Ferry), and the dormant Paycrest endpoints (§11).                                              |
 | `routes/balances.ts`  | USDT and POL balances for an address.                                                                                                                    |
 | `routes/health.ts`    | `/health` (liveness) and `/ready` (database, RPC and partner reachability).                                                                              |
@@ -275,7 +276,9 @@ sequenceDiagram
 ```
 
 - **Atomic:** the Lightning payment is a hold invoice. It settles only when the user's device reveals the secret that also releases the USDT. If the claim never happens, the Lightning payment fails back and the NIM returns.
-- **Ferry's server is not involved.** Keys and secrets live only in the browser's IndexedDB. The LendaSwap SDK is loaded on first use, so the rest of the app stays small.
+- **Ferry's server is not involved in the swap.** Keys and secrets live only in the browser's IndexedDB. The LendaSwap SDK is loaded on first use, so the rest of the app stays small.
+- **Counted afterwards.** Once the swap completes, the app asks the API to record it (`POST /v1/nim-swaps`). The API reads the swap back from LendaSwap and its claim from Polygon before counting it on Proof of Ferry (§5).
+- **NIM shown up front.** Lightning screens show "≈ N NIM" next to the USDT amount, from a cached NIM price (`GET /v1/prices/nim`). Nimiq Pay shows the exact amount at approval.
 
 ### 4.6 Add money
 
@@ -297,12 +300,13 @@ The relayer holds only POL for gas. It never holds or moves user funds.
 
 [`/proof`](https://ferry-beta.vercel.app/proof) shows public usage numbers. It counts only what a third party can check:
 
-| Counted                 | Evidence                                                                                    | Guard against inflation                                                                                 |
-| ----------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Fonbnk cash-outs        | The Polygon transaction (link to Polygonscan)                                               | Must be a direct USDT transfer from the sender's wallet, successful, and under 3 days old when recorded |
-| M-Pesa Direct cash-outs | The M-Pesa receipt from Tando (link to Tando's receipt page)                                | Ferry issued the invoice itself; it counts only once Tando reports it completed                         |
-| Median delivery time    | Send to delivery: Tando's confirmation for M-Pesa, the sender's "It arrived" tap for Fonbnk | M-Pesa payouts found later by reconciliation count but aren't timed; anything over 2 days is left out   |
-| "Arrived" confirmations | The sender tapping "It arrived" within 7 days                                               | First answer wins                                                                                       |
+| Counted                            | Evidence                                                                                    | Guard against inflation                                                                                                                            |
+| ---------------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fonbnk cash-outs                   | The Polygon transaction (link to Polygonscan)                                               | Must be a direct USDT transfer from the sender's wallet, successful, and under 3 days old when recorded                                            |
+| M-Pesa Direct cash-outs            | The M-Pesa receipt from Tando (link to Tando's receipt page)                                | Ferry issued the invoice itself; it counts only once Tando reports it completed                                                                    |
+| NIM turned into USDT (shown apart) | The swap at LendaSwap and its claim transaction on Polygon                                  | LendaSwap must report it complete; the claim must involve the swap's own contracts and pay USDT to the swap's own target address, under 3 days old |
+| Median delivery time               | Send to delivery: Tando's confirmation for M-Pesa, the sender's "It arrived" tap for Fonbnk | M-Pesa payouts found later by reconciliation count but aren't timed; anything over 2 days is left out                                              |
+| "Arrived" confirmations            | The sender tapping "It arrived" within 7 days                                               | First answer wins                                                                                                                                  |
 
 `computeStats` in `apps/api/src/proof.ts` is a pure function with its own tests. `/v1/stats` is cached for 30 seconds and, before computing, reconciles a few M-Pesa payouts whose senders closed the app before delivery. Wallets listed in `PROOF_EXCLUDE_ADDRESSES` are left out.
 
@@ -315,6 +319,7 @@ The relayer holds only POL for gas. It never holds or moves user funds.
 | `handoffs`   | Verified Fonbnk cash-out transfer | `tx_hash` (unique), `from_address`, `to_address`, `amount_units`, `country`, `channel`, `block_number`, `received_at`                           |
 | `ln_payouts` | Lightning invoice Ferry issued    | `payment_hash` (unique), `route`, `country`, `channel`, `fiat_amount`, `sats`, `amount_units`, `delivered_at`, `receipt`, `timed`, `verify_url` |
 | `gas_topups` | POL top-up sent by the relayer    | `address`, `amount_wei`, `tx_hash`, `created_at`                                                                                                |
+| `nim_swaps`  | Completed NIM → USDT swap         | `swap_id` (unique), `claim_tx` (unique), `to_address`, `amount_units`, `block_number`                                                           |
 
 The initial migration also creates tables for the dormant Paycrest path and for features that were planned but not built (`orders`, `order_events`, `webhook_events`, `relayer_txs`, `rewards`, `referrals`). Nothing in production writes to them. Migrations live in `apps/api/drizzle/` and run automatically when the API starts.
 

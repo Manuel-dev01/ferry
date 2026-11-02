@@ -21,7 +21,7 @@ import { Hono } from 'hono'
 import { getAddress } from 'viem'
 import { z } from 'zod'
 import type { AppEnv, Deps } from '../app'
-import { handoffs, lnPayouts } from '../db/schema'
+import { handoffs, lnPayouts, nimSwaps } from '../db/schema'
 import { HttpError } from '../errors'
 import { ORDER_VALID_MS } from '../orders/mock-engine'
 import { reconcileMpesa } from '../mpesa'
@@ -146,8 +146,11 @@ export function v1Routes(deps: Deps) {
         })
         .from(lnPayouts)
         .where(eq(lnPayouts.route, 'mpesa_ln'))
+      const nimRows = await db
+        .select({ toAddress: nimSwaps.toAddress, amountUnits: nimSwaps.amountUnits })
+        .from(nimSwaps)
       statsCache = {
-        body: computeStats(rows, env.PROOF_EXCLUDE_ADDRESSES, Date.now(), lnRows),
+        body: computeStats(rows, env.PROOF_EXCLUDE_ADDRESSES, Date.now(), lnRows, nimRows),
         at: Date.now(),
       }
     }

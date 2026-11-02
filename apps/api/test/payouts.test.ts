@@ -11,7 +11,7 @@ import {
   recommend,
   satsForUnits,
 } from '../src/payouts'
-import { json, makeApp } from './helpers'
+import { json, jsonResponse, makeApp } from './helpers'
 
 describe('payout route math', () => {
   it('turns USDT into sats at a BTC price', () => {
@@ -105,5 +105,12 @@ describe('payout endpoints', () => {
       body: JSON.stringify({ phone: '08012345678', kes: 100 }),
     })
     expect(res.status).toBe(400)
+  })
+
+  it('gives the NIM price as a fixed-point string', async () => {
+    const fetchImpl = async () => jsonResponse({ 'nimiq-2': { usd: 0.00024787 } })
+    const res = await makeApp({}, {}, fetchImpl).request('/v1/prices/nim')
+    expect(res.status).toBe(200)
+    expect(await json(res)).toEqual({ usd: '0.0002478700' })
   })
 })

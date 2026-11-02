@@ -40,6 +40,9 @@ export interface HistoryEntry {
   channel?: string
   /** When the user confirmed the money arrived (partner payouts report no status to Ferry). */
   paidAt?: number
+  /** Nimiq Pay's own NIM or Polygon transaction and swap for a Lightning payment, for support. */
+  walletTx?: string
+  walletSwapId?: string
 }
 
 /** The amount a history row shows: fiat for Ferry orders, USDT sent for partner cash-outs. */

@@ -1,0 +1,29 @@
+name: Uptime
+
+# Checks the live app and API every 15 minutes. A failed run emails the repository owner
+# (and notifies the GitHub mobile app), so an outage doesn't go unnoticed.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: API is up
+        run: curl --fail --silent --show-error --retry 3 --retry-delay 20 --max-time 20 https://api-production-5835.up.railway.app/health
+      - name: Partners answer (offers for Kenya)
+        run: |
+          body=$(curl --fail --silent --show-error --retry 3 --retry-delay 20 --max-time 30 \
+            'https://api-production-5835.up.railway.app/v1/offers?country=KE&channel=mobile_money&units=5000000')
+          echo "$body"
+          echo "$body" | grep -q '"route"'
+      - name: Proof of Ferry loads
+        run: curl --fail --silent --show-error --retry 3 --retry-delay 20 --max-time 30 https://api-production-5835.up.railway.app/v1/stats > /dev/null
+      - name: Web app is up
+        run: curl --fail --silent --show-error --retry 3 --retry-delay 20 --max-time 20 https://ferry-beta.vercel.app/ > /dev/null

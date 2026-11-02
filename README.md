@@ -153,7 +153,7 @@ To click through every screen in a desktop browser, create `apps/web/.env.local`
 
 | Command          | What it runs                                      |
 | ---------------- | ------------------------------------------------- |
-| `pnpm test`      | 124 Vitest tests across `shared`, `api` and `web` |
+| `pnpm test`      | 134 Vitest tests across `shared`, `api` and `web` |
 | `pnpm lint`      | ESLint and Prettier                               |
 | `pnpm typecheck` | TypeScript (and `vue-tsc`) in every package       |
 | `pnpm build`     | Production builds of all three packages           |

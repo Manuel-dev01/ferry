@@ -7,6 +7,7 @@ import type { Address } from 'viem'
 import AppHeader from '../components/AppHeader.vue'
 import Banner from '../components/Banner.vue'
 import Icon from '../components/Icon.vue'
+import { ferryApi } from '../lib/ferryApi'
 import { usdtDisplay } from '../lib/format'
 import {
   claimNimSwap,
@@ -17,7 +18,7 @@ import {
   type NimSwapQuote,
   type NimSwapStage,
 } from '../lib/nimSwap'
-import { classifyNimiqError, initNimiq } from '../providers/nimiq'
+import { classifyNimiqError, initNimiq, lightningIdsFrom } from '../providers/nimiq'
 import { useCashoutStore } from '../stores/cashout'
 import { useHistoryStore } from '../stores/history'
 import { useSessionStore } from '../stores/session'
@@ -168,13 +169,18 @@ async function pay() {
   remember('awaiting')
   try {
     const nimiq = await initNimiq()
-    await nimiq.payLightningInvoice({ invoice: s.invoice })
+    const paid = await nimiq.payLightningInvoice({ invoice: s.invoice })
+    history.update(s.id, { walletTx: paid.hash, walletSwapId: paid.swapId })
     payLocked.value = true
     remember('swapping')
     phase.value = 'progress'
     void follow()
   } catch (err) {
     const e = classifyNimiqError(err)
+    const ids = lightningIdsFrom(e.data)
+    if (ids.hash || ids.swapId) {
+      history.update(s.id, { walletTx: ids.hash, walletSwapId: ids.swapId })
+    }
     switch (e.kind) {
       case 'rejected':
         history.setStatus(s.id, 'failed')
@@ -243,6 +249,7 @@ async function follow() {
         }
         if (state.stage === 'done') {
           history.setStatus(s.id, 'received')
+          void reportSwap(s.id)
           void session.loadBalances().catch(() => undefined)
           phase.value = 'done'
           return
@@ -264,6 +271,18 @@ async function follow() {
     following = false
   }
 }
+/**
+ * Counts the finished swap on Proof of Ferry. The claim may still be mining when LendaSwap says
+ * it's done, so a pending answer is asked again a few times. Stats only; never blocks the user.
+ */
+async function reportSwap(id: string) {
+  for (let i = 0; i < 4 && !stopped; i++) {
+    const res = await ferryApi.recordNimSwap(id).catch(() => null)
+    if (res?.status === 'confirmed') return
+    await new Promise((r) => setTimeout(r, 15_000))
+  }
+}
+
 const stoppedChecking = ref(false)
 function checkAgain() {
   stoppedChecking.value = false
@@ -292,6 +311,7 @@ onMounted(() => {
   payLocked.value = true
   if (entry.status === 'received') {
     phase.value = 'done'
+    void reportSwap(id) // idempotent: covers a swap that finished while Ferry was closed
     return
   }
   phase.value = 'progress'

@@ -8,6 +8,7 @@ import {
   type FonbnkCountry,
   type LnInvoiceResponse,
   type MavapayStatusResponse,
+  type NimPriceResponse,
   type Offer,
   type OffersResponse,
 } from '@ferry/shared'
@@ -120,6 +121,19 @@ export function payoutRoutes(deps: Deps) {
       return priceToCents(body.bitcoin.usd)
     })
 
+  const nimPriceCache = cached<string>(PRICE_TTL_MS)
+  const nimUsd = () =>
+    nimPriceCache('nim-usd', async () => {
+      const body = z
+        .object({ 'nimiq-2': z.object({ usd: z.number().positive() }) })
+        .parse(
+          await getJson(
+            fetchImpl,
+            'https://api.coingecko.com/api/v3/simple/price?ids=nimiq-2&vs_currencies=usd',
+          ),
+        )
+      return body['nimiq-2'].usd.toFixed(10)
+    })
   const mavapayPriceCache = cached<bigint>(PRICE_TTL_MS)
   /** Mavapay's own price per BTC, in hundredths of the local unit. */
   const mavapayPrice = (currency: string) =>
@@ -182,6 +196,13 @@ export function payoutRoutes(deps: Deps) {
         estimate: false,
       }
     })
+
+  // The NIM price, so Lightning screens can say "≈ N NIM" next to USDT. Nimiq Pay shows the exact
+  // amount at approval; this is a hint only.
+  r.get('/prices/nim', async (c) => {
+    const body: NimPriceResponse = { usd: await nimUsd() }
+    return c.json(body)
+  })
 
   r.get('/offers', async (c) => {
     const q = parseValue(offersQuerySchema, c.req.query())

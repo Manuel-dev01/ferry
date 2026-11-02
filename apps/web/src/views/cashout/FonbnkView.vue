@@ -26,7 +26,14 @@ import { ApiRequestError } from '../../lib/api'
 import { friendlyError } from '../../lib/errors'
 import { channelLabel, flagOf } from '../../lib/fonbnk'
 import { ferryApi } from '../../lib/ferryApi'
-import { polygonscanTx, rateDisplay, usdtDisplay, wholeFiatDisplay } from '../../lib/format'
+import {
+  polygonscanTx,
+  rateDisplay,
+  roughDurationDisplay,
+  usdtDisplay,
+  wholeFiatDisplay,
+} from '../../lib/format'
+import { publicSite, shareResult } from '../../lib/share'
 import {
   classifyEvmError,
   currentChainId,
@@ -489,6 +496,27 @@ const tookText = computed(() => {
     ? t('fonbnk.tookMinutes', { n: minutes })
     : t('fonbnk.tookHours', { n: Math.round(minutes / 60) })
 })
+
+// ---- Share a payout the user confirmed ----
+
+const sharing = ref(false)
+async function share() {
+  if (amountUnits.value === null) return
+  sharing.value = true
+  const took = sentAt.value && paidAt.value ? paidAt.value - sentAt.value : null
+  // A confirmation tapped much later says nothing about speed, so only quick ones show a time.
+  const time = took !== null && took < 60 * 60_000 ? roughDurationDisplay(took) : null
+  const amount = `${usdtDisplay(amountUnits.value)} USDT`
+  await shareResult({
+    amount,
+    eyebrow: time ? t('share.eyebrowTimed', { time }) : t('share.eyebrow'),
+    place: t('share.place', { country: info.value.name, flag: flagOf(country.value) }),
+    text: time ? t('share.textTimed', { amount, time }) : t('share.text', { amount }),
+    headline: t('home.title'),
+    sub: t('share.sub', { site: publicSite() }),
+  })
+  sharing.value = false
+}
 
 // Fonbnk's "Back to Ferry" link opens /fonbnk/return inside the frame, which tells this page.
 function onFrameMessage(e: MessageEvent) {
@@ -1040,6 +1068,15 @@ function onBack() {
           </div>
         </dl>
         <p class="fy-caption" style="margin: 0">{{ t('fonbnk.paidNote') }}</p>
+        <button
+          v-if="amountUnits"
+          type="button"
+          class="fy-btn fy-btn--text fy-btn--sm self-start"
+          :disabled="sharing"
+          @click="share"
+        >
+          <Icon name="share" :size="16" /> {{ t('share.button') }}
+        </button>
       </div>
       <div class="fy-bottom">
         <RouterLink to="/" class="fy-btn fy-btn--primary">{{ t('fonbnk.home') }}</RouterLink>

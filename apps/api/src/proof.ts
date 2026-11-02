@@ -32,6 +32,12 @@ export interface LnProofRow {
   timed: boolean
 }
 
+/** A NIM → USDT swap read back from LendaSwap and Polygon. */
+export interface NimSwapRow {
+  toAddress: string
+  amountUnits: bigint
+}
+
 interface Counted {
   route: 'fonbnk' | 'mpesa_ln'
   country: FonbnkCountry
@@ -72,8 +78,10 @@ export function computeStats(
   exclude: string[],
   now = Date.now(),
   lnRows: LnProofRow[] = [],
+  nimRows: NimSwapRow[] = [],
 ): StatsResponse {
   const skip = new Set(exclude.map((a) => getAddress(a)))
+  const swaps = nimRows.filter((r) => !skip.has(getAddress(r.toAddress)))
   const fromChain: Counted[] = rows
     .filter((r) => !skip.has(getAddress(r.fromAddress)))
     .flatMap((r) => {
@@ -134,6 +142,10 @@ export function computeStats(
     countries: byCountry.size,
     volumeUnits: volume.toString(),
     medianSeconds: median(seconds),
+    nimSwaps: {
+      count: swaps.length,
+      volumeUnits: swaps.reduce((sum, r) => sum + r.amountUnits, 0n).toString(),
+    },
     byCountry: [...byCountry]
       .map(([country, c]) => ({
         country,

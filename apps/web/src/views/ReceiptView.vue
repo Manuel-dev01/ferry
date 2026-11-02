@@ -54,7 +54,7 @@ async function share() {
     const c = order.value.currency
     const blob = await renderShareImage({
       amount: amount.value.replace(/\.00$/, ''),
-      seconds: tookMs.value < 60_000 ? `${Math.round(tookMs.value / 1000)} seconds` : seconds,
+      eyebrow: `Paid in ${tookMs.value < 60_000 ? `${Math.round(tookMs.value / 1000)} seconds` : seconds}`,
       place: isCorridorCurrency(c) ? `landed in ${COUNTRY_NAMES[c]} ${FLAGS[c]}` : '',
       headline: t('home.title'),
       sub: 'USDT to bank and mobile money · inside Nimiq Pay',
