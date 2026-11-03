@@ -3,7 +3,14 @@
 // verifies genuine EIP-712 signatures. Nothing here can reach a real wallet or real funds.
 import { NimiqProviderError, type NimiqProvider } from '@nimiq/mini-app-sdk'
 import { formatUsdt } from '@ferry/shared'
-import { decodeFunctionData, erc20Abi, type EIP1193Provider, type Hex } from 'viem'
+import {
+  decodeFunctionData,
+  erc20Abi,
+  hexToString,
+  isHex,
+  type EIP1193Provider,
+  type Hex,
+} from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { askApproval } from './mockApproval'
 
@@ -103,6 +110,17 @@ const ethereum = {
           primaryType: td.primaryType,
           message: td.message,
         })
+      }
+      case 'personal_sign': {
+        const message = String(params?.[0] ?? '')
+        const text = isHex(message) ? hexToString(message) : message
+        if (
+          !(await askApproval('Sign this message?', [
+            { label: 'Message', value: text.slice(0, 120) },
+          ]))
+        )
+          throw rejected()
+        return account.signMessage({ message: isHex(message) ? { raw: message } : message })
       }
       case 'eth_sendTransaction': {
         // Shown, never broadcast: the hash is made up, so nothing moves.

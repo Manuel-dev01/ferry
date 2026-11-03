@@ -282,7 +282,37 @@ sequenceDiagram
 
 ### 4.6 Add money
 
-> **Paused since 3 November 2026.** Fonbnk's buy form no longer takes a pasted address: its "Specify your wallet" step now offers only WalletConnect (and Trust Wallet on phones), and pre-filling the address needs a Fonbnk merchant account. Nimiq Pay's wallet isn't available inside the embedded form, so the flow dead-ends. The Home entry is hidden and `/topup` opens only past top-ups from History, behind `ADD_MONEY_OPEN` in `apps/web/src/config.ts`. Fonbnk's cash-out form is unaffected.
+Since November 2026 Fonbnk's buy form no longer takes a pasted address: its "Specify your wallet" step offers only WalletConnect, and Nimiq Pay's wallet isn't available inside the embedded form. So Ferry acts as the WalletConnect wallet (`lib/wcBridge.ts`, `components/WalletConnectStrip.vue`):
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant FB as Fonbnk form (iframe)
+  participant F as Ferry (WalletConnect wallet)
+  participant R as WalletConnect relay
+  participant W as Nimiq Pay wallet
+
+  U->>FB: amount, then WalletConnect → QR icon → Copy link
+  U->>F: Paste link
+  F->>R: pair
+  R-->>F: connection request from Fonbnk
+  F->>F: accept only fonbnk.com (claimed and verified origin)
+  U->>F: Share my address
+  F->>R: approve: the address Nimiq Pay already gave Ferry
+  opt Fonbnk asks for a sign-in
+    F-->>U: show the message
+    U->>F: Sign
+    F->>W: personal_sign (one approval)
+  end
+  FB-->>U: pay by bank or mobile money
+  FB->>W: USDT on Polygon
+```
+
+- Sharing the address needs one tap and no wallet prompt, because Nimiq Pay shared it when the user connected.
+- Sign-in requests are shown on Ferry's own screen first; Nimiq Pay asks only after that tap.
+- Any request to send or sign a transaction is refused: through the bridge, nothing can leave the wallet.
+- The WalletConnect SDK loads only on this screen. The Reown project ID is public and limited to Ferry's domains.
 
 Six countries (Nigeria, Kenya, Ghana, South Africa, Uganda, Tanzania). Fonbnk's buy form runs in an iframe; the user pays Fonbnk by bank or mobile money, and Fonbnk sends USDT to the user's Polygon address. Ferry doesn't receive a callback; it watches the wallet's USDT balance and shows the new amount when it rises. When Fonbnk's form finishes, it redirects to `/fonbnk/return` inside the iframe, which posts a same-origin message so the parent screen can move on.
 

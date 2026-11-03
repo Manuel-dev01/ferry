@@ -13,6 +13,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '../components/AppHeader.vue'
 import Banner from '../components/Banner.vue'
 import Icon from '../components/Icon.vue'
+import WalletConnectStrip from '../components/WalletConnectStrip.vue'
 import { countryName, flagOf } from '../lib/fonbnk'
 import { usdtDisplay } from '../lib/format'
 import { useCashoutStore } from '../stores/cashout'
@@ -284,18 +285,8 @@ onMounted(() => {
         >
         <span class="fy-header__spacer" />
       </header>
-      <div v-if="session.evmAddress" class="s-strip">
-        <span class="s-strip__text">
-          <span class="fy-caption">{{ t('topup.pasteThis') }}</span>
-          <span class="s-mono"
-            >{{ session.evmAddress.slice(0, 8) }}…{{ session.evmAddress.slice(-6) }}</span
-          >
-        </span>
-        <button type="button" class="fy-btn fy-btn--secondary fy-btn--sm" @click="copyAddress">
-          <Icon :name="copied ? 'check' : 'copy'" :size="16" />
-          {{ copied ? t('topup.copied') : t('topup.copy') }}
-        </button>
-      </div>
+      <!-- Fonbnk connects wallets only over WalletConnect; Ferry answers for Nimiq Pay -->
+      <WalletConnectStrip v-if="session.evmAddress" :address="session.evmAddress" />
       <div v-show="!returned" class="s-widget">
         <iframe
           :src="widgetUrl"
@@ -333,7 +324,7 @@ onMounted(() => {
       <div class="fy-content" style="gap: 18px">
         <div class="fy-now fy-now--mint" style="margin-top: 4px">
           <div class="fy-now__top">
-            <span class="fy-eyebrow">{{ flagOf(country) }} {{ info.name }}</span>
+            <span class="fy-eyebrow">{{ flagOf(country) }} {{ countryName(country) }}</span>
             <Icon name="check" :size="18" :stroke="3" />
           </div>
           <span class="fy-now__title">{{ t('topup.arrivedTitle') }}</span>
@@ -399,29 +390,6 @@ onMounted(() => {
 .s-address span:last-child {
   color: var(--fy-brand-text);
   font-weight: 800;
-}
-.s-strip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 16px 10px;
-  padding: 8px 8px 8px 14px;
-  border-radius: var(--fy-radius-m);
-  background: var(--fy-surface);
-  box-shadow: inset 0 0 0 1px var(--fy-line);
-}
-.s-strip__text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.s-mono {
-  font:
-    600 15px ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    monospace;
 }
 .s-widget {
   display: flex;

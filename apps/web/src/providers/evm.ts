@@ -69,6 +69,14 @@ export async function signTypedDataV4(address: Address, typedData: unknown): Pro
   })
 }
 
+/**
+ * Approval: a plain-text signature another site asks for over WalletConnect (a sign-in). Only
+ * relayed as asked; Ferry's own structured signatures always use signTypedDataV4.
+ */
+export async function personalSign(address: Address, message: Hex): Promise<Hex> {
+  return provider().request({ method: 'personal_sign', params: [message, address] })
+}
+
 /** Approval: a normal transaction the user pays gas for. */
 export async function sendTransaction(tx: { from: Address; to: Address; data: Hex }): Promise<Hex> {
   return provider().request({ method: 'eth_sendTransaction', params: [tx] })
