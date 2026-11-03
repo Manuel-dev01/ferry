@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, onMounted } from 'vue'
 import { MOCK_WALLET } from './config'
+import { useHistoryStore } from './stores/history'
 import { useSessionStore } from './stores/session'
 
 const MockWalletSheet =
@@ -9,7 +10,11 @@ const MockWalletSheet =
     : null
 
 const session = useSessionStore()
-onMounted(() => void session.start())
+const history = useHistoryStore()
+onMounted(() => {
+  void session.start()
+  void history.syncConfirmations() // confirmations that didn't reach Ferry's server yet
+})
 </script>
 
 <template>

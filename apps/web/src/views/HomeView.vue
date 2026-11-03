@@ -8,6 +8,7 @@ import FerryLogo from '../components/FerryLogo.vue'
 import Icon from '../components/Icon.vue'
 import Monogram from '../components/Monogram.vue'
 import StatusChip from '../components/StatusChip.vue'
+import { ADD_MONEY_OPEN } from '../config'
 import { ferryApi } from '../lib/ferryApi'
 import { shortTimeDisplay, usdtDisplay, wholeFiatDisplay } from '../lib/format'
 import { tinyAddress } from '../lib/names'
@@ -161,6 +162,7 @@ function startCashout(kind: 'self' | 'other') {
             </span>
             <div v-if="session.meta?.payoutRoute !== 'paycrest'" class="flex flex-wrap gap-2">
               <RouterLink
+                v-if="ADD_MONEY_OPEN"
                 to="/topup"
                 class="fy-btn fy-btn--cream fy-btn--sm"
                 style="font-weight: 700"

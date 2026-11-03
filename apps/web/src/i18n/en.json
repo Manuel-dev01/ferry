@@ -451,7 +451,7 @@
       "q4": "What if a payout fails?",
       "a4": "Lightning routes are atomic: if the payout doesn’t happen, the payment fails back to your wallet. Fonbnk orders stay open with Fonbnk, and History takes you back to finish or check them.",
       "q5": "Which countries can I cash out to?",
-      "a5": "Nigeria, Kenya, Ghana, South Africa, Uganda, Tanzania, Rwanda, Zambia, The Gambia, Senegal, Côte d’Ivoire, Cameroon and Brazil, to banks or mobile money. Airtime works in 11 of them, and you can add money in 6.",
+      "a5": "Nigeria, Kenya, Ghana, South Africa, Uganda, Tanzania, Rwanda, Zambia, The Gambia, Senegal, Côte d’Ivoire, Cameroon and Brazil, to banks or mobile money. Airtime works in 11 of them.",
       "q6": "Does Ferry hold my money?",
       "a6": "No. Your wallet pays the payout partner directly, and every approval happens in Nimiq Pay. Ferry’s code is open source under the MIT licence."
     },

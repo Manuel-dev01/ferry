@@ -1,5 +1,6 @@
 import { isFonbnkCountry } from '@ferry/shared'
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { ADD_MONEY_OPEN } from './config'
 import { useCashoutStore } from './stores/cashout'
 import { useSessionStore } from './stores/session'
 import RootView from './views/RootView.vue'
@@ -72,7 +73,13 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: app,
   },
-  { path: '/topup', component: () => import('./views/TopupView.vue'), meta: app },
+  {
+    path: '/topup',
+    component: () => import('./views/TopupView.vue'),
+    // While Add money is off, only past top-ups (opened from History with ?id=) open here.
+    beforeEnter: (to) => ADD_MONEY_OPEN || typeof to.query.id === 'string' || { path: '/' },
+    meta: app,
+  },
   { path: '/nim', component: () => import('./views/NimView.vue'), meta: app },
   // Opened by Fonbnk inside its frame, where Nimiq Pay's context isn't available.
   { path: '/fonbnk/return', component: () => import('./views/FonbnkReturnView.vue') },

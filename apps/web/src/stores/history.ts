@@ -1,4 +1,6 @@
 import { recordCountry, type OrderView } from '@ferry/shared'
+import type { Hex } from 'viem'
+import { ferryApi } from '../lib/ferryApi'
 import { channelLabel } from '../lib/fonbnk'
 import { fiatDisplay, usdtDisplay } from '../lib/format'
 import { titleCase } from '../lib/names'
@@ -7,6 +9,8 @@ import { ref } from 'vue'
 
 const STORAGE_KEY = 'ferry.orders.v1'
 const MAX_ENTRIES = 50
+/** Ferry's server accepts an "it arrived" confirmation for a week after the cash-out. */
+const CONFIRM_WINDOW_MS = 7 * 24 * 60 * 60_000
 
 /** What this device remembers about an order. Stays on the device; never full account numbers. */
 export interface HistoryEntry {
@@ -43,6 +47,8 @@ export interface HistoryEntry {
   /** Nimiq Pay's own NIM or Polygon transaction and swap for a Lightning payment, for support. */
   walletTx?: string
   walletSwapId?: string
+  /** Ferry's server has the user's "it arrived" confirmation, so Proof of Ferry counts it. */
+  receivedSynced?: boolean
 }
 
 /** The amount a history row shows: fiat for Ferry orders, USDT sent for partner cash-outs. */
@@ -152,5 +158,43 @@ export const useHistoryStore = defineStore('history', () => {
     persist()
   }
 
-  return { entries, add, updateFrom, find, setStatus, markPaid, update }
+  /**
+   * Sends "it arrived" confirmations the server hasn't acknowledged yet: one may have been tapped
+   * offline, or before the server could take it. Repeats are harmless (the first answer wins).
+   */
+  let syncing = false
+  async function syncConfirmations() {
+    if (syncing) return
+    syncing = true
+    try {
+      const due = entries.value.filter(
+        (e) =>
+          e.provider === 'fonbnk' &&
+          e.status === 'settled' &&
+          e.txHash &&
+          !e.receivedSynced &&
+          Date.now() - e.createdAt < CONFIRM_WINDOW_MS,
+      )
+      for (const e of due) {
+        const ok = await ferryApi
+          .handoffReceived(e.txHash as Hex)
+          .then(() => true)
+          .catch(() => false) // offline or not recorded yet: try again next time
+        if (ok) update(e.id, { receivedSynced: true })
+      }
+    } finally {
+      syncing = false
+    }
+  }
+
+  return {
+    entries,
+    add,
+    updateFrom,
+    find,
+    setStatus,
+    markPaid,
+    update,
+    syncConfirmations,
+  }
 })

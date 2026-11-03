@@ -557,7 +557,7 @@
       "q4": "Et si un paiement échoue ?",
       "a4": "Les routes Lightning sont atomiques : si le versement n’a pas lieu, le paiement revient dans votre portefeuille. Les commandes Fonbnk restent ouvertes chez Fonbnk, et l’historique vous y ramène pour les terminer ou les vérifier.",
       "q5": "Vers quels pays puis-je retirer ?",
-      "a5": "Nigeria, Kenya, Ghana, Afrique du Sud, Ouganda, Tanzanie, Rwanda, Zambie, Gambie, Sénégal, Côte d’Ivoire, Cameroun et Brésil, vers des banques ou du mobile money. Le crédit téléphonique fonctionne dans 11 d’entre eux, et l’ajout d’argent dans 6.",
+      "a5": "Nigeria, Kenya, Ghana, Afrique du Sud, Ouganda, Tanzanie, Rwanda, Zambie, Gambie, Sénégal, Côte d’Ivoire, Cameroun et Brésil, vers des banques ou du mobile money. Le crédit téléphonique fonctionne dans 11 d’entre eux.",
       "q6": "Ferry détient-il mon argent ?",
       "a6": "Non. Votre portefeuille paie directement le partenaire de paiement, et chaque approbation a lieu dans Nimiq Pay. Le code de Ferry est open source sous licence MIT."
     },

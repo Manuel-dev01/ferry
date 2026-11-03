@@ -557,7 +557,7 @@
       "q4": "E se um pagamento falhar?",
       "a4": "As rotas Lightning são atômicas: se o pagamento ao destino não acontecer, o valor volta para sua carteira. Os pedidos da Fonbnk ficam abertos na Fonbnk, e o histórico te leva de volta para concluir ou conferir.",
       "q5": "Para quais países posso sacar?",
-      "a5": "Nigéria, Quênia, Gana, África do Sul, Uganda, Tanzânia, Ruanda, Zâmbia, Gâmbia, Senegal, Costa do Marfim, Camarões e Brasil, para bancos ou carteiras móveis. O crédito de celular funciona em 11 deles, e adicionar dinheiro em 6.",
+      "a5": "Nigéria, Quênia, Gana, África do Sul, Uganda, Tanzânia, Ruanda, Zâmbia, Gâmbia, Senegal, Costa do Marfim, Camarões e Brasil, para bancos ou carteiras móveis. O crédito de celular funciona em 11 deles.",
       "q6": "O Ferry guarda o meu dinheiro?",
       "a6": "Não. Sua carteira paga direto o parceiro de pagamento, e toda aprovação acontece no Nimiq Pay. O código do Ferry é aberto, sob a licença MIT."
     },

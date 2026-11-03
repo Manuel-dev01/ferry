@@ -282,6 +282,8 @@ sequenceDiagram
 
 ### 4.6 Add money
 
+> **Paused since 3 November 2026.** Fonbnk's buy form no longer takes a pasted address: its "Specify your wallet" step now offers only WalletConnect (and Trust Wallet on phones), and pre-filling the address needs a Fonbnk merchant account. Nimiq Pay's wallet isn't available inside the embedded form, so the flow dead-ends. The Home entry is hidden and `/topup` opens only past top-ups from History, behind `ADD_MONEY_OPEN` in `apps/web/src/config.ts`. Fonbnk's cash-out form is unaffected.
+
 Six countries (Nigeria, Kenya, Ghana, South Africa, Uganda, Tanzania). Fonbnk's buy form runs in an iframe; the user pays Fonbnk by bank or mobile money, and Fonbnk sends USDT to the user's Polygon address. Ferry doesn't receive a callback; it watches the wallet's USDT balance and shows the new amount when it rises. When Fonbnk's form finishes, it redirects to `/fonbnk/return` inside the iframe, which posts a same-origin message so the parent screen can move on.
 
 ### 4.7 Gas top-up
