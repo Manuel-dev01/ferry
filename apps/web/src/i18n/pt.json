@@ -186,11 +186,6 @@
     "paidIn": "Pago em {t}",
     "sent": "Enviado",
     "empty": "Ainda não há saques públicos. Os primeiros aparecem aqui assim que acontecerem.",
-    "howTitle": "Como contamos",
-    "how1": "Um saque conta quando o Ferry consegue prová-lo: a transferência de USDT do próprio usuário para a Fonbnk na Polygon, ou um comprovante M-Pesa de um pagamento M-Pesa Direct. Cada linha leva à sua prova.",
-    "how2": "O tempo mediano e “Recebimento confirmado” usam o comprovante M-Pesa quando existe e, caso contrário, quem enviou tocando em “Recebi meu dinheiro” no Ferry.",
-    "how3": "Carteiras únicas conta só quem enviou pela blockchain: um pagamento Lightning não revela a carteira pagadora.",
-    "how4": "NIM convertidos em USDT contam quando a LendaSwap informa a troca concluída e o Ferry vê os USDT chegarem ao endereço da própria troca na Polygon. Aparecem separados dos saques, porque o saque seguinte é contado à parte.",
     "nimSwaps": "NIM convertidos em USDT",
     "soon": "Em breve",
     "afterFirst": "a partir da primeira entrega cronometrada"

@@ -186,11 +186,6 @@
     "paidIn": "Payé en {t}",
     "sent": "Envoyé",
     "empty": "Aucun retrait public pour l’instant. Les premiers apparaîtront ici dès qu’ils auront lieu.",
-    "howTitle": "Comment nous comptons",
-    "how1": "Un retrait compte dès que Ferry peut le prouver : le transfert d’USDT de l’utilisateur vers Fonbnk sur Polygon, ou un reçu M-Pesa pour un paiement M-Pesa Direct. Chaque ligne renvoie vers sa preuve.",
-    "how2": "Le délai médian et « Réception confirmée » utilisent le reçu M-Pesa quand il existe, sinon l’expéditeur qui touche « J’ai reçu mon argent » dans Ferry.",
-    "how3": "Les portefeuilles uniques ne comptent que les expéditeurs sur la blockchain : un paiement Lightning ne révèle pas le portefeuille payeur.",
-    "how4": "Les NIM convertis en USDT comptent dès que LendaSwap signale l’échange terminé et que Ferry voit les USDT arriver à l’adresse de l’échange sur Polygon. Ils sont affichés à part, car le retrait qui suit est compté séparément.",
     "nimSwaps": "NIM convertis en USDT",
     "soon": "Bientôt",
     "afterFirst": "dès la première livraison chronométrée"

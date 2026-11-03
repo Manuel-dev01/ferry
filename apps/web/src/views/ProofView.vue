@@ -162,14 +162,6 @@ const maxCountry = computed(() =>
             {{ t('proof.empty') }}
           </p>
         </section>
-
-        <section class="fy-panel s-how">
-          <h2 style="font: 700 16px var(--fy-font-body); margin: 0">{{ t('proof.howTitle') }}</h2>
-          <p>{{ t('proof.how1') }}</p>
-          <p>{{ t('proof.how2') }}</p>
-          <p>{{ t('proof.how3') }}</p>
-          <p>{{ t('proof.how4') }}</p>
-        </section>
       </template>
     </div>
   </main>
@@ -259,16 +251,5 @@ const maxCountry = computed(() =>
   justify-content: center;
   font-size: 24px;
   background: var(--fy-surface-2);
-}
-.s-how {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.s-how p {
-  margin: 0;
-  font-size: 14px;
-  color: var(--fy-ink-2);
 }
 </style>

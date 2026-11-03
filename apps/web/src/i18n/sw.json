@@ -186,11 +186,6 @@
     "paidIn": "Imelipwa ndani ya {t}",
     "sent": "Imetumwa",
     "empty": "Bado hakuna utoaji wa pesa wa umma. Wa kwanza utaonekana hapa mara tu utakapotokea.",
-    "howTitle": "Jinsi tunavyohesabu",
-    "how1": "Utoaji wa pesa unahesabiwa mara Ferry inapoweza kuuthibitisha: uhamisho wa USDT wa mtumiaji mwenyewe kwenda Fonbnk kwenye Polygon, au risiti ya M-Pesa kwa malipo ya M-Pesa Direct. Kila mstari unaunganishwa na uthibitisho wake.",
-    "how2": "Muda wa kati na “Kupokelewa kumethibitishwa” vinatumia risiti ya M-Pesa ikiwepo, au vinginevyo mtumaji akibonyeza “Nimepokea pesa zangu” ndani ya Ferry.",
-    "how3": "Pochi tofauti zinahesabu watumaji wa blockchain tu: malipo ya Lightning hayaonyeshi pochi iliyolipa.",
-    "how4": "NIM zilizobadilishwa kuwa USDT zinahesabiwa mara LendaSwap inaporipoti ubadilishaji umekamilika na Ferry inaona USDT zikifika kwenye anwani ya ubadilishaji huo kwenye Polygon. Zinaonyeshwa kando na utoaji wa pesa, kwa sababu utoaji unaofuata unahesabiwa wenyewe.",
     "nimSwaps": "NIM zilizobadilishwa kuwa USDT",
     "soon": "Hivi karibuni",
     "afterFirst": "kuanzia malipo ya kwanza yaliyopimwa muda"

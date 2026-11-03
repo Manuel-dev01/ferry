@@ -649,11 +649,6 @@
     "paidIn": "Paid in {t}",
     "sent": "Sent",
     "empty": "No public cash-outs yet. The first ones will show here the moment they happen.",
-    "howTitle": "How we count",
-    "how1": "A cash-out counts once Ferry can prove it: the user’s own USDT transfer to Fonbnk on Polygon, or an M-Pesa receipt for an M-Pesa Direct payout. Each row links to its proof.",
-    "how2": "The median time and “Confirmed received” use M-Pesa receipts where there is one, and otherwise senders tapping “I’ve got my money” in Ferry.",
-    "how3": "Unique wallets counts on-chain senders only: a Lightning payout doesn’t reveal the paying wallet.",
-    "how4": "NIM turned into USDT counts once LendaSwap reports the swap complete and Ferry sees the USDT reach the swap’s own address on Polygon. It’s shown apart from cash-outs, since the cash-out that follows is counted on its own.",
     "nimSwaps": "NIM turned into USDT",
     "soon": "Soon",
     "afterFirst": "from the first timed delivery"
