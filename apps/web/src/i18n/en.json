@@ -44,7 +44,8 @@
   "evm": {
     "rejected": "No problem. Connect when you're ready.",
     "unavailable": "This version of Nimiq Pay doesn't share an Ethereum wallet. Update Nimiq Pay and try again.",
-    "balanceFailed": "We couldn't load your balance. Check your connection and try again."
+    "balanceFailed": "We couldn't load your balance. Check your connection and try again.",
+    "accountChanged": "Your connected wallet changed. Check the destination and amount before sending again."
   },
   "nim": {
     "rejected": "No problem. You can share your NIM address any time.",
@@ -589,7 +590,8 @@
     "sendUncertain": "We can’t tell whether the transfer went out ({reason}). Check Nimiq Pay’s activity before sending again.",
     "checkedRetry": "I checked: it didn’t go out. Try again",
     "gasReverted": "the gas top-up failed on the network",
-    "startAgain": "Start a new cash-out"
+    "startAgain": "Start a new cash-out",
+    "previousUncertain": "A previous transfer from this wallet has an unknown outcome."
   },
   "topup": {
     "header": "Add money",
@@ -627,7 +629,8 @@
       "GH": "With mobile money.",
       "ZA": "By bank transfer in rand."
     },
-    "watchAgain": "Ferry stopped watching. Tap to check for your USDT again"
+    "watchAgain": "Ferry stopped watching. Tap to check for your USDT again",
+    "balanceFailed": "Could not read your wallet balance. Try again before opening Fonbnk so Ferry can detect your deposit."
   },
   "proof": {
     "header": "Proof of Ferry",
@@ -696,7 +699,12 @@
     "cashOutNow": "Cash out now",
     "quoteFailed": "We couldn’t get a price from the swap service just now.",
     "stoppedChecking": "Ferry stopped checking for now. Check again; the swap is also in History.",
-    "checkAgain": "Check again"
+    "checkAgain": "Check again",
+    "invalid": "Nimiq Pay could not start this payment. Check your balance and payment details, then try again.",
+    "insufficient": "Nimiq Pay reports insufficient balance. Reduce the amount or add funds before trying again.",
+    "nimEstimate": "≈ {nim} NIM before fees. Nimiq Pay shows the total before approval.",
+    "estimateUnavailable": "NIM estimate unavailable. Nimiq Pay shows the total, including fees, before approval.",
+    "refreshQuote": "Get a new quote"
   },
   "offers": {
     "loading": "Finding the best rate…",
@@ -775,14 +783,15 @@
     "mavapayUnconfirmedNote": "Nimiq Pay didn’t confirm this payment and Mavapay gives no status. Check Nimiq Pay’s activity before paying again."
   },
   "wc": {
-    "title": "Fonbnk asks to connect a wallet",
-    "steps": "In Fonbnk, tap WalletConnect, then the QR icon at the top, then Copy link. Paste it here.",
+    "title": "Connect your wallet",
+    "steps": "In Fonbnk, tap WalletConnect, then the QR icon at the top, then Copy link. Close the QR panel, then tap Paste link above the form.",
     "paste": "Paste link",
     "badLink": "That isn't a WalletConnect link. Copy it again from Fonbnk.",
     "connecting": "Connecting to Fonbnk…",
     "noAnswer": "Fonbnk didn't answer. Copy a fresh link and paste it again.",
     "notFonbnk": "That link isn't from Fonbnk, so Ferry didn't connect.",
-    "connected": "Connected to Fonbnk · USDT goes to {address}",
+    "connected": "Address shared with Fonbnk: {address}. If it still asks to connect, reconnect below.",
+    "reconnect": "Reconnect",
     "disconnected": "Fonbnk disconnected. Paste a fresh link if it asks again.",
     "proposalTitle": "Fonbnk wants your wallet address",
     "proposalBody": "It gets only your address, so it knows where to send the USDT. Nothing can leave your wallet this way.",
@@ -795,6 +804,7 @@
     "signDeclined": "You declined the sign-in. Fonbnk may ask again.",
     "wrongAccount": "Fonbnk asked for a different wallet, so Ferry said no.",
     "refusedTx": "Fonbnk asked to send a transaction. Ferry only shares your address, so it said no.",
-    "failed": "Couldn't connect ({reason}). Copy a fresh link from Fonbnk and try again."
+    "failed": "Couldn't connect ({reason}). Copy a fresh link from Fonbnk and try again.",
+    "help": "How to connect · show steps"
   }
 }

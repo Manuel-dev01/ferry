@@ -7,12 +7,13 @@ import {
   type FonbnkChannel,
   type FonbnkCountry,
 } from '@ferry/shared'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '../components/AppHeader.vue'
 import Banner from '../components/Banner.vue'
 import Icon from '../components/Icon.vue'
+import PaymentError from '../components/PaymentError.vue'
 import WalletConnectStrip from '../components/WalletConnectStrip.vue'
 import { countryName, flagOf } from '../lib/fonbnk'
 import { usdtDisplay } from '../lib/format'
@@ -58,6 +59,7 @@ const widgetUrl = computed(() =>
 // ---- Wallet ----
 
 const connectBusy = ref(false)
+const preparing = ref(false)
 const connectProblem = ref('')
 async function connect() {
   connectBusy.value = true
@@ -90,13 +92,32 @@ async function copyAddress() {
 const baseline = ref<bigint | null>(null)
 const arrivedUnits = ref<bigint | null>(null)
 const returned = ref(false)
-let watching = false
+const widget = ref<HTMLIFrameElement | null>(null)
+let activeRun: number | null = null
+let watchSequence = 0
 let stopped = false
 let wake: (() => void) | null = null
+function stopWatching() {
+  activeRun = null
+  watchSequence++
+  wake?.()
+  wake = null
+}
 onUnmounted(() => {
   stopped = true
-  wake?.()
+  stopWatching()
 })
+watch(phase, (next) => {
+  if (next !== 'fonbnk') stopWatching()
+})
+watch(
+  () => session.evmAddress,
+  () => {
+    stopWatching()
+    if (phase.value === 'fonbnk') phase.value = 'pick'
+    baseline.value = null
+  },
+)
 
 async function readUsdt(): Promise<bigint | null> {
   try {
@@ -108,28 +129,38 @@ async function readUsdt(): Promise<bigint | null> {
 }
 
 async function watchBalance() {
-  if (watching) return
-  watching = true
+  if (activeRun !== null || stopped || phase.value !== 'fonbnk') return
+  const run = ++watchSequence
+  activeRun = run
   const started = Date.now()
   try {
-    while (!stopped && phase.value === 'fonbnk' && Date.now() - started < WATCH_MAX_MS) {
+    while (
+      !stopped &&
+      activeRun === run &&
+      phase.value === 'fonbnk' &&
+      Date.now() - started < WATCH_MAX_MS
+    ) {
       const elapsed = Date.now() - started
       await new Promise<void>((r) => {
-        wake = r
-        setTimeout(r, elapsed < WATCH_FAST_FOR_MS ? WATCH_FAST_MS : WATCH_SLOW_MS)
+        const timer = setTimeout(r, elapsed < WATCH_FAST_FOR_MS ? WATCH_FAST_MS : WATCH_SLOW_MS)
+        wake = () => {
+          clearTimeout(timer)
+          r()
+        }
       })
+      if (stopped || activeRun !== run || phase.value !== 'fonbnk') return
       wake = null
-      if (stopped || phase.value !== 'fonbnk') return
       const now = await readUsdt()
+      if (stopped || activeRun !== run || phase.value !== 'fonbnk') return
       if (now !== null && baseline.value === null) baseline.value = now
       else if (now !== null && baseline.value !== null && now > baseline.value) {
         arrived(now - baseline.value)
         return
       }
     }
-    if (!stopped && phase.value === 'fonbnk') stoppedWatching.value = true
+    if (!stopped && activeRun === run && phase.value === 'fonbnk') stoppedWatching.value = true
   } finally {
-    watching = false
+    if (activeRun === run) activeRun = null
   }
 }
 const stoppedWatching = ref(false)
@@ -162,15 +193,30 @@ function arrived(units: bigint) {
 }
 
 async function toFonbnk() {
-  if (!session.evmAddress) return
-  baseline.value = await readUsdt()
-  phase.value = 'fonbnk'
-  returned.value = false
-  void watchBalance()
+  if (preparing.value || !session.evmAddress || phase.value !== 'pick') return
+  const address = session.evmAddress
+  preparing.value = true
+  connectProblem.value = ''
+  try {
+    const initial = await readUsdt()
+    if (stopped || session.evmAddress !== address || phase.value !== 'pick') return
+    if (initial === null) {
+      connectProblem.value = t('topup.balanceFailed')
+      return
+    }
+    baseline.value = initial
+    stoppedWatching.value = false
+    phase.value = 'fonbnk'
+    returned.value = false
+    void watchBalance()
+  } finally {
+    preparing.value = false
+  }
 }
 
 // Fonbnk's "Back to Ferry" link: the order is done on Fonbnk's side, so check right away.
 function onFrameMessage(e: MessageEvent) {
+  if (e.source !== widget.value?.contentWindow) return
   if (e.origin !== window.location.origin || e.data?.type !== 'ferry:fonbnk-return') return
   if (phase.value !== 'fonbnk') return
   returned.value = true
@@ -198,7 +244,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="fy-screen">
+  <main class="fy-screen" :class="{ 's-topup-widget': phase === 'fonbnk' }">
     <!-- Country and wallet -->
     <template v-if="phase === 'pick'">
       <AppHeader back="/">{{ t('topup.header') }}</AppHeader>
@@ -250,10 +296,9 @@ onMounted(() => {
           </ol>
           <p class="fy-caption" style="margin: 0">{{ t('topup.partner') }}</p>
         </section>
-
-        <Banner v-if="connectProblem" tone="brand" :body="connectProblem" />
       </div>
       <div class="fy-bottom">
+        <PaymentError v-if="connectProblem" :body="connectProblem" />
         <button
           v-if="!session.evmAddress"
           type="button"
@@ -263,7 +308,13 @@ onMounted(() => {
         >
           {{ connectBusy ? t('home.connecting') : t('topup.connect') }}
         </button>
-        <button v-else type="button" class="fy-btn fy-btn--primary" @click="toFonbnk">
+        <button
+          v-else
+          type="button"
+          class="fy-btn fy-btn--primary"
+          :disabled="preparing"
+          @click="toFonbnk"
+        >
           {{ t('topup.continue') }} <Icon name="arrow-right" :size="18" />
         </button>
       </div>
@@ -289,6 +340,7 @@ onMounted(() => {
       <WalletConnectStrip v-if="session.evmAddress" :address="session.evmAddress" />
       <div v-show="!returned" class="s-widget">
         <iframe
+          ref="widget"
           :src="widgetUrl"
           title="Fonbnk"
           allow="clipboard-read; clipboard-write; camera"
@@ -400,10 +452,16 @@ onMounted(() => {
 .s-widget iframe {
   flex: 1;
   width: 100%;
-  height: calc(100svh - 230px);
-  min-height: 400px;
+  /* WalletConnect's wallet picker needs a tall viewport, even on a short phone.
+     Let Ferry scroll instead of centering a tall partner modal above the frame. */
+  height: max(720px, calc(100svh - 180px));
+  min-height: 720px;
+  flex: none;
   border: 0;
   background: #fff;
+}
+.s-topup-widget .fy-bottom {
+  position: static;
 }
 .s-watch {
   margin: 0;

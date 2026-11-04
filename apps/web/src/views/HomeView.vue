@@ -42,18 +42,21 @@ const approxCountry = computed(
     FONBNK_COUNTRY_CODES.find((c) => FONBNK_COUNTRIES[c].currency === session.host.fiat) ?? null,
 )
 const approx = ref<{ receive: string; currency: string } | null>(null)
+let approxSequence = 0
 watch(
   () => session.balances?.usdt,
   async (usdt) => {
+    const sequence = ++approxSequence
     approx.value = null
     const country = approxCountry.value
     if (!usdt || usdt <= 0n || !country) return
     try {
       const { offers } = await ferryApi.offers(country, FONBNK_COUNTRIES[country].cashout[0], usdt)
+      if (sequence !== approxSequence) return
       const fonbnk = offers.find((o) => o.route === 'fonbnk')
       approx.value = fonbnk ? { receive: fonbnk.receive, currency: fonbnk.currency } : null
     } catch {
-      approx.value = null // the estimate is a nice-to-have
+      if (sequence === approxSequence) approx.value = null // the estimate is a nice-to-have
     }
   },
   { immediate: true },

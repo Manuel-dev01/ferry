@@ -24,6 +24,7 @@ export type NimiqErrorKind =
   | 'rejected'
   | 'unsupported'
   | 'invalid'
+  | 'insufficient'
   | 'network'
   | 'duplicate'
   | 'outcome_unknown'
@@ -50,7 +51,16 @@ export function classifyNimiqError(err: unknown): ClassifiedNimiqError {
       return { kind: 'unsupported', ...base }
     case 'INVALID_REQUEST':
     case 'INVALID_TRANSACTION':
-      return { kind: 'invalid', ...base }
+      // Only classify an explicit validation rejection as a balance failure.
+      // Network, duplicate and unknown outcomes must keep their conservative handling.
+      return {
+        kind: /insufficient (?:nim |usdt |wallet )?(?:funds|balance)|not enough (?:nim|usdt|funds|balance)|balance (?:is )?too low/i.test(
+          err.message,
+        )
+          ? 'insufficient'
+          : 'invalid',
+        ...base,
+      }
     case 'NETWORK_ERROR':
       return { kind: 'network', ...base }
     case 'DUPLICATE_PAYMENT':

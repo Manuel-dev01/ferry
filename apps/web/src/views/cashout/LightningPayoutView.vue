@@ -11,6 +11,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '../../components/AppHeader.vue'
 import Banner from '../../components/Banner.vue'
 import Icon from '../../components/Icon.vue'
+import PaymentError from '../../components/PaymentError.vue'
 import { friendlyError } from '../../lib/errors'
 import { ferryApi } from '../../lib/ferryApi'
 import { flagOf } from '../../lib/fonbnk'
@@ -22,7 +23,8 @@ import {
   wholeFiatDisplay,
 } from '../../lib/format'
 import { publicSite, shareResult } from '../../lib/share'
-import { classifyNimiqError, initNimiq, lightningIdsFrom } from '../../providers/nimiq'
+import { initNimiq } from '../../providers/nimiq'
+import { lightningFailure } from '../../lib/lightningFailure'
 import { useHistoryStore } from '../../stores/history'
 
 // One-screen cash-outs over Lightning: the user's Nimiq Pay wallet pays the partner's invoice
@@ -44,8 +46,14 @@ const units = (() => {
 })()
 /** Local currency per USDT from the offer, for the "≈ USDT" line. */
 const rate = typeof route.query.rate === 'string' ? route.query.rate : null
-const estimate = typeof route.query.receive === 'string' ? route.query.receive : null
-const estimateCurrency = typeof route.query.currency === 'string' ? route.query.currency : null
+const estimate =
+  typeof route.query.receive === 'string' && /^\d{1,20}(?:\.\d{1,20})?$/.test(route.query.receive)
+    ? route.query.receive
+    : null
+const estimateCurrency =
+  typeof route.query.currency === 'string' && /^[A-Z]{3}$/.test(route.query.currency)
+    ? route.query.currency
+    : null
 
 const STATUS_POLL_MS = 3_000
 const STATUS_POLL_MAX = 100 // 5 minutes
@@ -79,7 +87,7 @@ const kesError = computed(() => {
 })
 /** ≈ USDT base units for a shilling amount at the offer's rate (display only). */
 const usdtApproxUnits = computed(() => {
-  if (!rate || kes.value === null) return null
+  if (!rate || !/^\d{1,20}(?:\.\d{1,20})?$/.test(rate) || kes.value === null) return null
   const [whole = '0', frac = ''] = rate.split('.')
   const hundredths = BigInt(whole) * 100n + BigInt((frac + '00').slice(0, 2))
   if (hundredths === 0n) return null
@@ -186,17 +194,22 @@ async function send() {
         // storage unavailable: the address is asked for again next time
       }
     }
+    if (stopped) return
     invoice.value = inv
     remember(inv, 'awaiting')
     status.value = t('ln.confirmInWallet')
     let ambiguous = false
     try {
       const nimiq = await initNimiq()
+      if (stopped) {
+        history.setStatus(inv.paymentHash, 'failed')
+        return
+      }
       const paid = await nimiq.payLightningInvoice({ invoice: inv.invoice })
       history.update(inv.paymentHash, { walletTx: paid.hash, walletSwapId: paid.swapId })
     } catch (err) {
-      const e = classifyNimiqError(err)
-      const ids = lightningIdsFrom(e.data)
+      const e = lightningFailure(err, inv.expiresAt)
+      const ids = e.ids
       if (ids.hash || ids.swapId) {
         history.update(inv.paymentHash, { walletTx: ids.hash, walletSwapId: ids.swapId })
       }
@@ -206,6 +219,8 @@ async function send() {
       }
       if (e.kind === 'rejected') return settled(t('ln.cancelled'))
       if (e.kind === 'invalid') return settled(t('ln.invalid'))
+      if (e.kind === 'insufficient') return settled(t('nimSwap.insufficient'))
+      if (e.kind === 'expired') return settled(t('ln.expired'))
       if (e.kind === 'unsupported') return settled(t('ln.unsupported'))
       // duplicate, outcome unknown, network, wallet or unknown errors: it may have gone out.
       ambiguous = true
@@ -491,10 +506,9 @@ async function share() {
             </ol>
           </section>
         </template>
-
-        <Banner v-if="problem" tone="danger" :body="problem" />
       </div>
       <div class="fy-bottom">
+        <PaymentError v-if="problem" :body="problem" />
         <button
           type="button"
           class="fy-btn fy-btn--primary"

@@ -108,7 +108,7 @@ export function evmErrorText(err: unknown): string {
       // circular; fall through
     }
   }
-  return 'The wallet stopped without saying why. Nothing was sent.'
+  return 'The wallet stopped without saying why. Check its activity before another attempt.'
 }
 
 export type EvmErrorKind = 'rejected' | 'chain_missing' | 'unsupported' | 'unavailable' | 'unknown'

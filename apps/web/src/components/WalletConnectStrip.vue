@@ -3,7 +3,7 @@
 // its link, pastes it here, and Ferry answers as the wallet (see lib/wcBridge.ts).
 import type { WalletKitTypes } from '@reown/walletkit'
 import { hexToString, isHex, type Address, type Hex } from 'viem'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   answer,
@@ -37,9 +37,15 @@ const reason = (err: unknown) => (err instanceof Error ? err.message : String(er
 
 type Kit = Awaited<ReturnType<typeof walletKit>>
 let kit: Kit | null = null
+let disposed = false
+const sessionTopic = ref<string | null>(null)
 let pairTimer: ReturnType<typeof setTimeout> | undefined
 
 function onProposal(p: WalletKitTypes.SessionProposal) {
+  if (disposed || state.value !== 'pairing' || proposal.value) {
+    void reject(p).catch(() => undefined)
+    return
+  }
   clearTimeout(pairTimer)
   if (!fromFonbnk(p)) {
     void reject(p).catch(() => undefined)
@@ -51,6 +57,10 @@ function onProposal(p: WalletKitTypes.SessionProposal) {
 }
 
 function onRequest(r: WalletKitTypes.SessionRequest) {
+  if (r.topic !== sessionTopic.value || r.params.chainId !== 'eip155:137' || request.value) {
+    void refuse(r).catch(() => undefined)
+    return
+  }
   const { method, params } = r.params.request
   const target = (params as { chainId?: string }[] | undefined)?.[0]?.chainId
   if (method === 'wallet_switchEthereumChain' && target?.toLowerCase() === '0x89') {
@@ -65,7 +75,10 @@ function onRequest(r: WalletKitTypes.SessionRequest) {
   request.value = r
 }
 
-function onDelete() {
+function onDelete(event: { topic: string }) {
+  if (event.topic !== sessionTopic.value) return
+  sessionTopic.value = null
+  request.value = null
   state.value = 'idle'
   notice.value = t('wc.disconnected')
 }
@@ -73,22 +86,58 @@ function onDelete() {
 onMounted(async () => {
   try {
     kit = await walletKit()
+    if (disposed) return
     kit.on('session_proposal', onProposal)
     kit.on('session_request', onRequest)
     kit.on('session_delete', onDelete)
-    if (Object.keys(kit.getActiveSessions()).length) state.value = 'connected'
+    // A newly mounted Fonbnk frame has its own client. Saved sessions do not prove it is connected.
   } catch (err) {
     problem.value = t('wc.failed', { reason: reason(err) })
   }
 })
 onUnmounted(() => {
+  disposed = true
+  void resetConnection()
   clearTimeout(pairTimer)
   kit?.off('session_proposal', onProposal)
   kit?.off('session_request', onRequest)
   kit?.off('session_delete', onDelete)
 })
 
+async function resetConnection() {
+  clearTimeout(pairTimer)
+  const topic = sessionTopic.value
+  sessionTopic.value = null
+  state.value = 'idle'
+  const pendingProposal = proposal.value
+  const pendingRequest = request.value
+  proposal.value = null
+  request.value = null
+  if (pendingProposal) void reject(pendingProposal).catch(() => undefined)
+  if (pendingRequest) void refuse(pendingRequest).catch(() => undefined)
+  if (topic && kit) {
+    await kit
+      .disconnectSession({ topic, reason: { code: 6000, message: 'User disconnected' } })
+      .catch(() => undefined)
+  }
+}
+
+async function reconnect() {
+  await resetConnection()
+  showInput.value = true
+  notice.value = t('wc.disconnected')
+}
+
+watch(
+  () => props.address,
+  () => {
+    void reconnect()
+  },
+)
+
 async function pairWith(text: string) {
+  if (state.value === 'pairing' || busy.value || disposed) return
+  clearTimeout(pairTimer)
   problem.value = ''
   notice.value = ''
   const link = parseWcLink(text)
@@ -135,7 +184,15 @@ async function share() {
   if (!p) return
   busy.value = true
   try {
-    await approve(p, props.address)
+    const session = await approve(p, props.address)
+    if (disposed || proposal.value?.id !== p.id) {
+      await kit?.disconnectSession({
+        topic: session.topic,
+        reason: { code: 6000, message: 'Flow closed' },
+      })
+      return
+    }
+    sessionTopic.value = session.topic
     proposal.value = null
     state.value = 'connected'
   } catch (err) {
@@ -225,20 +282,34 @@ async function declineSign() {
     <template v-if="state === 'connected'">
       <span class="s-wc__ok"><Icon name="check" :size="16" :stroke="3" /></span>
       <span class="s-wc__text">{{ t('wc.connected', { address: short(address) }) }}</span>
+      <button
+        type="button"
+        class="fy-btn fy-btn--secondary fy-btn--sm"
+        :disabled="busy"
+        @click="reconnect"
+      >
+        {{ t('wc.reconnect') }}
+      </button>
     </template>
     <template v-else-if="state === 'pairing'">
       <span class="s-wc__text">{{ t('wc.connecting') }}</span>
+      <button type="button" class="fy-btn fy-btn--secondary fy-btn--sm" @click="reconnect">
+        {{ t('wc.notNow') }}
+      </button>
     </template>
     <template v-else>
       <span class="s-wc__text">
         <strong>{{ t('wc.title') }}</strong>
-        <span>{{ t('wc.steps') }}</span>
       </span>
       <button type="button" class="fy-btn fy-btn--primary fy-btn--sm" @click="pasteLink">
         <Icon name="copy" :size="16" />{{ t('wc.paste') }}
       </button>
     </template>
   </section>
+  <details v-if="state === 'idle'" class="s-wc__help">
+    <summary>{{ t('wc.help') }}</summary>
+    <p>{{ t('wc.steps') }}</p>
+  </details>
   <div v-if="showInput && state === 'idle'" class="s-wc__input">
     <input
       v-model="linkInput"
@@ -335,6 +406,22 @@ async function declineSign() {
   justify-content: center;
   background: var(--fy-brand-soft);
   color: var(--fy-brand);
+}
+.s-wc__help {
+  margin: 0 16px 8px;
+  font-size: 13px;
+  color: var(--fy-ink-2);
+}
+.s-wc__help summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.s-wc__help p {
+  margin: 0 0 8px;
+  line-height: 1.5;
 }
 .s-wc__input {
   margin: 0 16px 8px;

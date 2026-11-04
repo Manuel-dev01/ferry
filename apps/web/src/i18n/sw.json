@@ -42,7 +42,8 @@
   "evm": {
     "rejected": "Sawa. Unganisha ukiwa tayari.",
     "unavailable": "Toleo hili la Nimiq Pay halishiriki pochi ya Ethereum. Sasisha Nimiq Pay kisha ujaribu tena.",
-    "balanceFailed": "Hatukuweza kupakia salio lako. Angalia muunganisho wako kisha ujaribu tena."
+    "balanceFailed": "Hatukuweza kupakia salio lako. Angalia muunganisho wako kisha ujaribu tena.",
+    "accountChanged": "Pochi iliyounganishwa imebadilika. Angalia anwani na kiasi kabla ya kutuma tena."
   },
   "nim": {
     "rejected": "Sawa. Unaweza kushiriki anwani yako ya NIM wakati wowote.",
@@ -313,7 +314,8 @@
     "sendUncertain": "Hatuwezi kujua kama uhamisho ulitoka ({reason}). Angalia shughuli za Nimiq Pay kabla ya kutuma tena.",
     "checkedRetry": "Nimeangalia: haukutoka. Jaribu tena",
     "gasReverted": "uongezaji wa gesi umeshindwa kwenye mtandao",
-    "startAgain": "Anza utoaji mpya wa pesa"
+    "startAgain": "Anza utoaji mpya wa pesa",
+    "previousUncertain": "Matokeo ya muamala wa awali kutoka pochi hii hayajulikani."
   },
   "topup": {
     "header": "Ongeza pesa",
@@ -351,7 +353,8 @@
       "GH": "Kwa pesa kwa simu.",
       "ZA": "Kwa uhamisho wa benki kwa rand."
     },
-    "watchAgain": "Ferry imeacha kusubiri. Bonyeza kuangalia USDT zako tena"
+    "watchAgain": "Ferry imeacha kusubiri. Bonyeza kuangalia USDT zako tena",
+    "balanceFailed": "Salio halikuweza kusomwa. Jaribu tena kabla ya kufungua Fonbnk ili Ferry iweze kutambua amana yako."
   },
   "nimSwap": {
     "header": "Toa NIM",
@@ -397,7 +400,12 @@
     "cashOutNow": "Toa pesa sasa",
     "quoteFailed": "Hatukuweza kupata bei kutoka huduma ya ubadilishaji kwa sasa.",
     "stoppedChecking": "Ferry imeacha kukagua kwa sasa. Kagua tena; ubadilishaji pia uko kwenye historia.",
-    "checkAgain": "Kagua tena"
+    "checkAgain": "Kagua tena",
+    "invalid": "Nimiq Pay haikuweza kuanza malipo haya. Angalia salio na maelezo ya malipo, kisha ujaribu tena.",
+    "insufficient": "Nimiq Pay inaripoti salio halitoshi. Punguza kiasi au ongeza fedha kabla ya kujaribu tena.",
+    "nimEstimate": "Takriban {nim} NIM kabla ya ada. Nimiq Pay inaonyesha jumla kabla ya idhini.",
+    "estimateUnavailable": "Makadirio ya NIM hayapatikani. Nimiq Pay inaonyesha jumla pamoja na ada kabla ya idhini.",
+    "refreshQuote": "Pata bei mpya"
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",
@@ -568,14 +576,14 @@
     }
   },
   "wc": {
-    "title": "Fonbnk inaomba kuunganisha pochi",
+    "title": "Unganisha pochi yako",
     "steps": "Ndani ya Fonbnk, bonyeza WalletConnect, kisha alama ya QR juu, kisha Copy link. Ibandike hapa.",
     "paste": "Bandika kiungo",
     "badLink": "Hicho si kiungo cha WalletConnect. Kinakili tena kutoka Fonbnk.",
     "connecting": "Inaunganisha na Fonbnk…",
     "noAnswer": "Fonbnk haijajibu. Nakili kiungo kipya kisha ukibandike tena.",
     "notFonbnk": "Kiungo hicho hakitoki Fonbnk, kwa hiyo Ferry haikuunganisha.",
-    "connected": "Imeunganishwa na Fonbnk · USDT zinaenda {address}",
+    "connected": "Anwani imeshirikiwa na Fonbnk: {address}. Ikiomba kuunganisha tena, tumia kitufe hapa chini.",
     "disconnected": "Fonbnk imetenganisha. Bandika kiungo kipya ikiomba tena.",
     "proposalTitle": "Fonbnk inaomba anwani ya pochi yako",
     "proposalBody": "Inapata anwani yako tu, ili ijue pa kutuma USDT. Hakuna kinachoweza kutoka kwenye pochi yako kwa njia hii.",
@@ -588,6 +596,8 @@
     "signDeclined": "Umekataa kuingia. Fonbnk inaweza kuomba tena.",
     "wrongAccount": "Fonbnk iliomba pochi nyingine, kwa hiyo Ferry ilikataa.",
     "refusedTx": "Fonbnk iliomba kutuma muamala. Ferry inashiriki anwani yako tu, kwa hiyo ilikataa.",
-    "failed": "Imeshindwa kuunganisha ({reason}). Nakili kiungo kipya kutoka Fonbnk kisha ujaribu tena."
+    "failed": "Imeshindwa kuunganisha ({reason}). Nakili kiungo kipya kutoka Fonbnk kisha ujaribu tena.",
+    "reconnect": "Unganisha tena",
+    "help": "Jinsi ya kuunganisha · hatua"
   }
 }

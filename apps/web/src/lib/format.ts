@@ -10,6 +10,7 @@ export const usdtDisplay = (units: bigint) => formatUnitsFixed(units, USDT_DECIM
 export const polDisplay = (wei: bigint) => formatUnitsFixed(wei, POL_DECIMALS, 4)
 /** ≈ Luna for a USDT amount at a USD-per-NIM price with 10 decimals ("0.0002478700"). Hints only. */
 export function lunaForUsdt(units: bigint, usdPerNim: string): bigint | null {
+  if (!/^\d+\.\d{10}$/.test(usdPerNim)) return null
   const e10 = BigInt(usdPerNim.replace('.', ''))
   return e10 > 0n ? (units * 1_000_000_000n) / e10 : null
 }

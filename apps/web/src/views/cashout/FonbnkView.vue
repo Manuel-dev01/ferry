@@ -22,6 +22,7 @@ import { encodeFunctionData, erc20Abi, getAddress, isAddress, type Address, type
 import AppHeader from '../../components/AppHeader.vue'
 import Banner from '../../components/Banner.vue'
 import Icon from '../../components/Icon.vue'
+import PaymentError from '../../components/PaymentError.vue'
 import { ApiRequestError } from '../../lib/api'
 import { friendlyError } from '../../lib/errors'
 import { channelLabel, countryName, flagOf } from '../../lib/fonbnk'
@@ -41,6 +42,11 @@ import {
   sendTransaction,
   switchToPolygon,
 } from '../../providers/evm'
+import {
+  clearUncertainTransfer,
+  hasUncertainTransfer,
+  markUncertainTransfer,
+} from '../../lib/uncertainTransfers'
 import { useCashoutStore } from '../../stores/cashout'
 import { useHistoryStore } from '../../stores/history'
 import { useSessionStore } from '../../stores/session'
@@ -188,16 +194,29 @@ const savedMavapay = (() => {
 
 /** Continue: compare routes when there is more than one, otherwise straight to Fonbnk. */
 async function chooseRoute() {
-  if (!amountOk.value || amountUnits.value === null) return
+  if (loadingOffers.value || !amountOk.value || amountUnits.value === null) return
   if (mode.value !== 'cashout') return toFonbnk()
+  const requestedUnits = amountUnits.value
+  const requestedCountry = country.value
+  const requestedChannel = channel.value
   loadingOffers.value = true
   try {
     const res = await ferryApi.offers(country.value, channel.value, amountUnits.value)
+    if (stopped) return
     offers.value = res.offers
   } catch {
     offers.value = []
   } finally {
     loadingOffers.value = false
+  }
+  if (
+    stopped ||
+    amountUnits.value !== requestedUnits ||
+    country.value !== requestedCountry ||
+    channel.value !== requestedChannel
+  ) {
+    offers.value = []
+    return
   }
   if (offers.value.filter((o) => o.route !== 'fonbnk').length === 0) return toFonbnk()
   phase.value = 'offers'
@@ -286,7 +305,17 @@ async function connectWallet() {
  * the user has checked Nimiq Pay's activity and says it didn't go out.
  */
 const sendUncertain = ref(false)
+watch(
+  () => session.evmAddress,
+  (address) => {
+    sendUncertain.value = !!address && hasUncertainTransfer(address)
+    if (sendUncertain.value)
+      problem.value = t('fonbnk.sendUncertain', { reason: t('fonbnk.previousUncertain') })
+  },
+  { immediate: true },
+)
 function retryAfterCheck() {
+  if (session.evmAddress) clearUncertainTransfer(session.evmAddress)
   sendUncertain.value = false
   problem.value = ''
 }
@@ -327,7 +356,18 @@ async function switchNetwork() {
 async function send() {
   const to = address.value
   const units = amountUnits.value
-  if (!to || addressError.value || units === null || !session.evmAddress) return
+  if (
+    busy.value ||
+    txHash.value ||
+    sendUncertain.value ||
+    !amountOk.value ||
+    !to ||
+    addressError.value ||
+    units === null ||
+    !session.evmAddress
+  )
+    return
+  const from = session.evmAddress
   busy.value = true
   problem.value = ''
   try {
@@ -335,11 +375,12 @@ async function send() {
       problem.value = t('fonbnk.wrongNetwork')
       return
     }
+    if (stopped) return
     if (session.meta?.gasTopup) {
       status.value = t('fonbnk.gettingGas')
       try {
         const before = session.balances?.pol ?? 0n
-        const gas = await ferryApi.gasTopup(session.evmAddress)
+        const gas = await ferryApi.gasTopup(from)
         if (gas.status === 'reverted') {
           problem.value = t('fonbnk.gasFailed', { reason: t('fonbnk.gasReverted') })
           return
@@ -348,6 +389,7 @@ async function send() {
           // Wait (up to 30 s) for the POL to show, so the wallet sheet doesn't open without gas.
           for (let i = 0; i < 10; i++) {
             await new Promise((r) => setTimeout(r, 3_000))
+            if (stopped || session.evmAddress !== from) break
             await session.loadBalances().catch(() => undefined)
             if ((session.balances?.pol ?? 0n) > before) break
           }
@@ -357,11 +399,16 @@ async function send() {
         problem.value = t('fonbnk.gasFailed', { reason: describe(err) })
       }
     }
+    if (stopped) return
+    if (session.evmAddress !== from) {
+      problem.value = t('evm.accountChanged')
+      return
+    }
     status.value = t('fonbnk.confirmInWallet')
     let hash: Hex
     try {
       hash = await sendTransaction({
-        from: session.evmAddress as Address,
+        from: from as Address,
         to: USDT0_ADDRESS,
         data: encodeFunctionData({ abi: erc20Abi, functionName: 'transfer', args: [to, units] }),
       })
@@ -375,6 +422,7 @@ async function send() {
       if (/not enough gas|insufficient funds|execution reverted/i.test(reason)) {
         problem.value = t('fonbnk.sendFailed', { reason })
       } else {
+        markUncertainTransfer(from)
         sendUncertain.value = true
         problem.value = t('fonbnk.sendUncertain', { reason })
       }
@@ -568,6 +616,7 @@ watch(country, () => {
 const title = computed(() => `${flagOf(country.value)} ${countryName(country.value)}`)
 
 function onBack() {
+  if (busy.value) return
   // Once the USDT is sent, back never leads to a screen that could send it again.
   if (phase.value === 'offers') phase.value = 'amount'
   else if (phase.value === 'fonbnk')
@@ -582,7 +631,13 @@ function onBack() {
     <!-- Amount and payout method -->
     <template v-if="phase === 'amount'">
       <header class="fy-header">
-        <button type="button" class="fy-iconbtn" :aria-label="t('common.back')" @click="onBack">
+        <button
+          type="button"
+          class="fy-iconbtn"
+          :aria-label="t('common.back')"
+          :disabled="busy"
+          @click="onBack"
+        >
           <Icon name="back" />
         </button>
         <span class="fy-header__center"
@@ -683,7 +738,13 @@ function onBack() {
     <!-- Offers: compare every route, like Nimiq Pay's own sell screen -->
     <template v-if="phase === 'offers'">
       <header class="fy-header">
-        <button type="button" class="fy-iconbtn" :aria-label="t('common.back')" @click="onBack">
+        <button
+          type="button"
+          class="fy-iconbtn"
+          :aria-label="t('common.back')"
+          :disabled="busy"
+          @click="onBack"
+        >
           <Icon name="back" />
         </button>
         <span class="fy-header__center"
@@ -737,7 +798,13 @@ function onBack() {
     <!-- Fonbnk: details in their widget, then Ferry sends the USDT -->
     <template v-if="phase === 'fonbnk'">
       <header class="fy-header">
-        <button type="button" class="fy-iconbtn" :aria-label="t('common.back')" @click="onBack">
+        <button
+          type="button"
+          class="fy-iconbtn"
+          :aria-label="t('common.back')"
+          :disabled="busy"
+          @click="onBack"
+        >
           <Icon name="back" />
         </button>
         <span class="fy-header__center"
@@ -837,6 +904,7 @@ function onBack() {
             <input
               id="fonbnk-address"
               v-model="addressInput"
+              :disabled="busy"
               autocomplete="off"
               autocorrect="off"
               autocapitalize="off"
@@ -888,9 +956,9 @@ function onBack() {
           icon="alert"
           :body="t('fonbnk.wrongNetwork')"
         />
-        <Banner v-if="problem" tone="danger" :body="problem" />
       </div>
       <div class="fy-bottom">
+        <PaymentError v-if="problem" :body="problem" />
         <button
           v-if="!session.evmAddress"
           type="button"

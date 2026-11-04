@@ -90,6 +90,7 @@ export async function createNimSwap(usdtUnits: bigint, to: Address): Promise<Nim
 }
 
 export type NimSwapStage =
+  | 'checking' // an unfamiliar provider status is not proof of failure
   | 'waiting_payment' // invoice not paid yet
   | 'paid' // Lightning payment seen, USDT not locked yet
   | 'ready' // USDT locked on Polygon: claim now
@@ -111,7 +112,17 @@ const STAGES: Record<string, NimSwapStage> = {
   clientredeeming: 'claiming',
   clientredeemed: 'done',
   serverredeemed: 'done',
+  clientrefunded: 'failed',
+  clientfundedserverrefunded: 'failed',
+  clientrefundedserverfunded: 'failed',
+  clientrefundedserverrefunded: 'failed',
+  expired: 'failed',
+  clientinvalidfunded: 'failed',
+  clientfundedtoolate: 'failed',
+  serverwontfund: 'failed',
 }
+
+export const nimSwapStage = (status: string): NimSwapStage => STAGES[status] ?? 'checking'
 
 export async function nimSwapState(id: string): Promise<NimSwapState> {
   const client = await swapClient()
@@ -120,7 +131,7 @@ export async function nimSwapState(id: string): Promise<NimSwapState> {
     evm_claim_txid?: string | null
   }
   return {
-    stage: STAGES[s.status] ?? 'failed',
+    stage: nimSwapStage(s.status),
     status: s.status,
     claimTx: s.evm_claim_txid ?? null,
   }

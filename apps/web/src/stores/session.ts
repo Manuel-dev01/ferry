@@ -76,18 +76,24 @@ export const useSessionStore = defineStore('session', () => {
     })
   }
 
+  let balanceSequence = 0
   async function loadBalances() {
-    if (!evmAddress.value) return
+    const sequence = ++balanceSequence
+    const address = evmAddress.value
+    if (!address) return
     balancesError.value = false
     try {
       if (import.meta.env.DEV && import.meta.env.VITE_MOCK_WALLET === 'true') {
         const { MOCK_BALANCES } = await import('../dev/mockWallet')
-        balances.value = { usdt: MOCK_BALANCES.usdt, pol: MOCK_BALANCES.pol }
+        if (evmAddress.value === address && sequence === balanceSequence)
+          balances.value = { usdt: MOCK_BALANCES.usdt, pol: MOCK_BALANCES.pol }
         return
       }
-      const res = await api<BalancesResponse>(`/v1/balances/${evmAddress.value}`)
+      const res = await api<BalancesResponse>(`/v1/balances/${address}`)
+      if (evmAddress.value !== address || sequence !== balanceSequence) return
       balances.value = { usdt: BigInt(res.usdt), pol: BigInt(res.pol) }
     } catch (err) {
+      if (evmAddress.value !== address || sequence !== balanceSequence) return
       balancesError.value = true
       throw err
     }
@@ -107,6 +113,7 @@ export const useSessionStore = defineStore('session', () => {
 
   /** Forget the EVM address on this device. Nimiq Pay keeps its own permission. */
   function disconnectEvm() {
+    balanceSequence++
     evmAddress.value = null
     balances.value = null
     balancesError.value = false

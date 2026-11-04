@@ -1,6 +1,6 @@
 import { NimiqProviderError } from '@nimiq/mini-app-sdk'
 import { describe, expect, it } from 'vitest'
-import { classifyEvmError, EvmUnavailableError } from '../src/providers/evm'
+import { classifyEvmError, evmErrorText, EvmUnavailableError } from '../src/providers/evm'
 import { classifyNimiqError, lightningIdsFrom } from '../src/providers/nimiq'
 
 const providerError = (type: string, data?: unknown) =>
@@ -42,4 +42,9 @@ describe('classifyEvmError', () => {
     expect(classifyEvmError({ code: -32603 })).toBe('unknown')
     expect(classifyEvmError(new EvmUnavailableError('x'))).toBe('unavailable')
   })
+})
+
+it('does not claim an unknown wallet failure left funds untouched', () => {
+  expect(evmErrorText(undefined)).not.toContain('Nothing was sent')
+  expect(evmErrorText(undefined)).toContain('Check its activity')
 })

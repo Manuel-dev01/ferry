@@ -7,8 +7,9 @@ import type { Address } from 'viem'
 import AppHeader from '../components/AppHeader.vue'
 import Banner from '../components/Banner.vue'
 import Icon from '../components/Icon.vue'
+import PaymentError from '../components/PaymentError.vue'
 import { ferryApi } from '../lib/ferryApi'
-import { usdtDisplay } from '../lib/format'
+import { lunaForUsdt, nimWholeDisplay, usdtDisplay } from '../lib/format'
 import {
   claimNimSwap,
   createNimSwap,
@@ -18,7 +19,8 @@ import {
   type NimSwapQuote,
   type NimSwapStage,
 } from '../lib/nimSwap'
-import { classifyNimiqError, initNimiq, lightningIdsFrom } from '../providers/nimiq'
+import { initNimiq } from '../providers/nimiq'
+import { lightningFailure } from '../lib/lightningFailure'
 import { useCashoutStore } from '../stores/cashout'
 import { useHistoryStore } from '../stores/history'
 import { useSessionStore } from '../stores/session'
@@ -78,12 +80,13 @@ const quoteRetry = ref(0)
 let quoteSeq = 0
 let quoteTimer: ReturnType<typeof setTimeout> | undefined
 watch([amountUnits, quoteRetry], ([u]) => {
+  const seq = ++quoteSeq
+  quoting.value = false
   quoteFailed.value = false
   clearTimeout(quoteTimer)
   quote.value = null
   if (u === null || amountError.value) return
   quoteTimer = setTimeout(async () => {
-    const seq = ++quoteSeq
     quoting.value = true
     try {
       const q = await quoteNimSwap(u)
@@ -99,6 +102,24 @@ watch([amountUnits, quoteRetry], ([u]) => {
   }, 400)
 })
 const satsText = (n: number) => n.toLocaleString('en')
+const nimUsd = ref<string | null>(null)
+onMounted(() => {
+  void ferryApi
+    .nimPrice()
+    .then((p) => (nimUsd.value = p.usd))
+    .catch(() => undefined)
+})
+function estimatedNim(units: bigint | null) {
+  if (units === null || !nimUsd.value) return null
+  const luna = lunaForUsdt(units, nimUsd.value)
+  return luna === null ? null : nimWholeDisplay(luna)
+}
+function refreshQuote() {
+  swap.value = null
+  phase.value = 'amount'
+  problem.value = ''
+  quoteRetry.value++
+}
 
 // ---- Swap and payment ----
 
@@ -107,7 +128,15 @@ const swapUnits = ref<bigint | null>(null)
 
 async function prepare() {
   const units = amountUnits.value
-  if (!units || amountError.value || !session.evmAddress) return
+  if (
+    busy.value ||
+    !units ||
+    !quote.value ||
+    quoting.value ||
+    amountError.value ||
+    !session.evmAddress
+  )
+    return
   busy.value = true
   problem.value = ''
   try {
@@ -137,6 +166,7 @@ const countdown = computed(() => {
 
 /** Once the wallet may have paid, this invoice is never offered again. */
 const payLocked = ref(false)
+const uncertain = ref(false)
 
 function remember(status: string) {
   const s = swap.value
@@ -163,12 +193,20 @@ function remember(status: string) {
 
 async function pay() {
   const s = swap.value
-  if (!s || payLocked.value) return
+  if (!s || payLocked.value || busy.value) return
+  if (s.invoiceExpiresAt > 0 && s.invoiceExpiresAt <= Date.now() / 1000) {
+    problem.value = t('nimSwap.expired')
+    return
+  }
   busy.value = true
   problem.value = ''
   remember('awaiting')
   try {
     const nimiq = await initNimiq()
+    if (stopped) {
+      history.setStatus(s.id, 'failed')
+      return
+    }
     const paid = await nimiq.payLightningInvoice({ invoice: s.invoice })
     history.update(s.id, { walletTx: paid.hash, walletSwapId: paid.swapId })
     payLocked.value = true
@@ -176,8 +214,8 @@ async function pay() {
     phase.value = 'progress'
     void follow()
   } catch (err) {
-    const e = classifyNimiqError(err)
-    const ids = lightningIdsFrom(e.data)
+    const e = lightningFailure(err, s.invoiceExpiresAt)
+    const ids = e.ids
     if (ids.hash || ids.swapId) {
       history.update(s.id, { walletTx: ids.hash, walletSwapId: ids.swapId })
     }
@@ -187,17 +225,16 @@ async function pay() {
         problem.value = t('nimSwap.cancelled')
         break
       case 'invalid':
+      case 'insufficient':
+      case 'expired':
         history.setStatus(s.id, 'failed')
-        problem.value = t('nimSwap.expired')
-        swap.value = null
-        phase.value = 'amount'
+        problem.value = t(`nimSwap.${e.kind}`)
         break
-      case 'duplicate':
-      case 'outcome_unknown':
-      case 'network':
+      case 'uncertain':
         // It may have gone through: never pay again; read the swap's own status instead.
         payLocked.value = true
-        remember('swapping')
+        uncertain.value = true
+        remember('awaiting')
         phase.value = 'progress'
         void follow()
         break
@@ -208,7 +245,8 @@ async function pay() {
       default:
         // wallet or unknown errors: it may still have gone out, so follow the swap instead
         payLocked.value = true
-        remember('swapping')
+        uncertain.value = true
+        remember('awaiting')
         phase.value = 'progress'
         void follow()
     }
@@ -228,6 +266,7 @@ onUnmounted(() => {
   stopped = true
   clearInterval(clock)
   clearTimeout(quoteTimer)
+  quoteSeq++
 })
 
 async function follow() {
@@ -241,6 +280,7 @@ async function follow() {
       try {
         const state = await nimSwapState(s.id)
         stage.value = state.stage
+        if (['paid', 'ready', 'claiming', 'done'].includes(state.stage)) uncertain.value = false
         claimTx.value = state.claimTx
         if (state.stage === 'ready' && !claimAsked) {
           claimAsked = true
@@ -293,7 +333,7 @@ const steps = computed(() => {
   const order: NimSwapStage[] = ['waiting_payment', 'paid', 'ready', 'claiming', 'done']
   const at = order.indexOf(stage.value)
   return [
-    { label: t('nimSwap.step1'), done: at >= 1 || stage.value === 'waiting_payment' },
+    { label: t('nimSwap.step1'), done: at >= 1 },
     { label: t('nimSwap.step2'), done: at >= 2 },
     { label: t('nimSwap.step3'), done: at >= 4 },
   ]
@@ -309,6 +349,7 @@ onMounted(() => {
   swap.value = { id, invoice: '', sats: 0, invoiceExpiresAt: 0 }
   swapUnits.value = BigInt(entry.amountUnits ?? '0')
   payLocked.value = true
+  uncertain.value = entry.status === 'awaiting'
   if (entry.status === 'received') {
     phase.value = 'done'
     void reportSwap(id) // idempotent: covers a swap that finished while Ferry was closed
@@ -366,6 +407,13 @@ function cashOut() {
             <div style="font: 700 18px var(--fy-font-body)">
               {{ t('nimSwap.quote', { sats: satsText(quote.sats) }) }}
             </div>
+            <p class="fy-caption" data-testid="nim-estimate">
+              {{
+                estimatedNim(amountUnits)
+                  ? t('nimSwap.nimEstimate', { nim: estimatedNim(amountUnits) })
+                  : t('nimSwap.estimateUnavailable')
+              }}
+            </p>
             <div class="fy-caption">
               {{ t('nimSwap.quoteNote', { fee: satsText(quote.feeSats) }) }}
             </div>
@@ -382,10 +430,9 @@ function cashOut() {
           </ol>
           <p class="fy-caption" style="margin: 0">{{ t('nimSwap.safety') }}</p>
         </section>
-
-        <Banner v-if="problem" tone="danger" :body="problem" />
       </div>
       <div class="fy-bottom">
+        <PaymentError v-if="problem" :body="problem" />
         <button
           v-if="!session.evmAddress"
           type="button"
@@ -400,7 +447,7 @@ function cashOut() {
           type="button"
           class="fy-btn fy-btn--primary"
           :class="{ 'fy-btn--busy': busy }"
-          :disabled="busy || !quote || !!amountError"
+          :disabled="busy || quoting || !quote || !!amountError"
           @click="prepare"
         >
           {{ busy ? t('nimSwap.preparing') : t('nimSwap.continue') }}
@@ -451,10 +498,26 @@ function cashOut() {
             <dd class="fy-row__v">{{ countdown }}</dd>
           </div>
         </dl>
+        <p class="fy-caption" data-testid="nim-estimate">
+          {{
+            estimatedNim(swapUnits)
+              ? t('nimSwap.nimEstimate', { nim: estimatedNim(swapUnits) })
+              : t('nimSwap.estimateUnavailable')
+          }}
+        </p>
         <p class="fy-caption" style="margin: 0">{{ t('nimSwap.payNote') }}</p>
-        <Banner v-if="problem" tone="danger" :body="problem" />
       </div>
       <div class="fy-bottom">
+        <PaymentError v-if="problem" :body="problem" />
+        <Banner v-else-if="secondsLeft === 0" tone="warning" :body="t('nimSwap.expired')" />
+        <button
+          v-if="secondsLeft === 0 && !busy && !payLocked"
+          type="button"
+          class="fy-btn fy-btn--secondary"
+          @click="refreshQuote"
+        >
+          {{ t('nimSwap.refreshQuote') }}
+        </button>
         <button
           type="button"
           class="fy-btn fy-btn--primary"
@@ -492,7 +555,7 @@ function cashOut() {
           v-else-if="!stoppedChecking"
           tone="brand"
           icon="clock"
-          :body="slow ? t('nimSwap.slow') : t('nimSwap.waiting')"
+          :body="uncertain ? t('ln.uncertain') : slow ? t('nimSwap.slow') : t('nimSwap.waiting')"
         />
         <Banner
           v-if="stoppedChecking && !problem"

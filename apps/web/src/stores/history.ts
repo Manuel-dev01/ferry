@@ -94,11 +94,86 @@ export const entryLink = (e: HistoryEntry) =>
           ? `/cashout/fonbnk?tx=${e.txHash}`
           : `/orders/${e.id}`
 
+/** Stored data may be partial after an interrupted write or from an older app version. */
+export function parseHistory(raw: string | null): HistoryEntry[] {
+  try {
+    const parsed: unknown = raw ? JSON.parse(raw) : []
+    if (!Array.isArray(parsed)) return []
+    const valid = (entry: unknown): entry is HistoryEntry => {
+      if (!entry || typeof entry !== 'object') return false
+      const e = entry as Record<string, unknown>
+      const strings = [
+        'id',
+        'clientSecret',
+        'currency',
+        'institutionName',
+        'recipientMasked',
+        'status',
+      ]
+      if (!strings.every((k) => typeof e[k] === 'string')) return false
+      if (!e.id || (!/^[A-Z]{3}$/.test(String(e.currency)) && e.currency !== 'USDT')) return false
+      if (
+        e.currency === 'USDT' &&
+        !e.kind &&
+        e.provider !== 'fonbnk' &&
+        e.provider !== 'mavapay_ln'
+      )
+        return false
+      if (e.provider === 'mpesa_ln' && e.currency !== 'KES') return false
+      if (
+        typeof e.createdAt !== 'number' ||
+        !Number.isSafeInteger(e.createdAt) ||
+        e.createdAt < 0 ||
+        e.createdAt > 8_640_000_000_000_000
+      )
+        return false
+      if (
+        typeof e.mock !== 'boolean' ||
+        !(e.recipientName === null || typeof e.recipientName === 'string')
+      )
+        return false
+      if (typeof e.theyReceiveMinor !== 'string' || !/^\d{1,78}$/.test(e.theyReceiveMinor))
+        return false
+      if (
+        e.amountUnits !== undefined &&
+        (typeof e.amountUnits !== 'string' || !/^\d{1,78}$/.test(e.amountUnits))
+      )
+        return false
+      if (
+        e.provider !== undefined &&
+        !['fonbnk', 'mpesa_ln', 'mavapay_ln'].includes(String(e.provider))
+      )
+        return false
+      if (e.kind !== undefined && e.kind !== 'topup' && e.kind !== 'nim') return false
+      for (const key of [
+        'payee',
+        'receipt',
+        'txHash',
+        'country',
+        'channel',
+        'walletTx',
+        'walletSwapId',
+      ]) {
+        if (e[key] !== undefined && typeof e[key] !== 'string') return false
+      }
+      for (const key of ['paidAt', 'expiresAt']) {
+        if (
+          e[key] !== undefined &&
+          (typeof e[key] !== 'number' || !Number.isSafeInteger(e[key]) || e[key] < 0)
+        )
+          return false
+      }
+      return true
+    }
+    return parsed.filter(valid).slice(0, MAX_ENTRIES)
+  } catch {
+    return []
+  }
+}
+
 function load(): HistoryEntry[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    const parsed: unknown = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? (parsed as HistoryEntry[]) : []
+    return parseHistory(localStorage.getItem(STORAGE_KEY))
   } catch {
     return []
   }

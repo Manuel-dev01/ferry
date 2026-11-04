@@ -42,7 +42,8 @@
   "evm": {
     "rejected": "Sem problema. Conecte quando quiser.",
     "unavailable": "Esta versão do Nimiq Pay não compartilha uma carteira Ethereum. Atualize o Nimiq Pay e tente de novo.",
-    "balanceFailed": "Não conseguimos carregar seu saldo. Verifique sua conexão e tente de novo."
+    "balanceFailed": "Não conseguimos carregar seu saldo. Verifique sua conexão e tente de novo.",
+    "accountChanged": "A carteira conectada mudou. Confira o destino e o valor antes de enviar novamente."
   },
   "nim": {
     "rejected": "Sem problema. Você pode compartilhar seu endereço NIM quando quiser.",
@@ -313,7 +314,8 @@
     "sendUncertain": "Não dá para saber se a transferência saiu ({reason}). Confira a atividade do Nimiq Pay antes de enviar de novo.",
     "checkedRetry": "Conferi: não saiu. Tentar de novo",
     "gasReverted": "a recarga de gas falhou na rede",
-    "startAgain": "Começar um novo saque"
+    "startAgain": "Começar um novo saque",
+    "previousUncertain": "O resultado de uma transferência anterior desta carteira é desconhecido."
   },
   "topup": {
     "header": "Adicionar dinheiro",
@@ -351,7 +353,8 @@
       "GH": "Por carteira móvel.",
       "ZA": "Por transferência bancária em rand."
     },
-    "watchAgain": "O Ferry parou de aguardar. Toque para verificar seus USDT de novo"
+    "watchAgain": "O Ferry parou de aguardar. Toque para verificar seus USDT de novo",
+    "balanceFailed": "Não foi possível consultar o saldo. Tente novamente antes de abrir a Fonbnk para que a Ferry detecte seu depósito."
   },
   "nimSwap": {
     "header": "Sacar NIM",
@@ -397,7 +400,12 @@
     "cashOutNow": "Sacar agora",
     "quoteFailed": "Não conseguimos um preço do serviço de troca agora.",
     "stoppedChecking": "O Ferry parou de verificar por enquanto. Verifique de novo; a troca também está no histórico.",
-    "checkAgain": "Verificar de novo"
+    "checkAgain": "Verificar de novo",
+    "invalid": "A Nimiq Pay não conseguiu iniciar este pagamento. Confira o saldo e os dados e tente novamente.",
+    "insufficient": "A Nimiq Pay informa saldo insuficiente. Reduza o valor ou adicione fundos antes de tentar novamente.",
+    "nimEstimate": "≈ {nim} NIM antes das taxas. A Nimiq Pay mostra o total antes da aprovação.",
+    "estimateUnavailable": "Estimativa em NIM indisponível. A Nimiq Pay mostra o total com taxas antes da aprovação.",
+    "refreshQuote": "Obter nova cotação"
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",
@@ -568,14 +576,14 @@
     }
   },
   "wc": {
-    "title": "A Fonbnk pede para conectar uma carteira",
+    "title": "Conecte sua carteira",
     "steps": "Na Fonbnk, toque em WalletConnect, depois no ícone de QR no alto e em Copy link. Cole aqui.",
     "paste": "Colar link",
     "badLink": "Isso não é um link do WalletConnect. Copie de novo na Fonbnk.",
     "connecting": "Conectando à Fonbnk…",
     "noAnswer": "A Fonbnk não respondeu. Copie um link novo e cole de novo.",
     "notFonbnk": "Esse link não é da Fonbnk, então o Ferry não conectou.",
-    "connected": "Conectado à Fonbnk · os USDT vão para {address}",
+    "connected": "Endereço compartilhado com a Fonbnk: {address}. Se ainda pedir conexão, reconecte abaixo.",
     "disconnected": "A Fonbnk desconectou. Cole um link novo se ela pedir de novo.",
     "proposalTitle": "A Fonbnk quer o endereço da sua carteira",
     "proposalBody": "Ela recebe só o seu endereço, para saber para onde enviar os USDT. Nada sai da sua carteira assim.",
@@ -588,6 +596,8 @@
     "signDeclined": "Você recusou a entrada. A Fonbnk pode pedir de novo.",
     "wrongAccount": "A Fonbnk pediu outra carteira, então o Ferry recusou.",
     "refusedTx": "A Fonbnk pediu para enviar uma transação. O Ferry só compartilha seu endereço, então recusou.",
-    "failed": "Não foi possível conectar ({reason}). Copie um link novo na Fonbnk e tente de novo."
+    "failed": "Não foi possível conectar ({reason}). Copie um link novo na Fonbnk e tente de novo.",
+    "reconnect": "Reconectar",
+    "help": "Como conectar · ver etapas"
   }
 }

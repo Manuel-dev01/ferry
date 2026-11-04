@@ -42,7 +42,8 @@
   "evm": {
     "rejected": "Pas de souci. Connectez-vous quand vous voulez.",
     "unavailable": "Cette version de Nimiq Pay ne partage pas de portefeuille Ethereum. Mettez Nimiq Pay à jour et réessayez.",
-    "balanceFailed": "Impossible de charger votre solde. Vérifiez votre connexion et réessayez."
+    "balanceFailed": "Impossible de charger votre solde. Vérifiez votre connexion et réessayez.",
+    "accountChanged": "Le portefeuille connecté a changé. Vérifiez le destinataire et le montant avant de réessayer."
   },
   "nim": {
     "rejected": "Pas de souci. Vous pouvez partager votre adresse NIM à tout moment.",
@@ -313,7 +314,8 @@
     "sendUncertain": "Impossible de savoir si le transfert est parti ({reason}). Vérifiez l’activité de Nimiq Pay avant de renvoyer.",
     "checkedRetry": "J’ai vérifié : il n’est pas parti. Réessayer",
     "gasReverted": "la recharge de gaz a échoué sur le réseau",
-    "startAgain": "Commencer un nouveau retrait"
+    "startAgain": "Commencer un nouveau retrait",
+    "previousUncertain": "Le résultat d’un transfert précédent depuis ce portefeuille est inconnu."
   },
   "topup": {
     "header": "Ajouter de l’argent",
@@ -351,7 +353,8 @@
       "GH": "Par mobile money.",
       "ZA": "Par virement bancaire en rands."
     },
-    "watchAgain": "Ferry a arrêté d’attendre. Touchez pour vérifier à nouveau vos USDT"
+    "watchAgain": "Ferry a arrêté d’attendre. Touchez pour vérifier à nouveau vos USDT",
+    "balanceFailed": "Impossible de lire le solde. Réessayez avant d’ouvrir Fonbnk pour que Ferry puisse détecter votre dépôt."
   },
   "nimSwap": {
     "header": "Retirer des NIM",
@@ -397,7 +400,12 @@
     "cashOutNow": "Retirer maintenant",
     "quoteFailed": "Impossible d’obtenir un prix du service d’échange pour le moment.",
     "stoppedChecking": "Ferry a arrêté de vérifier pour l’instant. Vérifiez à nouveau ; l’échange est aussi dans l’historique.",
-    "checkAgain": "Vérifier à nouveau"
+    "checkAgain": "Vérifier à nouveau",
+    "invalid": "Nimiq Pay n’a pas pu démarrer ce paiement. Vérifiez votre solde et les détails, puis réessayez.",
+    "insufficient": "Nimiq Pay indique un solde insuffisant. Réduisez le montant ou ajoutez des fonds avant de réessayer.",
+    "nimEstimate": "≈ {nim} NIM hors frais. Nimiq Pay affiche le total avant approbation.",
+    "estimateUnavailable": "Estimation en NIM indisponible. Nimiq Pay affiche le total, frais inclus, avant approbation.",
+    "refreshQuote": "Obtenir un nouveau devis"
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",
@@ -568,14 +576,14 @@
     }
   },
   "wc": {
-    "title": "Fonbnk demande de connecter un portefeuille",
+    "title": "Connecter votre portefeuille",
     "steps": "Dans Fonbnk, touchez WalletConnect, puis l’icône QR en haut, puis Copy link. Collez-le ici.",
     "paste": "Coller le lien",
     "badLink": "Ce n’est pas un lien WalletConnect. Copiez-le à nouveau depuis Fonbnk.",
     "connecting": "Connexion à Fonbnk…",
     "noAnswer": "Fonbnk n’a pas répondu. Copiez un nouveau lien et collez-le à nouveau.",
     "notFonbnk": "Ce lien ne vient pas de Fonbnk, donc Ferry ne s’est pas connecté.",
-    "connected": "Connecté à Fonbnk · les USDT arrivent sur {address}",
+    "connected": "Adresse partagée avec Fonbnk : {address}. Si la connexion est encore demandée, reconnectez-vous ci-dessous.",
     "disconnected": "Fonbnk s’est déconnecté. Collez un nouveau lien s’il le redemande.",
     "proposalTitle": "Fonbnk demande l’adresse de votre portefeuille",
     "proposalBody": "Il ne reçoit que votre adresse, pour savoir où envoyer les USDT. Rien ne peut quitter votre portefeuille ainsi.",
@@ -588,6 +596,8 @@
     "signDeclined": "Vous avez refusé la connexion. Fonbnk peut redemander.",
     "wrongAccount": "Fonbnk a demandé un autre portefeuille, donc Ferry a refusé.",
     "refusedTx": "Fonbnk a demandé d’envoyer une transaction. Ferry ne partage que votre adresse, donc il a refusé.",
-    "failed": "Connexion impossible ({reason}). Copiez un nouveau lien depuis Fonbnk et réessayez."
+    "failed": "Connexion impossible ({reason}). Copiez un nouveau lien depuis Fonbnk et réessayez.",
+    "reconnect": "Reconnecter",
+    "help": "Comment se connecter · étapes"
   }
 }
