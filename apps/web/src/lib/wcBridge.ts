@@ -35,15 +35,38 @@ export function walletKit(): Promise<WalletKit> {
 
 /** A WalletConnect v2 pairing link, as Fonbnk's "Copy link" gives it. */
 export function parseWcLink(text: string): string | null {
-  const link = text.trim()
-  return /^wc:[0-9a-f]{64}@2\?/i.test(link) && link.includes('symKey=') ? link : null
+  let link = text.trim()
+  try {
+    if (/^https?:/i.test(link)) link = new URL(link).searchParams.get('uri') ?? ''
+    if (/^wc%3a/i.test(link)) link = decodeURIComponent(link)
+    if (!/^wc:[0-9a-f]{64}@2\?/i.test(link)) return null
+    const params = new URLSearchParams(link.split('?')[1])
+    return /^[0-9a-f]{64}$/i.test(params.get('symKey') ?? '') &&
+      params.get('relay-protocol') === 'irn'
+      ? link
+      : null
+  } catch {
+    return null
+  }
+}
+
+export function wcLinkExpired(link: string, now = Date.now()) {
+  const expiry = new URLSearchParams(link.split('?')[1]).get('expiryTimestamp')
+  return expiry !== null && (!/^\d+$/.test(expiry) || BigInt(expiry) * 1000n <= BigInt(now))
 }
 
 /** Methods Ferry will pass to Nimiq Pay, each after its own tap. Everything else is refused. */
-export const SIGN_METHODS = ['personal_sign', 'eth_signTypedData_v4'] as const
+export const SIGN_METHODS = ['personal_sign', 'eth_signTypedData_v4', 'eth_signTypedData'] as const
 export type SignMethod = (typeof SIGN_METHODS)[number]
 /** Methods a site may list for the session; requests for the money-moving ones are refused. */
-const LISTED_METHODS = [...SIGN_METHODS, 'eth_sendTransaction', 'eth_signTypedData']
+const LISTED_METHODS = [
+  ...SIGN_METHODS,
+  'eth_sendTransaction',
+  'eth_accounts',
+  'eth_requestAccounts',
+  'eth_chainId',
+  'wallet_switchEthereumChain',
+]
 const POLYGON = 'eip155:137'
 
 const hostOf = (url: string | undefined) => {

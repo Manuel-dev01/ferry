@@ -587,13 +587,13 @@
   },
   "wc": {
     "title": "Connecter votre portefeuille",
-    "steps": "Dans Fonbnk, touchez WalletConnect, puis l’icône QR en haut, puis Copy link. Collez-le ici.",
+    "steps": "Dans Fonbnk, choisissez WalletConnect → icône QR → Copier le lien. Gardez le panneau QR ouvert. Appuyez sur Coller le lien au-dessus, puis Partager l’adresse dans Ferry. Revenez au même formulaire sans le recharger.",
     "paste": "Coller le lien",
     "badLink": "Ce n’est pas un lien WalletConnect. Copiez-le à nouveau depuis Fonbnk.",
-    "connecting": "Connexion à Fonbnk…",
-    "noAnswer": "Fonbnk n’a pas répondu. Copiez un nouveau lien et collez-le à nouveau.",
+    "connecting": "En attente de Fonbnk… Gardez le panneau QR ouvert.",
+    "noAnswer": "Connexion inachevée. Gardez le panneau QR ouvert et copiez un nouveau lien.",
     "notFonbnk": "Ce lien ne vient pas de Fonbnk, donc Ferry ne s’est pas connecté.",
-    "connected": "Adresse partagée avec Fonbnk : {address}. Si la connexion est encore demandée, reconnectez-vous ci-dessous.",
+    "connected": "Adresse partagée : {address}. Continuez dans le même formulaire Fonbnk. Sinon, reconnectez-vous avec un nouveau lien.",
     "disconnected": "Fonbnk s’est déconnecté. Collez un nouveau lien s’il le redemande.",
     "proposalTitle": "Fonbnk demande l’adresse de votre portefeuille",
     "proposalBody": "Il ne reçoit que votre adresse, pour savoir où envoyer les USDT. Rien ne peut quitter votre portefeuille ainsi.",
@@ -608,6 +608,8 @@
     "refusedTx": "Fonbnk a demandé d’envoyer une transaction. Ferry ne partage que votre adresse, donc il a refusé.",
     "failed": "Connexion impossible ({reason}). Copiez un nouveau lien depuis Fonbnk et réessayez.",
     "reconnect": "Reconnecter",
-    "help": "Comment se connecter · étapes"
+    "help": "Comment se connecter · étapes",
+    "expiredLink": "Ce lien a expiré. Générez un nouveau QR/lien dans Fonbnk et gardez-le ouvert.",
+    "connectLink": "Connecter le lien collé"
   }
 }

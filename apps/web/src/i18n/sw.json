@@ -587,13 +587,13 @@
   },
   "wc": {
     "title": "Unganisha pochi yako",
-    "steps": "Ndani ya Fonbnk, bonyeza WalletConnect, kisha alama ya QR juu, kisha Copy link. Ibandike hapa.",
+    "steps": "Katika Fonbnk, chagua WalletConnect → ikoni ya QR → Nakili kiungo. Acha paneli ya QR wazi. Gusa Bandika kiungo hapo juu, kisha Shiriki anwani katika Ferry. Rudi kwenye fomu ileile bila kuipakia upya.",
     "paste": "Bandika kiungo",
     "badLink": "Hicho si kiungo cha WalletConnect. Kinakili tena kutoka Fonbnk.",
-    "connecting": "Inaunganisha na Fonbnk…",
-    "noAnswer": "Fonbnk haijajibu. Nakili kiungo kipya kisha ukibandike tena.",
+    "connecting": "Inasubiri Fonbnk… Acha paneli ya QR wazi.",
+    "noAnswer": "Uunganishaji haujakamilika. Acha paneli ya QR wazi na unakili kiungo kipya.",
     "notFonbnk": "Kiungo hicho hakitoki Fonbnk, kwa hiyo Ferry haikuunganisha.",
-    "connected": "Anwani imeshirikiwa na Fonbnk: {address}. Ikiomba kuunganisha tena, tumia kitufe hapa chini.",
+    "connected": "Anwani imeshirikiwa: {address}. Endelea kwenye fomu ileile ya Fonbnk. Ikihitajika, unganisha tena kwa kiungo kipya.",
     "disconnected": "Fonbnk imetenganisha. Bandika kiungo kipya ikiomba tena.",
     "proposalTitle": "Fonbnk inaomba anwani ya pochi yako",
     "proposalBody": "Inapata anwani yako tu, ili ijue pa kutuma USDT. Hakuna kinachoweza kutoka kwenye pochi yako kwa njia hii.",
@@ -608,6 +608,8 @@
     "refusedTx": "Fonbnk iliomba kutuma muamala. Ferry inashiriki anwani yako tu, kwa hiyo ilikataa.",
     "failed": "Imeshindwa kuunganisha ({reason}). Nakili kiungo kipya kutoka Fonbnk kisha ujaribu tena.",
     "reconnect": "Unganisha tena",
-    "help": "Jinsi ya kuunganisha · hatua"
+    "help": "Jinsi ya kuunganisha · hatua",
+    "expiredLink": "Kiungo hiki kimeisha muda. Tengeneza QR/kiungo kipya katika Fonbnk na uiache wazi.",
+    "connectLink": "Unganisha kiungo kilichobandikwa"
   }
 }

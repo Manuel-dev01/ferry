@@ -17,6 +17,7 @@ const bridge = vi.hoisted(() => {
     },
     approve: vi.fn().mockResolvedValue({ topic: 'current' }),
     refuse: vi.fn().mockResolvedValue(undefined),
+    answer: vi.fn().mockResolvedValue(undefined),
   }
 })
 vi.mock('../src/lib/wcBridge', () => ({
@@ -24,10 +25,12 @@ vi.mock('../src/lib/wcBridge', () => ({
   approve: bridge.approve,
   reject: vi.fn().mockResolvedValue(undefined),
   refuse: bridge.refuse,
-  answer: vi.fn(),
+  answer: bridge.answer,
   fromFonbnk: () => true,
   parseWcLink: (text: string) => (text.startsWith('wc:') ? text : null),
-  isSignMethod: () => true,
+  wcLinkExpired: () => false,
+  isSignMethod: (method: string) =>
+    ['personal_sign', 'eth_signTypedData', 'eth_signTypedData_v4'].includes(method),
 }))
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 
@@ -84,6 +87,49 @@ afterEach(() => {
 })
 
 describe('Fonbnk connection lifecycle', () => {
+  it('handles read-only connection checks without prompting or refusing a transaction', async () => {
+    const state = await mount()
+    await state.pairWith('wc:fresh')
+    bridge.handlers.session_proposal!({ id: 10 })
+    await state.share()
+    for (const [method, params, result] of [
+      ['eth_chainId', [], '0x89'],
+      ['eth_accounts', [], ['0x1111111111111111111111111111111111111111']],
+      ['wallet_switchEthereumChain', [{ chainId: '0x89' }], null],
+    ] as const) {
+      const r = { topic: 'current', params: { chainId: 'eip155:1', request: { method, params } } }
+      bridge.handlers.session_request!(r)
+      expect(bridge.answer).toHaveBeenCalledWith(r, result)
+    }
+    const transfer = {
+      topic: 'current',
+      params: { chainId: 'eip155:137', request: { method: 'eth_sendTransaction', params: [] } },
+    }
+    bridge.handlers.session_request!(transfer)
+    expect(bridge.refuse).toHaveBeenCalledWith(transfer)
+  })
+  it('queues a request arriving before session approval finishes', async () => {
+    let finish!: (value: { topic: string }) => void
+    bridge.approve.mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          finish = r
+        }),
+    )
+    const state = await mount()
+    await state.pairWith('wc:fresh')
+    bridge.handlers.session_proposal!({ id: 11 })
+    const sharing = state.share()
+    const r = {
+      topic: 'current',
+      params: { chainId: 'eip155:137', request: { method: 'eth_accounts', params: [] } },
+    }
+    bridge.handlers.session_request!(r)
+    expect(bridge.refuse).not.toHaveBeenCalledWith(r)
+    finish({ topic: 'current' })
+    await sharing
+    expect(bridge.answer).toHaveBeenCalledWith(r, ['0x1111111111111111111111111111111111111111'])
+  })
   it('does not report a saved session as connected to a fresh frame', async () => {
     const state = await mount()
     expect(state.state).toBe('idle')

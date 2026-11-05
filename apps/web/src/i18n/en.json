@@ -794,13 +794,13 @@
   },
   "wc": {
     "title": "Connect your wallet",
-    "steps": "In Fonbnk, tap WalletConnect, then the QR icon at the top, then Copy link. Close the QR panel, then tap Paste link above the form.",
+    "steps": "In Fonbnk, choose WalletConnect → QR icon → Copy link. Keep the QR panel open. Tap Paste link above the form, then Share address in Ferry. Return to the same Fonbnk form; do not reload it.",
     "paste": "Paste link",
     "badLink": "That isn't a WalletConnect link. Copy it again from Fonbnk.",
-    "connecting": "Connecting to Fonbnk…",
-    "noAnswer": "Fonbnk didn't answer. Copy a fresh link and paste it again.",
+    "connecting": "Waiting for Fonbnk… Keep its QR panel open.",
+    "noAnswer": "Fonbnk did not finish pairing. Keep its QR panel open, copy a fresh link and try again.",
     "notFonbnk": "That link isn't from Fonbnk, so Ferry didn't connect.",
-    "connected": "Address shared with Fonbnk: {address}. If it still asks to connect, reconnect below.",
+    "connected": "Address shared: {address}. Continue in the same Fonbnk form. If it still asks for a wallet, use Reconnect with a fresh link.",
     "reconnect": "Reconnect",
     "disconnected": "Fonbnk disconnected. Paste a fresh link if it asks again.",
     "proposalTitle": "Fonbnk wants your wallet address",
@@ -815,6 +815,8 @@
     "wrongAccount": "Fonbnk asked for a different wallet, so Ferry said no.",
     "refusedTx": "Fonbnk asked to send a transaction. Ferry only shares your address, so it said no.",
     "failed": "Couldn't connect ({reason}). Copy a fresh link from Fonbnk and try again.",
-    "help": "How to connect · show steps"
+    "help": "How to connect · show steps",
+    "expiredLink": "This link has expired. Generate a fresh QR/link in Fonbnk, keep it open, then paste it here.",
+    "connectLink": "Connect pasted link"
   }
 }

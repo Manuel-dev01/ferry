@@ -3,7 +3,7 @@
 // its link, pastes it here, and Ferry answers as the wallet (see lib/wcBridge.ts).
 import type { WalletKitTypes } from '@reown/walletkit'
 import { hexToString, isHex, type Address, type Hex } from 'viem'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   answer,
@@ -14,6 +14,7 @@ import {
   refuse,
   reject,
   walletKit,
+  wcLinkExpired,
 } from '../lib/wcBridge'
 import { classifyEvmError, evmErrorText, personalSign, signTypedDataV4 } from '../providers/evm'
 import Icon from './Icon.vue'
@@ -40,9 +41,18 @@ let kit: Kit | null = null
 let disposed = false
 const sessionTopic = ref<string | null>(null)
 let pairTimer: ReturnType<typeof setTimeout> | undefined
+let pairGeneration = 0
+let pairingTopic: string | null = null
+let listening = false
+const earlyRequests: WalletKitTypes.SessionRequest[] = []
 
 function onProposal(p: WalletKitTypes.SessionProposal) {
-  if (disposed || state.value !== 'pairing' || proposal.value) {
+  if (
+    disposed ||
+    state.value !== 'pairing' ||
+    proposal.value ||
+    (p.params?.pairingTopic && p.params.pairingTopic !== pairingTopic)
+  ) {
     void reject(p).catch(() => undefined)
     return
   }
@@ -57,17 +67,29 @@ function onProposal(p: WalletKitTypes.SessionProposal) {
 }
 
 function onRequest(r: WalletKitTypes.SessionRequest) {
-  if (r.topic !== sessionTopic.value || r.params.chainId !== 'eip155:137' || request.value) {
+  if (!sessionTopic.value && busy.value && proposal.value && earlyRequests.length < 4) {
+    earlyRequests.push(r)
+    return
+  }
+  if (r.topic !== sessionTopic.value) {
     void refuse(r).catch(() => undefined)
     return
   }
   const { method, params } = r.params.request
+  if (method === 'eth_chainId') {
+    void answer(r, '0x89').catch(() => undefined)
+    return
+  }
+  if (method === 'eth_accounts' || method === 'eth_requestAccounts') {
+    void answer(r, [props.address]).catch(() => undefined)
+    return
+  }
   const target = (params as { chainId?: string }[] | undefined)?.[0]?.chainId
   if (method === 'wallet_switchEthereumChain' && target?.toLowerCase() === '0x89') {
     void answer(r, null).catch(() => undefined) // already on Polygon
     return
   }
-  if (!isSignMethod(method)) {
+  if (r.params.chainId !== 'eip155:137' || request.value || !isSignMethod(method)) {
     void refuse(r).catch(() => undefined)
     notice.value = t('wc.refusedTx')
     return
@@ -83,18 +105,17 @@ function onDelete(event: { topic: string }) {
   notice.value = t('wc.disconnected')
 }
 
-onMounted(async () => {
-  try {
-    kit = await walletKit()
-    if (disposed) return
+async function ensureKit() {
+  kit ??= await walletKit()
+  if (disposed) throw new Error('Connection screen closed')
+  if (!listening) {
     kit.on('session_proposal', onProposal)
     kit.on('session_request', onRequest)
     kit.on('session_delete', onDelete)
-    // A newly mounted Fonbnk frame has its own client. Saved sessions do not prove it is connected.
-  } catch (err) {
-    problem.value = t('wc.failed', { reason: reason(err) })
+    listening = true
   }
-})
+  return kit
+}
 onUnmounted(() => {
   disposed = true
   void resetConnection()
@@ -105,6 +126,9 @@ onUnmounted(() => {
 })
 
 async function resetConnection() {
+  pairGeneration++
+  pairingTopic = null
+  for (const r of earlyRequests.splice(0)) void refuse(r).catch(() => undefined)
   clearTimeout(pairTimer)
   const topic = sessionTopic.value
   sessionTopic.value = null
@@ -146,18 +170,30 @@ async function pairWith(text: string) {
     showInput.value = true
     return
   }
+  if (wcLinkExpired(link)) {
+    problem.value = t('wc.expiredLink')
+    showInput.value = true
+    return
+  }
+  const generation = ++pairGeneration
+  pairingTopic = link.slice(3, link.indexOf('@'))
   state.value = 'pairing'
   linkInput.value = ''
   try {
-    kit ??= await walletKit()
-    await kit.pair({ uri: link })
+    kit = await ensureKit()
+    if (disposed || generation !== pairGeneration) return
     pairTimer = setTimeout(() => {
-      if (state.value === 'pairing' && !proposal.value) {
+      if (generation === pairGeneration && state.value === 'pairing' && !proposal.value) {
+        pairGeneration++
+        pairingTopic = null
         state.value = 'idle'
         problem.value = t('wc.noAnswer')
       }
     }, PAIR_TIMEOUT_MS)
+    await kit.pair({ uri: link })
   } catch (err) {
+    if (disposed || generation !== pairGeneration) return
+    clearTimeout(pairTimer)
     state.value = 'idle'
     problem.value = t('wc.failed', { reason: reason(err) })
   }
@@ -174,7 +210,7 @@ async function pasteLink() {
 }
 
 function onInput() {
-  if (parseWcLink(linkInput.value)) void pairWith(linkInput.value)
+  problem.value = ''
 }
 
 // ---- Sharing the address: one tap, no wallet prompt (Nimiq Pay already gave Ferry the address) ----
@@ -195,7 +231,9 @@ async function share() {
     sessionTopic.value = session.topic
     proposal.value = null
     state.value = 'connected'
+    for (const r of earlyRequests.splice(0)) onRequest(r)
   } catch (err) {
+    for (const r of earlyRequests.splice(0)) void refuse(r).catch(() => undefined)
     proposal.value = null
     state.value = 'idle'
     problem.value = t('wc.failed', { reason: reason(err) })
@@ -319,7 +357,17 @@ async function declineSign() {
       autocapitalize="off"
       spellcheck="false"
       @input="onInput"
+      @keydown.enter="pairWith(linkInput)"
     />
+    <button
+      type="button"
+      class="fy-btn fy-btn--primary fy-btn--sm"
+      style="margin-top: 8px"
+      :disabled="!linkInput.trim() || busy"
+      @click="pairWith(linkInput)"
+    >
+      {{ t('wc.connectLink') }}
+    </button>
   </div>
   <p v-if="problem" class="s-wc__msg s-wc__msg--bad" role="alert">{{ problem }}</p>
   <p v-else-if="notice" class="s-wc__msg">{{ notice }}</p>
