@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -7,10 +7,25 @@
       name="description"
       content="Move money in about a minute. Cash out USDT or NIM from Nimiq Pay to banks, mobile money and airtime in 13 countries. Ferry never holds your money."
     />
-    <meta name="theme-color" content="#fbf6ee" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0a0c2b" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fbf6ee" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Ferry · Move money in about a minute</title>
+    <script>
+      // Apply saved choices before CSS paints; a fresh visit always starts light.
+      try {
+        const appearance = localStorage.getItem('ferry.appearance')
+        if (appearance === 'dark') document.documentElement.setAttribute('data-theme', 'dark')
+        else if (appearance === 'system') document.documentElement.removeAttribute('data-theme')
+      } catch {
+        // Keep the light default when storage is unavailable.
+      }
+      if (
+        document.documentElement.getAttribute('data-theme') === 'dark' ||
+        (!document.documentElement.hasAttribute('data-theme') &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches)
+      )
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0a0c2b')
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -23,9 +38,12 @@
         background: #fbf6ee;
       }
       @media (prefers-color-scheme: dark) {
-        html {
+        html:not([data-theme='light']) {
           background: #0a0c2b;
         }
+      }
+      html[data-theme='dark'] {
+        background: #0a0c2b;
       }
     </style>
   </head>
