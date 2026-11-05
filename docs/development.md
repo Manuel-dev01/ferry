@@ -87,12 +87,12 @@ Every variable is validated at startup by [`apps/api/src/env.ts`](../apps/api/sr
 
 Everything here is compiled into the public bundle. **Never put a secret in a `VITE_` variable.**
 
-| Variable             | Purpose                                                                        |
-| -------------------- | ------------------------------------------------------------------------------ |
-| `VITE_API_URL`       | API base URL. Empty in development: the app uses the page's host on port 3000. |
-| `VITE_PUBLIC_ORIGIN` | Public origin, used for "Open in Nimiq Pay" links                              |
-| `VITE_MOCK_WALLET`   | `true` for the desktop mock wallet (development builds only)                   |
-| `VITE_SENTRY_DSN`    | Optional error reporting                                                       |
+| Variable             | Purpose                                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_URL`       | API base URL. Empty in development uses the page's host on port 3000. Required public HTTPS URL for production builds; missing configuration fails the build. |
+| `VITE_PUBLIC_ORIGIN` | Public origin, used for "Open in Nimiq Pay" links                                                                                                             |
+| `VITE_MOCK_WALLET`   | `true` for the desktop mock wallet (development builds only)                                                                                                  |
+| `VITE_SENTRY_DSN`    | Optional error reporting                                                                                                                                      |
 
 ## Database and migrations
 
@@ -112,7 +112,7 @@ Migrations are additive and run automatically when the production container star
 pnpm test         # all Vitest suites
 pnpm lint         # ESLint + Prettier check (pnpm format fixes formatting)
 pnpm typecheck    # tsc and vue-tsc
-pnpm build        # production builds
+VITE_API_URL=https://api-production-5835.up.railway.app pnpm build # production builds (bash)
 ```
 
 | Package           | What the tests cover                                                                                                                                                                                            |

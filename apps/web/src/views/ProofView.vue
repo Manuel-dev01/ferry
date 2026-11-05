@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import type { StatsResponse } from '@ferry/shared'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppHeader from '../components/AppHeader.vue'
 import Banner from '../components/Banner.vue'
-import { api } from '../lib/api'
+import { useProofStats } from '../composables/useProofStats'
 import { channelLabel, countryName, flagOf } from '../lib/fonbnk'
 import {
   durationDisplay,
@@ -17,24 +16,7 @@ import {
 
 const { t, te } = useI18n()
 
-const REFRESH_MS = 60_000
-
-const stats = ref<StatsResponse | null>(null)
-const failed = ref(false)
-async function load() {
-  try {
-    stats.value = await api<StatsResponse>('/v1/stats')
-    failed.value = false
-  } catch {
-    failed.value = !stats.value
-  }
-}
-let timer: ReturnType<typeof setInterval> | undefined
-onMounted(() => {
-  void load()
-  timer = setInterval(() => void load(), REFRESH_MS)
-})
-onUnmounted(() => clearInterval(timer))
+const { stats, failed, loading, load } = useProofStats()
 
 const usd = (units: string) => `$${usdtDisplay(BigInt(units))}`
 
@@ -69,15 +51,28 @@ const maxCountry = computed(() =>
     <div class="fy-content" style="gap: 22px">
       <div class="flex flex-col gap-2">
         <span class="s-live"
-          ><span class="s-live__dot" aria-hidden="true" />{{
-            stats ? t('proof.live', { time: timeDisplay(stats.updatedAt) }) : t('proof.loading')
+          ><span v-if="!failed" class="s-live__dot" aria-hidden="true" />{{
+            failed
+              ? t('proof.unavailable')
+              : stats
+                ? t('proof.live', { time: timeDisplay(stats.updatedAt) })
+                : t('proof.loading')
           }}</span
         >
         <h1 class="fy-display">{{ t('proof.title') }}</h1>
         <p class="fy-lede">{{ t('proof.lede') }}</p>
       </div>
 
-      <Banner v-if="failed" tone="danger" :body="t('proof.failed')" />
+      <Banner v-if="failed" tone="warning" :body="t(stats ? 'proof.stale' : 'proof.failed')" />
+      <button
+        v-if="failed"
+        type="button"
+        class="fy-btn fy-btn--secondary"
+        :disabled="loading"
+        @click="load"
+      >
+        {{ t('common.tryAgain') }}
+      </button>
 
       <!-- Loading -->
       <div v-if="!stats && !failed" class="s-grid" aria-busy="true">
@@ -90,6 +85,7 @@ const maxCountry = computed(() =>
       </div>
 
       <template v-if="stats">
+        <p class="fy-caption">{{ t('proof.method') }}</p>
         <div class="s-grid">
           <div v-for="s in tiles" :key="s.k" class="s-tile" :class="`s-tile--${s.tone}`">
             <span class="s-tile__v">{{ s.v }}</span>

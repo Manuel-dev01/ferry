@@ -190,7 +190,10 @@
     "empty": "Ainda não há saques públicos. Os primeiros aparecem aqui assim que acontecerem.",
     "nimSwaps": "NIM convertidos em USDT",
     "soon": "Em breve",
-    "afterFirst": "a partir da primeira entrega cronometrada"
+    "afterFirst": "a partir da primeira entrega cronometrada",
+    "unavailable": "Números ao vivo indisponíveis",
+    "stale": "Não foi possível atualizar. Exibindo a última atualização bem-sucedida.",
+    "method": "Saques conta transferências verificadas aos parceiros e pagamentos M-Pesa Direct confirmados. O recebimento é acompanhado separadamente. Carteiras únicas são remetentes Polygon visíveis; depósitos não estão incluídos."
   },
   "fonbnk": {
     "step": "Etapa 2 de 3",

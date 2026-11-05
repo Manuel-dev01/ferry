@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { FONBNK_COUNTRY_CODES, type StatsResponse } from '@ferry/shared'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { FONBNK_COUNTRY_CODES } from '@ferry/shared'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { renderSVG } from 'uqr'
 import FerryLogo from '../components/FerryLogo.vue'
 import NimiqMark from '../components/NimiqMark.vue'
 import { REPO_URL } from '../config'
 import { useLandingMotion } from '../composables/useLandingMotion'
-import { api } from '../lib/api'
+import { useProofStats } from '../composables/useProofStats'
 import { FLAGS } from '../lib/corridors'
 import { channelLabel, countryName, flagOf } from '../lib/fonbnk'
 import { durationDisplay, roughDurationDisplay, usdHeadline, usdtDisplay } from '../lib/format'
@@ -20,21 +20,8 @@ const openUrl = openInNimiqPayUrl()
 // Our own SVG from a URL we control, so v-html is safe here.
 const qrSvg = renderSVG(openUrl, { border: 1, whiteColor: '#FFFFFF', blackColor: '#0B0E3A' })
 
-const stats = ref<StatsResponse | null>(null)
-async function loadStats() {
-  try {
-    stats.value = await api<StatsResponse>('/v1/stats')
-  } catch {
-    // keep the last numbers; the tiles show dashes until the first load
-  }
-}
-let statsTimer: ReturnType<typeof setInterval> | undefined
-onMounted(() => {
-  void loadStats()
-  statsTimer = setInterval(() => void loadStats(), 60_000)
-})
-onUnmounted(() => clearInterval(statsTimer))
-const hasStats = computed(() => !!stats.value && stats.value.cashouts > 0)
+const { stats, failed, loading, load: loadStats } = useProofStats()
+const hasStats = computed(() => !!stats.value)
 const statTiles = computed(() => {
   const s = stats.value
   const dash = '—'
@@ -389,15 +376,31 @@ const countries = [
       <div class="band__head">
         <div class="flex flex-col gap-3.5">
           <span class="live"
-            ><span class="live__dot" />{{
-              hasStats ? t('landing.proof.live') : t('landing.proof.pending')
+            ><span v-if="!failed" class="live__dot" />{{
+              failed
+                ? t('proof.unavailable')
+                : hasStats
+                  ? t('landing.proof.live')
+                  : t('proof.loading')
             }}</span
           >
           <h2 class="band__h">{{ t('landing.proof.title') }}</h2>
         </div>
         <p class="band__p" style="color: #e4e8ff">{{ t('landing.proof.lede') }}</p>
       </div>
-      <div class="stats">
+      <p v-if="failed" class="band__p" style="color: #fff4e2">
+        {{ t(stats ? 'proof.stale' : 'proof.failed') }}
+      </p>
+      <button
+        v-if="failed"
+        type="button"
+        class="fy-btn fy-btn--cream"
+        :disabled="loading"
+        @click="loadStats"
+      >
+        {{ t('common.tryAgain') }}
+      </button>
+      <div v-if="stats" class="stats">
         <div v-for="s in statTiles" :key="s.k" class="stat" :class="`c-${s.bg}`">
           <span class="stat__v">{{ s.v }}</span>
           <span style="font-size: 15px; font-weight: 600">{{ s.k }}</span>
@@ -426,7 +429,7 @@ const countries = [
             }}</span>
           </a>
         </template>
-        <p v-else class="payouts__empty">{{ t('landing.proof.empty') }}</p>
+        <p v-else-if="stats" class="payouts__empty">{{ t('landing.proof.empty') }}</p>
         <RouterLink to="/proof" class="payouts__more">{{ t('landing.proof.more') }} →</RouterLink>
       </div>
     </section>

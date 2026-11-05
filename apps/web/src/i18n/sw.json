@@ -190,7 +190,10 @@
     "empty": "Bado hakuna utoaji wa pesa wa umma. Wa kwanza utaonekana hapa mara tu utakapotokea.",
     "nimSwaps": "NIM zilizobadilishwa kuwa USDT",
     "soon": "Hivi karibuni",
-    "afterFirst": "kuanzia malipo ya kwanza yaliyopimwa muda"
+    "afterFirst": "kuanzia malipo ya kwanza yaliyopimwa muda",
+    "unavailable": "Takwimu za moja kwa moja hazipatikani",
+    "stale": "Imeshindwa kusasisha. Inaonyesha taarifa zilizopatikana mara ya mwisho.",
+    "method": "Utoaji unahesabu uhamisho uliothibitishwa kwa washirika na malipo ya M-Pesa Direct yaliyothibitishwa. Kupokea fedha kunafuatiliwa kando. Pochi za kipekee ni watumaji wa Polygon wanaoonekana; amana hazijajumuishwa."
   },
   "fonbnk": {
     "step": "Hatua 2 kati ya 3",

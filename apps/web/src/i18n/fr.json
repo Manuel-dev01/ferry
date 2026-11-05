@@ -190,7 +190,10 @@
     "empty": "Aucun retrait public pour l’instant. Les premiers apparaîtront ici dès qu’ils auront lieu.",
     "nimSwaps": "NIM convertis en USDT",
     "soon": "Bientôt",
-    "afterFirst": "dès la première livraison chronométrée"
+    "afterFirst": "dès la première livraison chronométrée",
+    "unavailable": "Chiffres en direct indisponibles",
+    "stale": "Actualisation impossible. Dernières données disponibles affichées.",
+    "method": "Les retraits comptent les transferts vérifiés aux partenaires et les paiements M-Pesa Direct confirmés. La réception est suivie séparément. Les portefeuilles uniques sont les expéditeurs Polygon visibles ; les dépôts ne sont pas inclus."
   },
   "fonbnk": {
     "step": "Étape 2 sur 3",

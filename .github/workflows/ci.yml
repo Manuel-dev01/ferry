@@ -23,5 +23,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+        env:
+          VITE_API_URL: https://api-production-5835.up.railway.app
       - run: pnpm audit --prod --audit-level high
         continue-on-error: true

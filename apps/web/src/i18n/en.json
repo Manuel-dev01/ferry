@@ -654,7 +654,10 @@
     "empty": "No public cash-outs yet. The first ones will show here the moment they happen.",
     "nimSwaps": "NIM turned into USDT",
     "soon": "Soon",
-    "afterFirst": "from the first timed delivery"
+    "afterFirst": "from the first timed delivery",
+    "unavailable": "Live numbers unavailable",
+    "stale": "Could not refresh. Showing the last successful update.",
+    "method": "Cash-outs counts verified partner transfers and confirmed M-Pesa Direct payouts. Received confirmations are tracked separately. Unique wallets covers visible Polygon senders; Add money deposits are not included."
   },
   "nimSwap": {
     "header": "Cash out NIM",
