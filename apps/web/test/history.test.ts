@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { entryAmount, parseHistory, type HistoryEntry } from '../src/stores/history'
+import {
+  entryAmount,
+  entryAmountMuted,
+  parseHistory,
+  type HistoryEntry,
+} from '../src/stores/history'
 
 vi.mock('../src/lib/ferryApi', () => ({ ferryApi: {} }))
 
@@ -19,6 +24,24 @@ const valid: HistoryEntry = {
   txHash: `0x${'a'.repeat(64)}`,
 }
 describe('device history recovery', () => {
+  it.each(['failed', 'expired', 'awaiting', 'swapping'])(
+    'never labels %s incoming funds as received',
+    (status) => {
+      const entry: HistoryEntry = { ...valid, kind: 'nim', status, amountUnits: '1000000' }
+      expect(entryAmount(entry)).toBe('1.00 USDT')
+      expect(entryAmountMuted(entry)).toBe(true)
+    },
+  )
+  it('only adds the incoming plus sign after receipt', () => {
+    const entry: HistoryEntry = {
+      ...valid,
+      kind: 'topup',
+      status: 'received',
+      amountUnits: '1000000',
+    }
+    expect(entryAmount(entry)).toBe('+1.00 USDT')
+    expect(entryAmountMuted(entry)).toBe(false)
+  })
   it('keeps a valid receipt alongside interrupted or damaged entries', () => {
     const entries = parseHistory(JSON.stringify([null, {}, { id: 'broken' }, valid]))
     expect(entries).toEqual([valid])

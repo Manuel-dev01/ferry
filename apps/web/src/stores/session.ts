@@ -117,12 +117,20 @@ export const useSessionStore = defineStore('session', () => {
     evmAddress.value = null
     balances.value = null
     balancesError.value = false
+    nimBalanceSequence++
+    nimAddress.value = null
+    nimBalance.value = null
   }
 
+  let nimBalanceSequence = 0
   async function loadNimBalance() {
+    const sequence = ++nimBalanceSequence
     const provider = nimiq.value
-    if (!provider || !nimAddress.value) return
-    nimBalance.value = lunaFromNumber(await provider.getBalance(nimAddress.value))
+    const address = nimAddress.value
+    nimBalance.value = null
+    if (!provider || !address || typeof provider.getBalance !== 'function') return
+    const balance = lunaFromNumber(await provider.getBalance(address))
+    if (sequence === nimBalanceSequence && nimAddress.value === address) nimBalance.value = balance
   }
 
   const canReadNimBalance = () => typeof nimiq.value?.getBalance === 'function'

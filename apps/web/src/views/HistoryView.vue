@@ -12,6 +12,7 @@ import {
   useHistoryStore,
   type HistoryEntry,
   entryAmount,
+  entryAmountMuted,
   entryLink,
   entryTitle,
 } from '../stores/history'
@@ -74,8 +75,13 @@ function cashOut() {
   <main class="fy-screen">
     <AppHeader back="/" :title="t('history.title')" />
 
+    <div v-if="!session.evmAddress" class="fy-content items-center justify-center text-center">
+      <p class="fy-lede">{{ t('history.connectPrivacy') }}</p>
+      <RouterLink to="/" class="fy-btn fy-btn--primary">{{ t('home.connect') }}</RouterLink>
+    </div>
+
     <div
-      v-if="!history.entries.length"
+      v-else-if="!history.entries.length"
       class="fy-content items-center justify-center text-center"
       style="padding-bottom: 60px"
     >
@@ -136,14 +142,16 @@ function cashOut() {
             <span class="fy-list-row__meta">{{ meta(e) }}</span>
           </span>
           <span class="fy-list-row__end">
-            <span>{{ entryAmount(e) }}</span>
+            <span :class="{ 'fy-history-amount--muted': entryAmountMuted(e) }">{{
+              entryAmount(e)
+            }}</span>
             <StatusChip :status="e.status" />
           </span>
         </RouterLink>
       </section>
     </div>
 
-    <div v-if="!history.entries.length" class="fy-bottom">
+    <div v-if="session.evmAddress && !history.entries.length" class="fy-bottom">
       <button type="button" class="fy-btn fy-btn--primary" @click="cashOut">
         {{ t('history.cashOut') }}
       </button>

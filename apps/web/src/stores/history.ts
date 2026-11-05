@@ -52,9 +52,13 @@ export interface HistoryEntry {
 }
 
 /** The amount a history row shows: fiat for Ferry orders, USDT sent for partner cash-outs. */
+export const entryAmountMuted = (e: HistoryEntry) =>
+  ['failed', 'expired', 'refunded', 'cancelled'].includes(e.status) ||
+  ((e.kind === 'topup' || e.kind === 'nim') && e.status !== 'received')
+
 export const entryAmount = (e: HistoryEntry) =>
   e.kind === 'topup' || e.kind === 'nim'
-    ? `+${usdtDisplay(BigInt(e.amountUnits ?? '0'))} USDT`
+    ? `${e.status === 'received' ? '+' : ''}${usdtDisplay(BigInt(e.amountUnits ?? '0'))} USDT`
     : e.provider === 'mpesa_ln'
       ? fiatDisplay(e.theyReceiveMinor, e.currency)
       : e.provider === 'fonbnk' || e.provider === 'mavapay_ln'

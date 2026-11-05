@@ -213,6 +213,11 @@ a {
 }
 
 /* ---------- Logo ---------- */
+.fy-history-amount--muted {
+  color: var(--fy-ink-3);
+  font-weight: 400;
+}
+
 .fy-logo {
   display: inline-flex;
   align-items: center;

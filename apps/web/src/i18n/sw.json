@@ -111,7 +111,8 @@
     "airtimeTitle": "Muda wa maongezi",
     "payTitle": "Malipo · {method}",
     "mpesaTitle": "M-Pesa · {to}",
-    "mavapayTitle": "Mavapay Money · benki"
+    "mavapayTitle": "Mavapay Money · benki",
+    "connectPrivacy": "Unganisha pochi yako kuona historia iliyohifadhiwa kwenye simu hii."
   },
   "settings": {
     "title": "Mipangilio",
@@ -366,7 +367,7 @@
     "tooHigh": "Kikomo cha Ferry ni USDT {amount} kwa wakati mmoja.",
     "quoting": "Inapata bei…",
     "quote": "≈ sats {sats} kupitia Lightning",
-    "quoteNote": "Inajumuisha ada ya ubadilishaji ya sats {fee}. Nimiq Pay inaonyesha NIM kamili kabla hujaidhinisha.",
+    "quoteNote": "Inajumuisha ada ya ubadilishaji ya sats {fee}.",
     "howTitle": "Jinsi inavyofanya kazi",
     "how1": "Nimiq Pay inalipa ankara ya Lightning kwa NIM zako. Idhini moja.",
     "how2": "LendaSwap inakufungia USDT kwenye Polygon.",
@@ -403,9 +404,15 @@
     "checkAgain": "Kagua tena",
     "invalid": "Nimiq Pay haikuweza kuanza malipo haya. Angalia salio na maelezo ya malipo, kisha ujaribu tena.",
     "insufficient": "Nimiq Pay inaripoti salio halitoshi. Punguza kiasi au ongeza fedha kabla ya kujaribu tena.",
-    "nimEstimate": "Takriban {nim} NIM kabla ya ada. Nimiq Pay inaonyesha jumla kabla ya idhini.",
+    "nimEstimate": "Takriban NIM {nim} kabla ya ada.",
     "estimateUnavailable": "Makadirio ya NIM hayapatikani. Nimiq Pay inaonyesha jumla pamoja na ada kabla ya idhini.",
-    "refreshQuote": "Pata bei mpya"
+    "refreshQuote": "Pata bei mpya",
+    "balance": "Una NIM {nim} kwenye anwani hii.",
+    "balanceAddress": "Anwani ya NIM",
+    "checkBalance": "Angalia salio la NIM",
+    "checkingBalance": "Inaangalia salio la NIM…",
+    "balanceUnavailable": "Salio la NIM halipatikani. Unaweza kuendelea; Nimiq Pay hukagua jumla ya mwisho. Huenda ukahitaji kusasisha programu.",
+    "shortfall": "Anwani hii inahitaji takriban NIM {nim} zaidi kabla ya ada. Ongeza fedha au angalia anwani nyingine."
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",

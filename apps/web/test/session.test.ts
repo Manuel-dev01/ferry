@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSessionStore } from '../src/stores/session'
+import type { NimiqProvider } from '../src/providers/nimiq'
 const pending = vi.hoisted(() => ({ read: vi.fn() }))
 vi.mock('../src/lib/api', () => ({ api: pending.read }))
 vi.mock('../src/providers/host', () => ({
@@ -20,6 +21,30 @@ beforeEach(() => {
   pending.read.mockReset()
 })
 describe('balance request isolation', () => {
+  it('does not restore a disconnected NIM balance from a late read', async () => {
+    let complete!: (value: number) => void
+    const session = useSessionStore()
+    session.nimiq = {
+      getBalance: () => new Promise<number>((r) => (complete = r)),
+    } as unknown as NimiqProvider
+    session.nimAddress = 'NQ-test-address'
+    const request = session.loadNimBalance()
+    session.disconnectEvm()
+    complete(12900000)
+    await request
+    expect(session.nimBalance).toBeNull()
+    expect(session.nimAddress).toBeNull()
+  })
+  it('keeps zero distinct from an unavailable NIM balance', async () => {
+    const session = useSessionStore()
+    session.nimiq = { getBalance: async () => 0 } as unknown as NimiqProvider
+    session.nimAddress = 'NQ-test-address'
+    await session.loadNimBalance()
+    expect(session.nimBalance).toBe(0n)
+    session.nimiq = {} as NimiqProvider
+    await session.loadNimBalance()
+    expect(session.nimBalance).toBeNull()
+  })
   it('keeps the latest balance when same-wallet reads finish out of order', async () => {
     let oldRead!: (value: unknown) => void
     pending.read

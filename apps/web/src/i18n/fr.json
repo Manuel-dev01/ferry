@@ -111,7 +111,8 @@
     "airtimeTitle": "Recharge de crédit",
     "payTitle": "Paiement · {method}",
     "mpesaTitle": "M-Pesa · {to}",
-    "mavapayTitle": "Mavapay Money · banque"
+    "mavapayTitle": "Mavapay Money · banque",
+    "connectPrivacy": "Connectez votre portefeuille pour voir l’historique enregistré sur ce téléphone."
   },
   "settings": {
     "title": "Réglages",
@@ -366,7 +367,7 @@
     "tooHigh": "La limite de Ferry est de {amount} USDT à la fois.",
     "quoting": "Obtention d’un prix…",
     "quote": "≈ {sats} sats via Lightning",
-    "quoteNote": "Frais d’échange de {fee} sats inclus. Nimiq Pay affiche le montant exact en NIM avant que vous approuviez.",
+    "quoteNote": "Frais d’échange de {fee} sats inclus.",
     "howTitle": "Comment ça marche",
     "how1": "Nimiq Pay paie une facture Lightning avec vos NIM. Une seule approbation.",
     "how2": "LendaSwap bloque les USDT pour vous sur Polygon.",
@@ -403,9 +404,15 @@
     "checkAgain": "Vérifier à nouveau",
     "invalid": "Nimiq Pay n’a pas pu démarrer ce paiement. Vérifiez votre solde et les détails, puis réessayez.",
     "insufficient": "Nimiq Pay indique un solde insuffisant. Réduisez le montant ou ajoutez des fonds avant de réessayer.",
-    "nimEstimate": "≈ {nim} NIM hors frais. Nimiq Pay affiche le total avant approbation.",
+    "nimEstimate": "≈ {nim} NIM hors frais.",
     "estimateUnavailable": "Estimation en NIM indisponible. Nimiq Pay affiche le total, frais inclus, avant approbation.",
-    "refreshQuote": "Obtenir un nouveau devis"
+    "refreshQuote": "Obtenir un nouveau devis",
+    "balance": "Vous avez {nim} NIM à cette adresse.",
+    "balanceAddress": "Adresse NIM",
+    "checkBalance": "Vérifier le solde NIM",
+    "checkingBalance": "Vérification du solde NIM…",
+    "balanceUnavailable": "Solde NIM indisponible. Vous pouvez continuer ; Nimiq Pay vérifie le total final. Une mise à jour peut être nécessaire.",
+    "shortfall": "Il manque environ {nim} NIM à cette adresse, hors frais. Ajoutez des fonds ou vérifiez une autre adresse."
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",

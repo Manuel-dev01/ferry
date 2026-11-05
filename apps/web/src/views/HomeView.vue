@@ -13,7 +13,13 @@ import { ferryApi } from '../lib/ferryApi'
 import { shortTimeDisplay, usdtDisplay, wholeFiatDisplay } from '../lib/format'
 import { tinyAddress } from '../lib/names'
 import { useCashoutStore } from '../stores/cashout'
-import { useHistoryStore, entryAmount, entryLink, entryTitle } from '../stores/history'
+import {
+  useHistoryStore,
+  entryAmount,
+  entryAmountMuted,
+  entryLink,
+  entryTitle,
+} from '../stores/history'
 import { useSessionStore } from '../stores/session'
 
 const { t, te } = useI18n()
@@ -73,7 +79,7 @@ function startCashout(kind: 'self' | 'other') {
 
 <template>
   <main class="fy-screen">
-    <header class="fy-header" style="padding: 0 12px 0 20px">
+    <header class="fy-header" style="padding: 0 20px">
       <FerryLogo />
       <RouterLink
         to="/settings"
@@ -228,7 +234,11 @@ function startCashout(kind: 'self' | 'other') {
           </RouterLink>
         </section>
 
-        <section v-if="recent.length" aria-labelledby="home-history" class="flex flex-col">
+        <section
+          v-if="session.evmAddress && recent.length"
+          aria-labelledby="home-history"
+          class="flex flex-col"
+        >
           <div class="flex items-center justify-between" style="min-height: 32px">
             <h2 id="home-history" style="font: 700 17px var(--fy-font-body); margin: 0">
               {{ t('home.history') }}
@@ -246,7 +256,9 @@ function startCashout(kind: 'self' | 'other') {
               >
             </span>
             <span class="fy-list-row__end">
-              <span>{{ entryAmount(e) }}</span>
+              <span :class="{ 'fy-history-amount--muted': entryAmountMuted(e) }">{{
+                entryAmount(e)
+              }}</span>
               <StatusChip :status="e.status" />
             </span>
           </RouterLink>

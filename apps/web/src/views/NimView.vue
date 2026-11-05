@@ -9,7 +9,7 @@ import Banner from '../components/Banner.vue'
 import Icon from '../components/Icon.vue'
 import PaymentError from '../components/PaymentError.vue'
 import { ferryApi } from '../lib/ferryApi'
-import { lunaForUsdt, nimWholeDisplay, usdtDisplay } from '../lib/format'
+import { lunaForUsdt, nimDisplay, nimWholeDisplay, usdtDisplay } from '../lib/format'
 import {
   claimNimSwap,
   createNimSwap,
@@ -21,6 +21,7 @@ import {
 } from '../lib/nimSwap'
 import { initNimiq } from '../providers/nimiq'
 import { lightningFailure } from '../lib/lightningFailure'
+import { tinyAddress } from '../lib/names'
 import { useCashoutStore } from '../stores/cashout'
 import { useHistoryStore } from '../stores/history'
 import { useSessionStore } from '../stores/session'
@@ -114,6 +115,62 @@ function estimatedNim(units: bigint | null) {
   const luna = lunaForUsdt(units, nimUsd.value)
   return luna === null ? null : nimWholeDisplay(luna)
 }
+const nimAccounts = ref<string[]>([])
+const checkingNim = ref(false)
+const nimBalanceProblem = ref('')
+const estimatedLuna = computed(() =>
+  amountUnits.value !== null && nimUsd.value ? lunaForUsdt(amountUnits.value, nimUsd.value) : null,
+)
+const nimShortfall = computed(() =>
+  estimatedLuna.value !== null &&
+  session.nimBalance !== null &&
+  estimatedLuna.value > session.nimBalance
+    ? estimatedLuna.value - session.nimBalance
+    : null,
+)
+async function refreshNimBalance() {
+  checkingNim.value = true
+  nimBalanceProblem.value = ''
+  try {
+    await session.loadNimBalance()
+    if (session.nimBalance === null) nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
+  } catch {
+    nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
+  } finally {
+    checkingNim.value = false
+  }
+}
+/** Account access only follows this explicit button; EVM permission does not grant NIM access. */
+async function checkNimBalance() {
+  if (checkingNim.value || busy.value) return
+  if (nimAccounts.value.length && session.nimAddress) {
+    await refreshNimBalance()
+    return
+  }
+  checkingNim.value = true
+  nimBalanceProblem.value = ''
+  try {
+    const provider = await initNimiq()
+    if (typeof provider.getBalance !== 'function') {
+      nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
+      return
+    }
+    const accounts = await provider.listAccounts()
+    if (stopped) return
+    nimAccounts.value = accounts
+    session.nimAddress = accounts.includes(session.nimAddress ?? '')
+      ? session.nimAddress
+      : (accounts[0] ?? null)
+    await refreshNimBalance()
+  } catch {
+    nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
+  } finally {
+    checkingNim.value = false
+  }
+}
+onMounted(() => {
+  if (session.nimAddress) void refreshNimBalance()
+})
 function refreshQuote() {
   swap.value = null
   phase.value = 'amount'
@@ -134,9 +191,17 @@ async function prepare() {
     !quote.value ||
     quoting.value ||
     amountError.value ||
+    checkingNim.value ||
+    nimShortfall.value !== null ||
     !session.evmAddress
   )
     return
+  // First Continue checks NIM access on a separate user tap, never on page load.
+  // An unavailable balance is not zero: older hosts may still use Pay's final check.
+  if (session.nimBalance === null && !nimBalanceProblem.value) {
+    await checkNimBalance()
+    return
+  }
   busy.value = true
   problem.value = ''
   try {
@@ -193,7 +258,8 @@ function remember(status: string) {
 
 async function pay() {
   const s = swap.value
-  if (!s || payLocked.value || busy.value) return
+  if (!s || payLocked.value || busy.value || checkingNim.value || nimShortfall.value !== null)
+    return
   if (s.invoiceExpiresAt > 0 && s.invoiceExpiresAt <= Date.now() / 1000) {
     problem.value = t('nimSwap.expired')
     return
@@ -392,6 +458,39 @@ function cashOut() {
           <span v-else class="fy-caption">{{
             t('nimSwap.limits', { min: MIN_USDT, max: maxUsdt })
           }}</span>
+          <span v-if="session.nimBalance !== null" class="fy-caption" data-testid="nim-balance">
+            {{ t('nimSwap.balance', { nim: nimDisplay(session.nimBalance) }) }}
+          </span>
+          <label v-if="nimAccounts.length > 1" class="fy-caption">
+            {{ t('nimSwap.balanceAddress') }}
+            <select v-model="session.nimAddress" class="fy-field" @change="refreshNimBalance">
+              <option v-for="address in nimAccounts" :key="address" :value="address">
+                {{ tinyAddress(address) }}
+              </option>
+            </select>
+          </label>
+          <span v-else-if="session.nimAddress" class="fy-caption"
+            >{{ t('nimSwap.balanceAddress') }} · {{ tinyAddress(session.nimAddress) }}</span
+          >
+          <button
+            type="button"
+            class="fy-btn fy-btn--text fy-btn--sm self-start"
+            :disabled="checkingNim || busy"
+            @click="checkNimBalance"
+          >
+            {{ checkingNim ? t('nimSwap.checkingBalance') : t('nimSwap.checkBalance') }}
+          </button>
+          <span v-if="nimBalanceProblem" class="fy-caption" role="status">{{
+            nimBalanceProblem
+          }}</span>
+          <span
+            v-if="nimShortfall !== null"
+            class="fy-help fy-help--error"
+            role="status"
+            data-testid="nim-shortfall"
+          >
+            {{ t('nimSwap.shortfall', { nim: nimDisplay(nimShortfall) }) }}
+          </span>
         </div>
 
         <Banner
@@ -447,7 +546,9 @@ function cashOut() {
           type="button"
           class="fy-btn fy-btn--primary"
           :class="{ 'fy-btn--busy': busy }"
-          :disabled="busy || quoting || !quote || !!amountError"
+          :disabled="
+            busy || checkingNim || nimShortfall !== null || quoting || !quote || !!amountError
+          "
           @click="prepare"
         >
           {{ busy ? t('nimSwap.preparing') : t('nimSwap.continue') }}
@@ -506,6 +607,12 @@ function cashOut() {
           }}
         </p>
         <p class="fy-caption" style="margin: 0">{{ t('nimSwap.payNote') }}</p>
+        <p v-if="session.nimBalance !== null" class="fy-caption">
+          {{ t('nimSwap.balance', { nim: nimDisplay(session.nimBalance) }) }}
+        </p>
+        <p v-if="nimShortfall !== null" class="fy-help fy-help--error">
+          {{ t('nimSwap.shortfall', { nim: nimDisplay(nimShortfall) }) }}
+        </p>
       </div>
       <div class="fy-bottom">
         <PaymentError v-if="problem" :body="problem" />
@@ -522,7 +629,7 @@ function cashOut() {
           type="button"
           class="fy-btn fy-btn--primary"
           :class="{ 'fy-btn--busy': busy }"
-          :disabled="busy || payLocked || secondsLeft === 0"
+          :disabled="busy || checkingNim || nimShortfall !== null || payLocked || secondsLeft === 0"
           @click="pay"
         >
           {{ busy ? t('nimSwap.confirmInWallet') : t('nimSwap.pay') }}

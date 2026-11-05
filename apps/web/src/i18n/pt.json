@@ -111,7 +111,8 @@
     "airtimeTitle": "Recarga de celular",
     "payTitle": "Pagamento · {method}",
     "mpesaTitle": "M-Pesa · {to}",
-    "mavapayTitle": "Mavapay Money · banco"
+    "mavapayTitle": "Mavapay Money · banco",
+    "connectPrivacy": "Conecte sua carteira para ver o histórico salvo neste telefone."
   },
   "settings": {
     "title": "Ajustes",
@@ -366,7 +367,7 @@
     "tooHigh": "O limite do Ferry é {amount} USDT por vez.",
     "quoting": "Buscando um preço…",
     "quote": "≈ {sats} sats pela Lightning",
-    "quoteNote": "Inclui a taxa de troca de {fee} sats. O Nimiq Pay mostra o valor exato em NIM antes de você aprovar.",
+    "quoteNote": "Inclui a taxa de troca de {fee} sats.",
     "howTitle": "Como funciona",
     "how1": "O Nimiq Pay paga uma fatura Lightning com seus NIM. Uma aprovação.",
     "how2": "A LendaSwap reserva os USDT para você na Polygon.",
@@ -403,9 +404,15 @@
     "checkAgain": "Verificar de novo",
     "invalid": "A Nimiq Pay não conseguiu iniciar este pagamento. Confira o saldo e os dados e tente novamente.",
     "insufficient": "A Nimiq Pay informa saldo insuficiente. Reduza o valor ou adicione fundos antes de tentar novamente.",
-    "nimEstimate": "≈ {nim} NIM antes das taxas. A Nimiq Pay mostra o total antes da aprovação.",
+    "nimEstimate": "≈ {nim} NIM antes das taxas.",
     "estimateUnavailable": "Estimativa em NIM indisponível. A Nimiq Pay mostra o total com taxas antes da aprovação.",
-    "refreshQuote": "Obter nova cotação"
+    "refreshQuote": "Obter nova cotação",
+    "balance": "Você tem {nim} NIM neste endereço.",
+    "balanceAddress": "Endereço NIM",
+    "checkBalance": "Verificar saldo NIM",
+    "checkingBalance": "Verificando saldo NIM…",
+    "balanceUnavailable": "Saldo NIM indisponível. Você pode continuar; Nimiq Pay verifica o total final. Pode ser necessário atualizar o aplicativo.",
+    "shortfall": "Faltam cerca de {nim} NIM neste endereço, antes das taxas. Adicione fundos ou verifique outro endereço."
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",

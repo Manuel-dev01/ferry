@@ -317,7 +317,8 @@
     "airtimeTitle": "Airtime top-up",
     "payTitle": "Payment · {method}",
     "mpesaTitle": "M-Pesa · {to}",
-    "mavapayTitle": "Mavapay Money · bank"
+    "mavapayTitle": "Mavapay Money · bank",
+    "connectPrivacy": "Connect your wallet to view history saved on this phone."
   },
   "settings": {
     "title": "Settings",
@@ -665,7 +666,7 @@
     "tooHigh": "Ferry's limit is {amount} USDT at a time.",
     "quoting": "Getting a price…",
     "quote": "≈ {sats} sats over Lightning",
-    "quoteNote": "Includes the swap fee of {fee} sats. Nimiq Pay shows the exact NIM before you approve.",
+    "quoteNote": "Includes the swap fee of {fee} sats.",
     "howTitle": "How it works",
     "how1": "Nimiq Pay pays a Lightning invoice from your NIM. One approval.",
     "how2": "LendaSwap locks the USDT for you on Polygon.",
@@ -702,9 +703,15 @@
     "checkAgain": "Check again",
     "invalid": "Nimiq Pay could not start this payment. Check your balance and payment details, then try again.",
     "insufficient": "Nimiq Pay reports insufficient balance. Reduce the amount or add funds before trying again.",
-    "nimEstimate": "≈ {nim} NIM before fees. Nimiq Pay shows the total before approval.",
+    "nimEstimate": "≈ {nim} NIM before fees.",
     "estimateUnavailable": "NIM estimate unavailable. Nimiq Pay shows the total, including fees, before approval.",
-    "refreshQuote": "Get a new quote"
+    "refreshQuote": "Get a new quote",
+    "balance": "You have {nim} NIM at this address.",
+    "balanceAddress": "NIM address",
+    "checkBalance": "Check NIM balance",
+    "checkingBalance": "Checking NIM balance…",
+    "balanceUnavailable": "Could not check NIM balance. You can continue; Nimiq Pay checks the final total. Older hosts may need an update.",
+    "shortfall": "This address needs about {nim} more NIM before fees. Add funds or check another address."
   },
   "offers": {
     "loading": "Finding the best rate…",
