@@ -25,5 +25,13 @@ jobs:
           echo "$body" | grep -q '"route"'
       - name: Proof of Ferry loads
         run: curl --fail --silent --show-error --retry 3 --retry-delay 20 --max-time 30 https://api-production-5835.up.railway.app/v1/stats > /dev/null
+      - name: Gas relayer has POL (alert below 2 POL, about 15 top-ups)
+        run: |
+          meta=$(curl --fail --silent --show-error --retry 3 --retry-delay 20 --max-time 20 https://api-production-5835.up.railway.app/v1/meta)
+          relayer=$(echo "$meta" | python3 -c 'import json,sys; print(json.load(sys.stdin)["relayer"] or "")')
+          test -n "$relayer"
+          pol=$(curl --fail --silent --show-error --retry 3 --retry-delay 20 --max-time 20 "https://api-production-5835.up.railway.app/v1/balances/$relayer" | python3 -c 'import json,sys; print(int(json.load(sys.stdin)["pol"]))')
+          echo "relayer $relayer holds $pol wei"
+          python3 -c "import sys; sys.exit(0 if $pol >= 2 * 10**18 else 1)"
       - name: Web app is up
         run: curl --fail --silent --show-error --retry 3 --retry-delay 20 --max-time 20 https://ferry-beta.vercel.app/ > /dev/null
