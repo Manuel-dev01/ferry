@@ -627,7 +627,7 @@
       "steps": "Kwenye Fonbnk, baada ya taarifa zako, chagua Pay with WalletConnect → aikoni ya QR → Copy link. Acha QR wazi. Bonyeza Bandika kiungo juu ya fomu, kisha Shiriki anwani yangu. Fonbnk ikiomba malipo, Ferry inayaonyesha kwanza.",
       "connected": "Anwani imeshirikiwa: {address}. Endelea kwenye Fonbnk; ikiomba malipo, Ferry inayaonyesha hapa.",
       "proposalBody": "Inapata anwani yako sasa. Ikiomba malipo, Ferry inakuonyesha kwanza kiasi na anwani, na hakuna kinachotoka hadi uidhinishe kwenye Nimiq Pay.",
-      "unsupported": "Fonbnk imeomba malipo ambayo Ferry haiwezi kuyakagua, kwa hiyo imekataa. Tumia “Pay manually instead” kwenye Fonbnk."
+      "unsupported": "Fonbnk imeomba malipo ambayo Ferry haiwezi kuyakagua, kwa hiyo imekataa. Kwenye Fonbnk, chagua “Pay manually instead”, kisha tumia kichupo cha “2 · Tuma USDT” hapo juu."
     }
   }
 }

@@ -627,7 +627,7 @@
       "steps": "Na Fonbnk, depois dos seus dados, escolha Pay with WalletConnect → ícone de QR → Copy link. Mantenha o QR aberto. Toque em Colar link acima do formulário e depois em Compartilhar meu endereço. Quando a Fonbnk pedir o pagamento, o Ferry mostra primeiro.",
       "connected": "Endereço compartilhado: {address}. Continue na Fonbnk; quando ela pedir o pagamento, o Ferry mostra aqui.",
       "proposalBody": "Ela recebe seu endereço agora. Quando pedir o pagamento, o Ferry mostra antes o valor e o endereço, e nada sai até você aprovar no Nimiq Pay.",
-      "unsupported": "A Fonbnk pediu um pagamento que o Ferry não consegue verificar, então ele recusou. Use “Pay manually instead” na Fonbnk."
+      "unsupported": "A Fonbnk pediu um pagamento que o Ferry não consegue verificar, então ele recusou. Na Fonbnk, escolha “Pay manually instead” e use a aba “2 · Enviar USDT” acima."
     }
   }
 }

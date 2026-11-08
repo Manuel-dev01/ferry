@@ -927,7 +927,8 @@ function onBack() {
         pay
         @pay="onWcPay"
       />
-      <p class="fy-caption" style="margin: 0 16px 8px">
+      <!-- Before sending, the form gets the room; the steps are behind the strip's "How to connect" -->
+      <p v-if="txHash || !session.evmAddress" class="fy-caption" style="margin: 0 16px 8px">
         {{
           txHash
             ? paidOverWc
@@ -954,12 +955,13 @@ function onBack() {
         >
           {{ t('fonbnk.gotMoney') }}
         </button>
-        <button type="button" class="fy-btn fy-btn--text" @click="copyHash">
+        <button v-if="!paidOverWc" type="button" class="fy-btn fy-btn--text" @click="copyHash">
           <Icon :name="copied ? 'check' : 'copy'" :size="16" />
           {{ copied ? t('fonbnk.copied') : t('fonbnk.copyHash') }}
         </button>
       </div>
-      <div v-else class="fy-bottom">
+      <!-- With WalletConnect there is no address to carry over; the Send tab stays as the fallback -->
+      <div v-else-if="!session.evmAddress" class="fy-bottom">
         <button type="button" class="fy-btn fy-btn--primary" @click="tab = 'send'">
           {{ t('fonbnk.haveAddress') }} <Icon name="arrow-right" :size="18" />
         </button>
