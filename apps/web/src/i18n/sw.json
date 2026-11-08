@@ -320,7 +320,8 @@
     "gasReverted": "uongezaji wa gesi umeshindwa kwenye mtandao",
     "startAgain": "Anza utoaji mpya wa pesa",
     "previousUncertain": "Matokeo ya muamala wa awali kutoka pochi hii hayajulikani.",
-    "feeRose": "Ada ya mtandao wa Polygon imepanda kabla pochi yako haijatuma. Hakuna kilichotumwa. Bonyeza Tuma tena: Ferry inalipia ada kwanza."
+    "feeRose": "Ada ya mtandao wa Polygon imepanda kabla pochi yako haijatuma. Hakuna kilichotumwa. Bonyeza Tuma tena: Ferry inalipia ada kwanza.",
+    "pasteHint": "Bonyeza na ushikilie kisanduku, kisha uchague Bandika."
   },
   "topup": {
     "header": "Ongeza pesa",
@@ -611,6 +612,7 @@
     "reconnect": "Unganisha tena",
     "help": "Jinsi ya kuunganisha · hatua",
     "expiredLink": "Kiungo hiki kimeisha muda. Tengeneza QR/kiungo kipya katika Fonbnk na uiache wazi.",
-    "connectLink": "Unganisha kiungo kilichobandikwa"
+    "connectLink": "Unganisha kiungo kilichobandikwa",
+    "pasteHint": "Bonyeza na ushikilie kisanduku hapa chini, kisha uchague Bandika."
   }
 }

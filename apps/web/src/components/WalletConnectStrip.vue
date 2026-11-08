@@ -3,7 +3,7 @@
 // its link, pastes it here, and Ferry answers as the wallet (see lib/wcBridge.ts).
 import type { WalletKitTypes } from '@reown/walletkit'
 import { hexToString, isHex, type Address, type Hex } from 'viem'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   answer,
@@ -27,6 +27,7 @@ const PAIR_TIMEOUT_MS = 45_000
 const state = ref<'idle' | 'pairing' | 'connected'>('idle')
 const linkInput = ref('')
 const showInput = ref(false)
+const linkEl = ref<HTMLInputElement | null>(null)
 const notice = ref('')
 const problem = ref('')
 const busy = ref(false)
@@ -207,6 +208,9 @@ async function pasteLink() {
     // clipboard blocked: the box below takes a long-press paste
   }
   showInput.value = true
+  // Focusing opens the keyboard, which on Android offers the copied link as a suggestion
+  await nextTick()
+  linkEl.value?.focus()
 }
 
 function onInput() {
@@ -349,7 +353,9 @@ async function declineSign() {
     <p>{{ t('wc.steps') }}</p>
   </details>
   <div v-if="showInput && state === 'idle'" class="s-wc__input">
+    <span class="fy-help">{{ t('wc.pasteHint') }}</span>
     <input
+      ref="linkEl"
       v-model="linkInput"
       :aria-label="t('wc.paste')"
       placeholder="wc:…"

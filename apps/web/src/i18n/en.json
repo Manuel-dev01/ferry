@@ -593,7 +593,8 @@
     "gasReverted": "the gas top-up failed on the network",
     "startAgain": "Start a new cash-out",
     "previousUncertain": "A previous transfer from this wallet has an unknown outcome.",
-    "feeRose": "Polygon's network fee went up before your wallet could send. Nothing was sent. Tap Send again: Ferry tops up the fee first."
+    "feeRose": "Polygon's network fee went up before your wallet could send. Nothing was sent. Tap Send again: Ferry tops up the fee first.",
+    "pasteHint": "Long-press the box and tap Paste."
   },
   "topup": {
     "header": "Add money",
@@ -818,6 +819,7 @@
     "failed": "Couldn't connect ({reason}). Copy a fresh link from Fonbnk and try again.",
     "help": "How to connect · show steps",
     "expiredLink": "This link has expired. Generate a fresh QR/link in Fonbnk, keep it open, then paste it here.",
-    "connectLink": "Connect pasted link"
+    "connectLink": "Connect pasted link",
+    "pasteHint": "Long-press the box below and tap Paste."
   }
 }

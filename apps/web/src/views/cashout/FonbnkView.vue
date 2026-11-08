@@ -269,12 +269,22 @@ const addressGroups = computed(() =>
   address.value ? (address.value.slice(2).match(/.{1,4}/g) ?? []) : [],
 )
 
+const addressEl = ref<HTMLInputElement | null>(null)
+const pasteHint = ref(false)
+
 async function paste() {
   try {
-    addressInput.value = (await navigator.clipboard.readText()).trim()
+    const text = (await navigator.clipboard.readText()).trim()
+    if (text) {
+      addressInput.value = text
+      return
+    }
   } catch {
-    // clipboard read blocked: the field still takes a long-press paste
+    // Nimiq Pay blocks clipboard reads: fall through to a long-press paste
   }
+  // Focusing opens the keyboard, which on Android offers the copied address as a suggestion
+  addressEl.value?.focus()
+  pasteHint.value = true
 }
 
 const busy = ref(false)
@@ -909,6 +919,7 @@ function onBack() {
           <div class="fy-field" :class="{ 'fy-field--error': addressError }">
             <input
               id="fonbnk-address"
+              ref="addressEl"
               v-model="addressInput"
               :disabled="busy"
               autocomplete="off"
@@ -928,6 +939,9 @@ function onBack() {
             </button>
           </div>
           <span v-if="addressError" class="fy-help fy-help--error">{{ addressError }}</span>
+          <span v-else-if="pasteHint && !addressInput" class="fy-help">
+            {{ t('fonbnk.pasteHint') }}
+          </span>
           <span v-else class="fy-caption">{{ t('fonbnk.addressHelp') }}</span>
         </div>
 

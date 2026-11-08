@@ -320,7 +320,8 @@
     "gasReverted": "la recharge de gaz a échoué sur le réseau",
     "startAgain": "Commencer un nouveau retrait",
     "previousUncertain": "Le résultat d’un transfert précédent depuis ce portefeuille est inconnu.",
-    "feeRose": "Les frais du réseau Polygon ont augmenté avant l’envoi. Rien n’a été envoyé. Touchez à nouveau Envoyer : Ferry couvre d’abord les frais."
+    "feeRose": "Les frais du réseau Polygon ont augmenté avant l’envoi. Rien n’a été envoyé. Touchez à nouveau Envoyer : Ferry couvre d’abord les frais.",
+    "pasteHint": "Appuyez longuement sur le champ, puis sur Coller."
   },
   "topup": {
     "header": "Ajouter de l’argent",
@@ -611,6 +612,7 @@
     "reconnect": "Reconnecter",
     "help": "Comment se connecter · étapes",
     "expiredLink": "Ce lien a expiré. Générez un nouveau QR/lien dans Fonbnk et gardez-le ouvert.",
-    "connectLink": "Connecter le lien collé"
+    "connectLink": "Connecter le lien collé",
+    "pasteHint": "Appuyez longuement sur le champ ci-dessous, puis sur Coller."
   }
 }

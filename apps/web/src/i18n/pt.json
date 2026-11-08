@@ -320,7 +320,8 @@
     "gasReverted": "a recarga de gas falhou na rede",
     "startAgain": "Começar um novo saque",
     "previousUncertain": "O resultado de uma transferência anterior desta carteira é desconhecido.",
-    "feeRose": "A taxa da rede Polygon subiu antes de a carteira enviar. Nada foi enviado. Toque em Enviar de novo: o Ferry cobre a taxa primeiro."
+    "feeRose": "A taxa da rede Polygon subiu antes de a carteira enviar. Nada foi enviado. Toque em Enviar de novo: o Ferry cobre a taxa primeiro.",
+    "pasteHint": "Toque e segure no campo e escolha Colar."
   },
   "topup": {
     "header": "Adicionar dinheiro",
@@ -611,6 +612,7 @@
     "reconnect": "Reconectar",
     "help": "Como conectar · ver etapas",
     "expiredLink": "Este link expirou. Gere um novo QR/link no Fonbnk e mantenha-o aberto.",
-    "connectLink": "Conectar link colado"
+    "connectLink": "Conectar link colado",
+    "pasteHint": "Toque e segure no campo abaixo e escolha Colar."
   }
 }
