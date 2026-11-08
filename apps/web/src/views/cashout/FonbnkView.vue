@@ -419,7 +419,13 @@ async function send() {
       }
       const reason = describe(err)
       // Errors raised before broadcast are certain; anything else may have gone out.
-      if (/not enough gas|insufficient funds|execution reverted/i.test(reason)) {
+      if (
+        /not enough (gas|pol|balance)|insufficient (funds|balance)|gas (fee|limit)/i.test(reason)
+      ) {
+        // The wallet refused before signing: Polygon's fee rose past the POL it holds. Sending
+        // again asks Ferry for a fresh top-up first.
+        problem.value = t('fonbnk.feeRose')
+      } else if (/execution reverted/i.test(reason)) {
         problem.value = t('fonbnk.sendFailed', { reason })
       } else {
         markUncertainTransfer(from)

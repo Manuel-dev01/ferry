@@ -319,7 +319,8 @@
     "checkedRetry": "J’ai vérifié : il n’est pas parti. Réessayer",
     "gasReverted": "la recharge de gaz a échoué sur le réseau",
     "startAgain": "Commencer un nouveau retrait",
-    "previousUncertain": "Le résultat d’un transfert précédent depuis ce portefeuille est inconnu."
+    "previousUncertain": "Le résultat d’un transfert précédent depuis ce portefeuille est inconnu.",
+    "feeRose": "Les frais du réseau Polygon ont augmenté avant l’envoi. Rien n’a été envoyé. Touchez à nouveau Envoyer : Ferry couvre d’abord les frais."
   },
   "topup": {
     "header": "Ajouter de l’argent",

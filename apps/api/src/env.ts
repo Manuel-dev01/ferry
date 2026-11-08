@@ -66,6 +66,8 @@ const envSchema = z
     /** Production gas top-ups so a wallet with USDT but no POL can send its cash-out. */
     GAS_TOPUP_ENABLED: bool('false'),
     GAS_TOPUP_CAP_POL: z.string().default('0.3'),
+    /** Least a top-up fills a wallet to, so a fee spike before the send doesn't leave it short. */
+    GAS_TOPUP_FLOOR_POL: z.string().default('0.12'),
     GAS_TOPUP_PER_ADDRESS_DAY: z.coerce.number().int().nonnegative().default(3),
     GAS_TOPUP_DAILY_MAX: z.coerce.number().int().nonnegative().default(100),
     // Wallets left out of Proof of Ferry: the builder's own and test wallets.
@@ -96,6 +98,7 @@ const envSchema = z
   .transform((env) => ({
     ...env,
     gasTopupCapWei: parseUnits(env.GAS_TOPUP_CAP_POL, POL_DECIMALS),
+    gasTopupFloorWei: parseUnits(env.GAS_TOPUP_FLOOR_POL, POL_DECIMALS),
     ferryFeeBps: percentToBps(env.FERRY_FEE_PERCENT),
     // USDT is treated as 1:1 with USD for limits.
     limits: {

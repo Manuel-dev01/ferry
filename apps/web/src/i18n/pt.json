@@ -319,7 +319,8 @@
     "checkedRetry": "Conferi: não saiu. Tentar de novo",
     "gasReverted": "a recarga de gas falhou na rede",
     "startAgain": "Começar um novo saque",
-    "previousUncertain": "O resultado de uma transferência anterior desta carteira é desconhecido."
+    "previousUncertain": "O resultado de uma transferência anterior desta carteira é desconhecido.",
+    "feeRose": "A taxa da rede Polygon subiu antes de a carteira enviar. Nada foi enviado. Toque em Enviar de novo: o Ferry cobre a taxa primeiro."
   },
   "topup": {
     "header": "Adicionar dinheiro",

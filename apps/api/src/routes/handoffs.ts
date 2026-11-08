@@ -34,8 +34,18 @@ const RECEIPT_TIMEOUT_MS = 60_000
 const RECEIVED_WINDOW_MS = 7 * DAY_MS
 const HANDOFF_MAX_AGE_S = 3 * 24 * 60 * 60
 
-/** POL a wallet needs so the wallet's own check (gas limit × max fee) passes, with 25% margin. */
-export const transferGasNeedWei = (maxFeePerGas: bigint) => (TRANSFER_GAS * maxFeePerGas * 5n) / 4n
+/**
+ * POL a wallet needs so the wallet's own check (gas limit × max fee) passes. Doubled, because
+ * Polygon's base fee can rise sharply between the top-up and the send, and Nimiq Pay checks against
+ * its own, higher fee: a 25% margin left a wallet short on 2026-11-06.
+ */
+export const transferGasNeedWei = (maxFeePerGas: bigint) => TRANSFER_GAS * maxFeePerGas * 2n
+
+/** What a top-up fills the wallet to: the need, at least the floor, never above the cap. */
+export function gasTopupTarget(need: bigint, floorWei: bigint, capWei: bigint): bigint {
+  const wanted = need > floorWei ? need : floorWei
+  return wanted > capWei ? capWei : wanted
+}
 
 /**
  * The one USDT transfer a wallet sent itself: the transaction calls the USDT contract directly and
@@ -81,7 +91,7 @@ export function handoffRoutes(deps: Deps) {
 
     const fees = await polygonFees(polygon)
     const need = transferGasNeedWei(fees.maxFeePerGas)
-    const target = need > env.gasTopupCapWei ? env.gasTopupCapWei : need
+    const target = gasTopupTarget(need, env.gasTopupFloorWei, env.gasTopupCapWei)
     const [pol, usdt] = await Promise.all([
       polygon.getBalance({ address }),
       polygon.readContract({

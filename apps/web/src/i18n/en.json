@@ -592,7 +592,8 @@
     "checkedRetry": "I checked: it didn’t go out. Try again",
     "gasReverted": "the gas top-up failed on the network",
     "startAgain": "Start a new cash-out",
-    "previousUncertain": "A previous transfer from this wallet has an unknown outcome."
+    "previousUncertain": "A previous transfer from this wallet has an unknown outcome.",
+    "feeRose": "Polygon's network fee went up before your wallet could send. Nothing was sent. Tap Send again: Ferry tops up the fee first."
   },
   "topup": {
     "header": "Add money",

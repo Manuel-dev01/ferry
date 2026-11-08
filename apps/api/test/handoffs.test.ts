@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { USDT0_ADDRESS } from '@ferry/shared'
 import { encodeAbiParameters, encodeEventTopics, erc20Abi, type Address, type Log } from 'viem'
-import { directUsdtTransfer, TRANSFER_GAS, transferGasNeedWei } from '../src/routes/handoffs'
+import {
+  directUsdtTransfer,
+  gasTopupTarget,
+  TRANSFER_GAS,
+  transferGasNeedWei,
+} from '../src/routes/handoffs'
 import { json, makeApp } from './helpers'
 
 const ADDRESS = '0x358bC84A34Df878A5497DFc01D14D6AaFe7E8A76'
@@ -41,10 +46,26 @@ describe('POST /v1/gas', () => {
 })
 
 describe('transferGasNeedWei', () => {
-  it('covers the wallet check for one transfer with a margin', () => {
+  it('covers the wallet check for one transfer with room for the fee to double', () => {
     const maxFee = 527_480_000_000n // seen in Nimiq Pay on 2026-10-28
-    expect(transferGasNeedWei(maxFee)).toBe((TRANSFER_GAS * maxFee * 5n) / 4n)
-    expect(transferGasNeedWei(maxFee)).toBeLessThan(10n ** 17n) // under 0.1 POL
+    expect(transferGasNeedWei(maxFee)).toBe(TRANSFER_GAS * maxFee * 2n)
+  })
+})
+
+describe('gasTopupTarget', () => {
+  const floor = 120_000_000_000_000_000n // 0.12 POL
+  const cap = 300_000_000_000_000_000n // 0.3 POL
+
+  it('never fills below the floor', () => {
+    // 2026-11-06: an estimate of ~353 gwei gave 0.053 POL; Nimiq Pay then wanted ~0.063
+    const need = transferGasNeedWei(176_000_000_000n)
+    expect(gasTopupTarget(need, floor, cap)).toBe(floor)
+  })
+
+  it('follows a higher need, up to the cap', () => {
+    const high = transferGasNeedWei(600_000_000_000n) // 0.144 POL
+    expect(gasTopupTarget(high, floor, cap)).toBe(high)
+    expect(gasTopupTarget(10n ** 18n, floor, cap)).toBe(cap)
   })
 })
 
