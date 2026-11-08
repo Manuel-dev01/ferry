@@ -78,7 +78,7 @@ Every variable is validated at startup by [`apps/api/src/env.ts`](../apps/api/sr
 | `PAYOUT_ROUTE`                                                              | `fonbnk`                  | `fonbnk` in production; `paycrest` enables the dormant path                       |
 | `GAS_TOPUP_ENABLED`                                                         | `false`                   | Turn on gas top-ups (needs the relayer key and a database)                        |
 | `GAS_TOPUP_CAP_POL`                                                         | `0.3`                     | Most POL a wallet can be topped up to                                             |
-| `GAS_TOPUP_PER_ADDRESS_DAY`, `GAS_TOPUP_DAILY_MAX`                          | `3`, `100`                | Top-up limits per wallet and in total, per 24 hours                               |
+| `GAS_TOPUP_PER_ADDRESS_DAY`, `GAS_TOPUP_DAILY_MAX`                          | `0`, `0`                  | Optional caps per wallet and in total per 24 hours; `0` means no cap              |
 | `PROOF_EXCLUDE_ADDRESSES`                                                   | none                      | Wallets left out of Proof of Ferry (for example, test wallets)                    |
 | `LIMIT_MIN_USD`, `LIMIT_MAX_USD`, `LIMIT_DAILY_USD`                         | `1`, `200`, `500`         | Amount limits; the minimum also decides who qualifies for gas                     |
 | `PAYCREST_*`, `FERRY_FEE_PERCENT`, `CORRIDORS_ENABLED`, `ALLOW_MOCK_ORDERS` | see `.env.example`        | Dormant Paycrest path only                                                        |

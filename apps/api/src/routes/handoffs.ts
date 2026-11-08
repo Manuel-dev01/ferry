@@ -118,10 +118,12 @@ export function handoffRoutes(deps: Deps) {
         .where(and(eq(gasTopups.address, address), gte(gasTopups.createdAt, since))),
       db.select({ n: count() }).from(gasTopups).where(gte(gasTopups.createdAt, since)),
     ])
-    if ((mine?.n ?? 0) >= env.GAS_TOPUP_PER_ADDRESS_DAY) {
+    // 0 turns a cap off. Without caps, a wallet still gets gas only while it holds USDT and too
+    // little POL, so a top-up happens only when a cash-out actually needs one.
+    if (env.GAS_TOPUP_PER_ADDRESS_DAY > 0 && (mine?.n ?? 0) >= env.GAS_TOPUP_PER_ADDRESS_DAY) {
       throw new HttpError(429, 'GAS_LIMIT', 'This wallet already got gas today')
     }
-    if ((all?.n ?? 0) >= env.GAS_TOPUP_DAILY_MAX) {
+    if (env.GAS_TOPUP_DAILY_MAX > 0 && (all?.n ?? 0) >= env.GAS_TOPUP_DAILY_MAX) {
       throw new HttpError(429, 'GAS_LIMIT', 'Gas top-ups are paused until tomorrow')
     }
     // One relayer transaction at a time keeps its nonces in order.

@@ -68,8 +68,9 @@ const envSchema = z
     GAS_TOPUP_CAP_POL: z.string().default('0.3'),
     /** Least a top-up fills a wallet to, so a fee spike before the send doesn't leave it short. */
     GAS_TOPUP_FLOOR_POL: z.string().default('0.12'),
-    GAS_TOPUP_PER_ADDRESS_DAY: z.coerce.number().int().nonnegative().default(3),
-    GAS_TOPUP_DAILY_MAX: z.coerce.number().int().nonnegative().default(100),
+    /** Optional caps on top-ups per wallet and in total per 24 hours; 0 means no cap. */
+    GAS_TOPUP_PER_ADDRESS_DAY: z.coerce.number().int().nonnegative().default(0),
+    GAS_TOPUP_DAILY_MAX: z.coerce.number().int().nonnegative().default(0),
     // Wallets left out of Proof of Ferry: the builder's own and test wallets.
     PROOF_EXCLUDE_ADDRESSES: csv.pipe(z.array(address)),
 

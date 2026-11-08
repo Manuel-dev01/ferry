@@ -322,7 +322,7 @@ A wallet holding USDT but no POL can't pay Polygon's gas fee. `POST /v1/gas` sen
 
 - The amount is the gas limit Nimiq Pay sets for one USDT transfer × the current max fee, plus 25%, capped by `GAS_TOPUP_CAP_POL`.
 - Only wallets holding at least the minimum cash-out in USDT qualify.
-- Limits: `GAS_TOPUP_PER_ADDRESS_DAY` per wallet and `GAS_TOPUP_DAILY_MAX` overall, counted in the database.
+- Optional caps: `GAS_TOPUP_PER_ADDRESS_DAY` per wallet and `GAS_TOPUP_DAILY_MAX` overall, counted in the database. Both are off (`0`) in production so testers are never blocked; the rules above already limit top-ups to wallets that need one for a cash-out.
 - One relayer transaction at a time keeps nonces in order.
 - The top-up is recorded **before** broadcast, so limits hold even when the broadcast outcome is unknown, and an unknown outcome is reported as such, never re-sent.
 
