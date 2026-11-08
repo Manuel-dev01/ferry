@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// Sits above Fonbnk's buy form. Fonbnk asks to connect a wallet over WalletConnect; the user copies
-// its link, pastes it here, and Ferry answers as the wallet (see lib/wcBridge.ts).
+// Sits above Fonbnk's buy and sell forms. Fonbnk asks to connect a wallet over WalletConnect; the
+// user copies its link, pastes it here, and Ferry answers as the wallet (see lib/wcBridge.ts). With
+// `pay` (cash-out), Fonbnk's USDT payment request is handed to the page as a `pay` event.
 import type { WalletKitTypes } from '@reown/walletkit'
 import { hexToString, isHex, type Address, type Hex } from 'viem'
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
@@ -10,17 +11,23 @@ import {
   approve,
   fromFonbnk,
   isSignMethod,
+  parseUsdtPayment,
   parseWcLink,
   refuse,
   reject,
   walletKit,
   wcLinkExpired,
+  type WcPayment,
 } from '../lib/wcBridge'
 import { classifyEvmError, evmErrorText, personalSign, signTypedDataV4 } from '../providers/evm'
 import Icon from './Icon.vue'
 
-const props = defineProps<{ address: Address }>()
-const { t } = useI18n()
+const props = defineProps<{ address: Address; pay?: boolean }>()
+const emit = defineEmits<{ pay: [payment: WcPayment] }>()
+const { t, te } = useI18n()
+/** Copy for the current job: cash-out wording under wc.pay, falling back to the buy wording. */
+const wt = (key: string, values: Record<string, unknown> = {}) =>
+  props.pay && te(`wc.pay.${key}`) ? t(`wc.pay.${key}`, values) : t(`wc.${key}`, values)
 
 const PAIR_TIMEOUT_MS = 45_000
 
@@ -33,6 +40,8 @@ const problem = ref('')
 const busy = ref(false)
 const proposal = ref<WalletKitTypes.SessionProposal | null>(null)
 const request = ref<WalletKitTypes.SessionRequest | null>(null)
+/** Fonbnk's payment request while the page shows it; answered once through settle(). */
+let payment: WalletKitTypes.SessionRequest | null = null
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
 const reason = (err: unknown) => (err instanceof Error ? err.message : String(err))
@@ -90,6 +99,7 @@ function onRequest(r: WalletKitTypes.SessionRequest) {
     void answer(r, null).catch(() => undefined) // already on Polygon
     return
   }
+  if (props.pay && method === 'eth_sendTransaction') return onPayment(r)
   if (r.params.chainId !== 'eip155:137' || request.value || !isSignMethod(method)) {
     void refuse(r).catch(() => undefined)
     notice.value = t('wc.refusedTx')
@@ -98,10 +108,37 @@ function onRequest(r: WalletKitTypes.SessionRequest) {
   request.value = r
 }
 
+function onPayment(r: WalletKitTypes.SessionRequest) {
+  const asked = (r.params.request.params as unknown[] | undefined)?.[0]
+  const parsed =
+    r.params.chainId === 'eip155:137' && !payment && !request.value
+      ? parseUsdtPayment(asked, props.address)
+      : null
+  if (!parsed) {
+    void refuse(r).catch(() => undefined)
+    notice.value = t('wc.pay.unsupported')
+    return
+  }
+  payment = r
+  emit('pay', { ...parsed, settle: (hash) => settle(r, hash) })
+}
+
+async function settle(r: WalletKitTypes.SessionRequest, hash: Hex | null): Promise<boolean> {
+  if (payment?.id !== r.id) return false
+  payment = null
+  try {
+    await (hash ? answer(r, hash) : refuse(r))
+    return true
+  } catch {
+    return false
+  }
+}
+
 function onDelete(event: { topic: string }) {
   if (event.topic !== sessionTopic.value) return
   sessionTopic.value = null
   request.value = null
+  payment = null
   state.value = 'idle'
   notice.value = t('wc.disconnected')
 }
@@ -136,10 +173,13 @@ async function resetConnection() {
   state.value = 'idle'
   const pendingProposal = proposal.value
   const pendingRequest = request.value
+  const pendingPayment = payment
   proposal.value = null
   request.value = null
+  payment = null
   if (pendingProposal) void reject(pendingProposal).catch(() => undefined)
   if (pendingRequest) void refuse(pendingRequest).catch(() => undefined)
+  if (pendingPayment) void refuse(pendingPayment).catch(() => undefined)
   if (topic && kit) {
     await kit
       .disconnectSession({ topic, reason: { code: 6000, message: 'User disconnected' } })
@@ -323,7 +363,7 @@ async function declineSign() {
   <section class="s-wc" aria-live="polite">
     <template v-if="state === 'connected'">
       <span class="s-wc__ok"><Icon name="check" :size="16" :stroke="3" /></span>
-      <span class="s-wc__text">{{ t('wc.connected', { address: short(address) }) }}</span>
+      <span class="s-wc__text">{{ wt('connected', { address: short(address) }) }}</span>
       <button
         type="button"
         class="fy-btn fy-btn--secondary fy-btn--sm"
@@ -341,7 +381,7 @@ async function declineSign() {
     </template>
     <template v-else>
       <span class="s-wc__text">
-        <strong>{{ t('wc.title') }}</strong>
+        <strong>{{ wt('title') }}</strong>
       </span>
       <button type="button" class="fy-btn fy-btn--primary fy-btn--sm" @click="pasteLink">
         <Icon name="copy" :size="16" />{{ t('wc.paste') }}
@@ -350,7 +390,7 @@ async function declineSign() {
   </section>
   <details v-if="state === 'idle'" class="s-wc__help">
     <summary>{{ t('wc.help') }}</summary>
-    <p>{{ t('wc.steps') }}</p>
+    <p>{{ wt('steps') }}</p>
   </details>
   <div v-if="showInput && state === 'idle'" class="s-wc__input">
     <span class="fy-help">{{ t('wc.pasteHint') }}</span>
@@ -382,7 +422,7 @@ async function declineSign() {
     <div v-if="proposal" class="sheet-backdrop" role="presentation">
       <section class="sheet s-wcsheet" role="dialog" aria-modal="true" aria-labelledby="wc-share">
         <h2 id="wc-share" class="s-wcsheet__title">{{ t('wc.proposalTitle') }}</h2>
-        <p class="s-wcsheet__body">{{ t('wc.proposalBody') }}</p>
+        <p class="s-wcsheet__body">{{ wt('proposalBody') }}</p>
         <p class="s-wcsheet__mono">{{ address }}</p>
         <button
           type="button"

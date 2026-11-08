@@ -20,7 +20,10 @@ const bridge = vi.hoisted(() => {
     answer: vi.fn().mockResolvedValue(undefined),
   }
 })
-vi.mock('../src/lib/wcBridge', () => ({
+vi.mock('../src/lib/wcBridge', async () => ({
+  parseUsdtPayment: (
+    await vi.importActual<typeof import('../src/lib/wcBridge')>('../src/lib/wcBridge')
+  ).parseUsdtPayment,
   walletKit: async () => bridge.kit,
   approve: bridge.approve,
   reject: vi.fn().mockResolvedValue(undefined),
@@ -32,7 +35,7 @@ vi.mock('../src/lib/wcBridge', () => ({
   isSignMethod: (method: string) =>
     ['personal_sign', 'eth_signTypedData', 'eth_signTypedData_v4'].includes(method),
 }))
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
+vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key, te: () => false }) }))
 
 type Node = { children: Node[]; parent?: Node; text?: string }
 const renderer = createRenderer<Node, Node>({
@@ -62,8 +65,11 @@ const flush = async () => {
   await nextTick()
   await Promise.resolve()
 }
-async function mount() {
-  app = renderer.createApp(Strip, { address: '0x1111111111111111111111111111111111111111' })
+async function mount(extra: Record<string, unknown> = {}) {
+  app = renderer.createApp(Strip, {
+    address: '0x1111111111111111111111111111111111111111',
+    ...extra,
+  })
   app.provide(ssrContextKey, { modules: new Set() })
   app.mount({ children: [] })
   await flush()
@@ -168,5 +174,75 @@ describe('Fonbnk connection lifecycle', () => {
     expect(bridge.kit.disconnectSession).toHaveBeenCalledWith(
       expect.objectContaining({ topic: 'current' }),
     )
+  })
+
+  describe('cash-out payments', () => {
+    const ME = '0x1111111111111111111111111111111111111111'
+    const FONBNK = '0x2222222222222222222222222222222222222222'
+    const USDT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'
+    const transferData = (to: string, units: bigint) =>
+      '0xa9059cbb' + to.slice(2).padStart(64, '0') + units.toString(16).padStart(64, '0')
+    const payRequest = (id: number, tx: Record<string, unknown>) => ({
+      id,
+      topic: 'current',
+      params: { chainId: 'eip155:137', request: { method: 'eth_sendTransaction', params: [tx] } },
+    })
+    async function connected(onPay: (p: unknown) => void) {
+      const state = await mount({ pay: true, onPay })
+      await state.pairWith('wc:fresh')
+      bridge.handlers.session_proposal!({ id: 20 })
+      await state.share()
+      return state
+    }
+
+    it('hands a plain USDT transfer to the page and answers Fonbnk with the hash', async () => {
+      const onPay = vi.fn()
+      await connected(onPay)
+      const r = payRequest(1, { from: ME, to: USDT, data: transferData(FONBNK, 5_000_000n) })
+      bridge.handlers.session_request!(r)
+      expect(bridge.refuse).not.toHaveBeenCalledWith(r)
+      expect(onPay).toHaveBeenCalledWith(expect.objectContaining({ to: FONBNK, units: 5_000_000n }))
+      const hash = '0x' + 'ab'.repeat(32)
+      await onPay.mock.calls[0]![0].settle(hash)
+      expect(bridge.answer).toHaveBeenCalledWith(r, hash)
+    })
+
+    it('refuses anything that is not a plain USDT transfer', async () => {
+      const onPay = vi.fn()
+      await connected(onPay)
+      for (const tx of [
+        { to: FONBNK, data: transferData(FONBNK, 5_000_000n) }, // not the USDT contract
+        { to: USDT, data: transferData(FONBNK, 5_000_000n), value: '0x1' }, // POL attached
+        { to: USDT, data: transferData(FONBNK, 5_000_000n).replace('a9059cbb', '095ea7b3') }, // approve
+      ]) {
+        const r = payRequest(2, tx)
+        bridge.handlers.session_request!(r)
+        expect(bridge.refuse).toHaveBeenCalledWith(r)
+      }
+      expect(onPay).not.toHaveBeenCalled()
+    })
+
+    it('takes one payment at a time and refuses a pending one on exit', async () => {
+      const onPay = vi.fn()
+      await connected(onPay)
+      const first = payRequest(3, { to: USDT, data: transferData(FONBNK, 5_000_000n) })
+      const second = payRequest(4, { to: USDT, data: transferData(FONBNK, 5_000_000n) })
+      bridge.handlers.session_request!(first)
+      bridge.handlers.session_request!(second)
+      expect(onPay).toHaveBeenCalledTimes(1)
+      expect(bridge.refuse).toHaveBeenCalledWith(second)
+      app.unmount()
+      expect(bridge.refuse).toHaveBeenCalledWith(first)
+    })
+
+    it('still refuses transfers when not on a cash-out', async () => {
+      const state = await mount()
+      await state.pairWith('wc:fresh')
+      bridge.handlers.session_proposal!({ id: 21 })
+      await state.share()
+      const r = payRequest(5, { to: USDT, data: transferData(FONBNK, 5_000_000n) })
+      bridge.handlers.session_request!(r)
+      expect(bridge.refuse).toHaveBeenCalledWith(r)
+    })
   })
 })

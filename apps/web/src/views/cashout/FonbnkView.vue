@@ -23,6 +23,7 @@ import AppHeader from '../../components/AppHeader.vue'
 import Banner from '../../components/Banner.vue'
 import Icon from '../../components/Icon.vue'
 import PaymentError from '../../components/PaymentError.vue'
+import WalletConnectStrip from '../../components/WalletConnectStrip.vue'
 import { ApiRequestError } from '../../lib/api'
 import { friendlyError } from '../../lib/errors'
 import { channelLabel, countryName, flagOf } from '../../lib/fonbnk'
@@ -35,6 +36,7 @@ import {
   wholeFiatDisplay,
 } from '../../lib/format'
 import { publicSite, shareResult } from '../../lib/share'
+import type { WcPayment } from '../../lib/wcBridge'
 import {
   classifyEvmError,
   currentChainId,
@@ -363,16 +365,19 @@ async function switchNetwork() {
   }
 }
 
-async function send() {
-  const to = address.value
-  const units = amountUnits.value
+/**
+ * Sends the USDT to Fonbnk. Without arguments it pays the address pasted on the Send tab; with
+ * `wc` it pays what Fonbnk asked for over WalletConnect, and hands Fonbnk the hash via onHash.
+ */
+async function send(wc?: { to: Address; units: bigint; onHash: (hash: Hex) => void }) {
+  const to = wc ? wc.to : address.value
+  const units = wc ? wc.units : amountUnits.value
   if (
     busy.value ||
     txHash.value ||
     sendUncertain.value ||
-    !amountOk.value ||
+    (!wc && (!amountOk.value || addressError.value)) ||
     !to ||
-    addressError.value ||
     units === null ||
     !session.evmAddress
   )
@@ -381,6 +386,10 @@ async function send() {
   busy.value = true
   problem.value = ''
   try {
+    if (session.balances && units > session.balances.usdt) {
+      problem.value = t('fonbnk.tooHigh')
+      return
+    }
     if (!(await checkNetwork())) {
       problem.value = t('fonbnk.wrongNetwork')
       return
@@ -447,6 +456,11 @@ async function send() {
     problem.value = ''
     txHash.value = hash
     sentAt.value = Date.now()
+    sentUnits.value = units
+    if (wc) {
+      paidOverWc.value = true
+      wc.onHash(hash)
+    }
     history.add({
       id: hash,
       clientSecret: '',
@@ -472,6 +486,59 @@ async function send() {
     status.value = ''
   }
 }
+
+// ---- Paying over WalletConnect: Fonbnk asks, Ferry shows it, then one approval in Nimiq Pay ----
+
+const wcPayment = ref<WcPayment | null>(null)
+/** Fonbnk got the hash over WalletConnect, so there is nothing to paste back. */
+const paidOverWc = ref(false)
+/** What actually went out; Fonbnk's request can differ from the amount typed. */
+const sentUnits = ref<bigint | null>(null)
+const wcGroups = computed(() =>
+  wcPayment.value ? (wcPayment.value.to.slice(2).match(/.{1,4}/g) ?? []) : [],
+)
+
+function onWcPay(p: WcPayment) {
+  if (wcPayment.value || txHash.value || sendUncertain.value || busy.value) {
+    void p.settle(null)
+    return
+  }
+  problem.value = ''
+  wcPayment.value = p
+  void checkNetwork()
+}
+
+async function payOverWc() {
+  const p = wcPayment.value
+  if (!p || busy.value) return
+  await send({
+    to: p.to,
+    units: p.units,
+    // If Fonbnk can't be told (the connection dropped), fall back to pasting the hash
+    onHash: (hash) =>
+      void p.settle(hash).then((told) => {
+        if (!told) paidOverWc.value = false
+      }),
+  })
+  if (wcPayment.value !== p) return
+  if (txHash.value) {
+    wcPayment.value = null
+  } else if (sendUncertain.value) {
+    // It may have gone out: Fonbnk is told no, and the Send tab explains what to check
+    void p.settle(null)
+    wcPayment.value = null
+    tab.value = 'send'
+  }
+  // Otherwise (declined, fee rose, wrong network) the sheet stays open to try again
+}
+
+function declineWcPay() {
+  const p = wcPayment.value
+  wcPayment.value = null
+  problem.value = ''
+  if (p) void p.settle(null)
+}
+onUnmounted(() => void wcPayment.value?.settle(null))
 
 /** Reads the transfer back until it is on-chain. Never resends anything. */
 async function follow(hash: Hex) {
@@ -853,8 +920,21 @@ function onBack() {
     </template>
 
     <div v-if="widgetMounted" v-show="phase === 'fonbnk' && tab === 'details'" class="s-widget">
+      <!-- "Pay with WalletConnect": Ferry answers for Nimiq Pay, so nothing is pasted back -->
+      <WalletConnectStrip
+        v-if="session.evmAddress"
+        :address="session.evmAddress"
+        pay
+        @pay="onWcPay"
+      />
       <p class="fy-caption" style="margin: 0 16px 8px">
-        {{ txHash ? t('fonbnk.detailsHelpSent') : t('fonbnk.detailsHelp') }}
+        {{
+          txHash
+            ? paidOverWc
+              ? t('fonbnk.detailsHelpWcSent')
+              : t('fonbnk.detailsHelpSent')
+            : t('fonbnk.detailsHelp')
+        }}
       </p>
       <iframe
         :src="widgetUrl"
@@ -1012,7 +1092,7 @@ function onBack() {
           class="fy-btn fy-btn--primary"
           :class="{ 'fy-btn--busy': busy }"
           :disabled="busy || !address || !!addressError || !amountUnits"
-          @click="send"
+          @click="send()"
         >
           {{
             busy
@@ -1035,7 +1115,7 @@ function onBack() {
           </div>
           <span class="fy-now__title">{{ t('fonbnk.doneTitle') }}</span>
           <span style="font: 600 16px var(--fy-font-body)">
-            {{ amountUnits ? usdtDisplay(amountUnits) : '' }} USDT
+            {{ (sentUnits ?? amountUnits) ? usdtDisplay((sentUnits ?? amountUnits)!) : '' }} USDT
           </span>
         </div>
 
@@ -1063,11 +1143,17 @@ function onBack() {
               </div>
             </div>
           </li>
-          <li>
-            <span>2</span>
+          <li :class="{ 's-done': paidOverWc }">
+            <span
+              ><Icon v-if="paidOverWc" name="check" :size="14" :stroke="3" /><template v-else
+                >2</template
+              ></span
+            >
             <div>
-              <strong>{{ t('fonbnk.step2') }}</strong>
-              <div class="fy-caption">{{ t('fonbnk.step2Note') }}</div>
+              <strong>{{ paidOverWc ? t('fonbnk.step2Wc') : t('fonbnk.step2') }}</strong>
+              <div class="fy-caption">
+                {{ paidOverWc ? t('fonbnk.step2NoteWc') : t('fonbnk.step2Note') }}
+              </div>
             </div>
           </li>
           <li>
@@ -1105,7 +1191,20 @@ function onBack() {
         </button>
       </div>
       <div v-else class="fy-bottom">
-        <button v-if="amountUnits" type="button" class="fy-btn fy-btn--primary" @click="copyAndGo">
+        <button
+          v-if="paidOverWc"
+          type="button"
+          class="fy-btn fy-btn--primary"
+          @click="backToFonbnk"
+        >
+          {{ t('fonbnk.backToFonbnk') }}
+        </button>
+        <button
+          v-else-if="amountUnits"
+          type="button"
+          class="fy-btn fy-btn--primary"
+          @click="copyAndGo"
+        >
           {{ widgetMounted ? t('fonbnk.copyAndBack') : t('fonbnk.copyAndOpen') }}
         </button>
         <button
@@ -1173,10 +1272,79 @@ function onBack() {
         </button>
       </div>
     </template>
+
+    <!-- Fonbnk asked for the USDT over WalletConnect: shown here first, then one Nimiq Pay approval -->
+    <Teleport to="body">
+      <div v-if="wcPayment" class="sheet-backdrop" role="presentation">
+        <section class="sheet s-paysheet" role="dialog" aria-modal="true" aria-labelledby="wc-pay">
+          <h2 id="wc-pay" class="s-paysheet__title">
+            {{ t('fonbnk.wcPayTitle', { amount: usdtDisplay(wcPayment.units) }) }}
+          </h2>
+          <p class="s-paysheet__body">{{ t('fonbnk.wcPayBody') }}</p>
+          <div class="s-address" :aria-label="t('fonbnk.wcPayTo')">
+            <span>0x</span><span v-for="(g, i) in wcGroups" :key="i">{{ g }}</span>
+          </div>
+          <p
+            v-if="amountUnits !== null && wcPayment.units !== amountUnits"
+            class="fy-help fy-help--error"
+          >
+            {{ t('fonbnk.wcPayDiffers', { amount: usdtDisplay(amountUnits) }) }}
+          </p>
+          <PaymentError v-if="problem" :body="problem" />
+          <button
+            v-if="onPolygon === false"
+            type="button"
+            class="fy-btn fy-btn--primary"
+            :class="{ 'fy-btn--busy': busy }"
+            :disabled="busy"
+            @click="switchNetwork"
+          >
+            {{ busy ? status : t('fonbnk.switchNetwork') }}
+            <span v-if="busy" class="fy-btn__progress" />
+          </button>
+          <button
+            v-else
+            type="button"
+            class="fy-btn fy-btn--primary"
+            :class="{ 'fy-btn--busy': busy }"
+            :disabled="busy"
+            @click="payOverWc"
+          >
+            {{ busy ? status : t('fonbnk.wcPaySend') }}
+            <span v-if="busy" class="fy-btn__progress" />
+          </button>
+          <button
+            type="button"
+            class="fy-btn fy-btn--secondary"
+            :disabled="busy"
+            @click="declineWcPay"
+          >
+            {{ t('wc.decline') }}
+          </button>
+        </section>
+      </div>
+    </Teleport>
   </main>
 </template>
 
 <style scoped>
+.s-paysheet {
+  background: var(--fy-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.s-paysheet__title {
+  margin: 0;
+  font: 800 20px/1.2 var(--fy-font-display);
+  letter-spacing: -0.02em;
+  color: var(--fy-ink);
+}
+.s-paysheet__body {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--fy-ink-2);
+}
 .s-how {
   margin: 0;
   padding: 0;

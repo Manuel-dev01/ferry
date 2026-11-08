@@ -216,7 +216,7 @@
     "payoutBy": "Paiement par Fonbnk",
     "tabDetails": "1 · Vos informations",
     "tabSend": "2 · Envoyer les USDT",
-    "detailsHelp": "Vérifiez votre e-mail et ajoutez votre compte. Quand Fonbnk propose des moyens de paiement, touchez « Pay manually instead » et copiez l’adresse.",
+    "detailsHelp": "Vérifiez votre e-mail et ajoutez votre compte. Quand Fonbnk propose des moyens de paiement, choisissez « Pay with WalletConnect » et utilisez Coller le lien ci-dessus, ou touchez « Pay manually instead » et copiez l’adresse.",
     "haveAddress": "J’ai l’adresse",
     "addressLabel": "Adresse de dépôt Fonbnk",
     "paste": "Coller",
@@ -321,7 +321,15 @@
     "startAgain": "Commencer un nouveau retrait",
     "previousUncertain": "Le résultat d’un transfert précédent depuis ce portefeuille est inconnu.",
     "feeRose": "Les frais du réseau Polygon ont augmenté avant l’envoi. Rien n’a été envoyé. Touchez à nouveau Envoyer : Ferry couvre d’abord les frais.",
-    "pasteHint": "Appuyez longuement sur le champ, puis sur Coller."
+    "pasteHint": "Appuyez longuement sur le champ, puis sur Coller.",
+    "detailsHelpWcSent": "Fonbnk a reçu la transaction de Ferry. Quand l’argent est sur votre compte, touchez « J’ai reçu mon argent ».",
+    "step2Wc": "Fonbnk a reçu le hash",
+    "step2NoteWc": "Ferry l’a transmis via WalletConnect, il n’y a rien à coller.",
+    "wcPayTitle": "Envoyer {amount} USDT à Fonbnk ?",
+    "wcPayBody": "Fonbnk a demandé ce paiement via WalletConnect. Il part vers l’adresse de dépôt de Fonbnk ci-dessous. Ferry paie les frais de réseau, puis Nimiq Pay vous demande d’approuver.",
+    "wcPayTo": "Adresse de dépôt de Fonbnk",
+    "wcPayDiffers": "C’est différent des {amount} USDT saisis. Vérifiez le montant dans le formulaire de Fonbnk.",
+    "wcPaySend": "Envoyer avec Nimiq Pay"
   },
   "topup": {
     "header": "Ajouter de l’argent",
@@ -613,6 +621,13 @@
     "help": "Comment se connecter · étapes",
     "expiredLink": "Ce lien a expiré. Générez un nouveau QR/lien dans Fonbnk et gardez-le ouvert.",
     "connectLink": "Connecter le lien collé",
-    "pasteHint": "Appuyez longuement sur le champ ci-dessous, puis sur Coller."
+    "pasteHint": "Appuyez longuement sur le champ ci-dessous, puis sur Coller.",
+    "pay": {
+      "title": "Payer avec WalletConnect",
+      "steps": "Dans Fonbnk, après vos coordonnées, choisissez Pay with WalletConnect → icône QR → Copy link. Gardez le QR ouvert. Touchez Coller le lien au-dessus du formulaire, puis Partager mon adresse. Quand Fonbnk demande le paiement, Ferry vous le montre d’abord.",
+      "connected": "Adresse partagée : {address}. Continuez dans Fonbnk ; quand il demande le paiement, Ferry l’affiche ici.",
+      "proposalBody": "Il reçoit votre adresse maintenant. Quand il demande le paiement, Ferry vous montre d’abord le montant et l’adresse, et rien ne part avant votre accord dans Nimiq Pay.",
+      "unsupported": "Fonbnk a demandé un paiement que Ferry ne peut pas vérifier, donc il a refusé. Utilisez « Pay manually instead » dans Fonbnk."
+    }
   }
 }

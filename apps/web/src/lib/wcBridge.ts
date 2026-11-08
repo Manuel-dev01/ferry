@@ -1,9 +1,12 @@
 // Fonbnk's buy form only connects wallets over WalletConnect, and Nimiq Pay's wallet isn't reachable
 // from inside Fonbnk's frame. So Ferry answers as that WalletConnect wallet: it pairs from a link
 // the user pastes, shares the address Nimiq Pay already gave Ferry, and passes sign-in requests to
-// Nimiq Pay one tap at a time. It refuses anything that would move money.
+// Nimiq Pay one tap at a time. It refuses anything that would move money, except on a cash-out:
+// there it accepts Fonbnk's request for the USDT payment (see parseUsdtPayment), shows it, and
+// sends it through Ferry's own send flow.
 import type { WalletKitTypes } from '@reown/walletkit'
-import type { Address } from 'viem'
+import { USDT0_ADDRESS } from '@ferry/shared'
+import { decodeFunctionData, erc20Abi, getAddress, isAddress, type Address, type Hex } from 'viem'
 import { WC_PROJECT_ID } from '../config'
 
 type WalletKit = Awaited<ReturnType<(typeof import('@reown/walletkit'))['WalletKit']['init']>>
@@ -135,3 +138,46 @@ export async function refuse(request: WalletKitTypes.SessionRequest) {
 
 export const isSignMethod = (method: string): method is SignMethod =>
   (SIGN_METHODS as readonly string[]).includes(method)
+
+/**
+ * A payment Fonbnk asked for. `settle` answers Fonbnk once: the hash, or null to refuse. It resolves
+ * to false when Fonbnk could not be told (the session closed or the answer failed).
+ */
+export type WcPayment = {
+  to: Address
+  units: bigint
+  settle: (hash: Hex | null) => Promise<boolean>
+}
+
+/**
+ * On a cash-out, Fonbnk asks the wallet to pay its deposit address. Ferry accepts exactly one
+ * shape: a plain USDT `transfer` on Polygon from this wallet, with no POL attached. Anything else
+ * returns null and is refused. Ferry then builds and sends its own transfer, not Fonbnk's object.
+ */
+export function parseUsdtPayment(
+  tx: unknown,
+  from: Address,
+): { to: Address; units: bigint } | null {
+  if (!tx || typeof tx !== 'object') return null
+  const { to, from: sender, data, value } = tx as Record<string, unknown>
+  if (typeof to !== 'string' || !isAddress(to, { strict: false })) return null
+  if (getAddress(to) !== getAddress(USDT0_ADDRESS)) return null
+  if (
+    sender !== undefined &&
+    (typeof sender !== 'string' || sender.toLowerCase() !== from.toLowerCase())
+  )
+    return null
+  if (value !== undefined && value !== null && !/^(0x0*|0*)$/i.test(String(value))) return null
+  if (typeof data !== 'string' || !/^0x[0-9a-f]{136}$/i.test(data)) return null
+  try {
+    const call = decodeFunctionData({ abi: erc20Abi, data: data as `0x${string}` })
+    if (call.functionName !== 'transfer') return null
+    const [recipient, units] = call.args
+    const payee = getAddress(recipient)
+    if (units <= 0n || payee === getAddress(from) || payee === getAddress(USDT0_ADDRESS))
+      return null
+    return { to: payee, units }
+  } catch {
+    return null
+  }
+}

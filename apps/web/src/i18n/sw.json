@@ -216,7 +216,7 @@
     "payoutBy": "Malipo kupitia Fonbnk",
     "tabDetails": "1 · Taarifa zako",
     "tabSend": "2 · Tuma USDT",
-    "detailsHelp": "Thibitisha barua pepe yako na uongeze akaunti yako. Fonbnk ikikupa njia za kulipa, bonyeza “Pay manually instead” na unakili anwani.",
+    "detailsHelp": "Thibitisha barua pepe yako na uongeze akaunti yako. Fonbnk ikionyesha njia za kulipa, chagua “Pay with WalletConnect” na utumie Bandika kiungo hapo juu, au bonyeza “Pay manually instead” na unakili anwani.",
     "haveAddress": "Nina anwani",
     "addressLabel": "Anwani ya Fonbnk ya kuweka pesa",
     "paste": "Bandika",
@@ -321,7 +321,15 @@
     "startAgain": "Anza utoaji mpya wa pesa",
     "previousUncertain": "Matokeo ya muamala wa awali kutoka pochi hii hayajulikani.",
     "feeRose": "Ada ya mtandao wa Polygon imepanda kabla pochi yako haijatuma. Hakuna kilichotumwa. Bonyeza Tuma tena: Ferry inalipia ada kwanza.",
-    "pasteHint": "Bonyeza na ushikilie kisanduku, kisha uchague Bandika."
+    "pasteHint": "Bonyeza na ushikilie kisanduku, kisha uchague Bandika.",
+    "detailsHelpWcSent": "Fonbnk imepokea muamala kutoka Ferry. Pesa zikifika kwenye akaunti yako, bonyeza “Nimepokea pesa zangu”.",
+    "step2Wc": "Fonbnk imepokea hash",
+    "step2NoteWc": "Ferry imeituma kupitia WalletConnect, kwa hiyo hakuna cha kubandika.",
+    "wcPayTitle": "Tuma USDT {amount} kwa Fonbnk?",
+    "wcPayBody": "Fonbnk imeomba malipo haya kupitia WalletConnect. Yanaenda kwenye anwani ya amana ya Fonbnk hapa chini. Ferry inalipia ada ya mtandao, kisha Nimiq Pay inakuomba uidhinishe.",
+    "wcPayTo": "Anwani ya amana ya Fonbnk",
+    "wcPayDiffers": "Hii ni tofauti na USDT {amount} uliyoweka. Angalia kiasi kwenye fomu ya Fonbnk.",
+    "wcPaySend": "Tuma kwa Nimiq Pay"
   },
   "topup": {
     "header": "Ongeza pesa",
@@ -613,6 +621,13 @@
     "help": "Jinsi ya kuunganisha · hatua",
     "expiredLink": "Kiungo hiki kimeisha muda. Tengeneza QR/kiungo kipya katika Fonbnk na uiache wazi.",
     "connectLink": "Unganisha kiungo kilichobandikwa",
-    "pasteHint": "Bonyeza na ushikilie kisanduku hapa chini, kisha uchague Bandika."
+    "pasteHint": "Bonyeza na ushikilie kisanduku hapa chini, kisha uchague Bandika.",
+    "pay": {
+      "title": "Lipa kwa WalletConnect",
+      "steps": "Kwenye Fonbnk, baada ya taarifa zako, chagua Pay with WalletConnect → aikoni ya QR → Copy link. Acha QR wazi. Bonyeza Bandika kiungo juu ya fomu, kisha Shiriki anwani yangu. Fonbnk ikiomba malipo, Ferry inayaonyesha kwanza.",
+      "connected": "Anwani imeshirikiwa: {address}. Endelea kwenye Fonbnk; ikiomba malipo, Ferry inayaonyesha hapa.",
+      "proposalBody": "Inapata anwani yako sasa. Ikiomba malipo, Ferry inakuonyesha kwanza kiasi na anwani, na hakuna kinachotoka hadi uidhinishe kwenye Nimiq Pay.",
+      "unsupported": "Fonbnk imeomba malipo ambayo Ferry haiwezi kuyakagua, kwa hiyo imekataa. Tumia “Pay manually instead” kwenye Fonbnk."
+    }
   }
 }

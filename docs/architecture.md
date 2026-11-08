@@ -205,6 +205,32 @@ sequenceDiagram
 - If sending fails in a way that might still have broadcast, the Send button stays locked (`sendUncertain`) until the user has checked Nimiq Pay's activity. Ferry never re-sends on its own.
 - `POST /v1/handoffs` accepts only a successful transaction that calls the USDT contract directly, moves the sender's own tokens in exactly one transfer, and is under 3 days old. Contract-made transfers don't count.
 
+**Paying over WalletConnect instead of pasting.** Fonbnk's payment step also offers "Pay with WalletConnect". Ferry answers as that wallet (the same bridge as [Add money](#46-add-money)), so the user pastes one link instead of the deposit address and, later, the hash:
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant FB as Fonbnk form (iframe)
+  participant F as Ferry (WalletConnect wallet)
+  participant W as Nimiq Pay wallet
+  participant P as Polygon
+
+  U->>FB: Pay with WalletConnect → Copy link
+  U->>F: Paste link, Share my address
+  FB->>F: eth_sendTransaction (USDT transfer to its deposit address)
+  F->>F: parseUsdtPayment: plain USDT transfer on Polygon, from this wallet, no POL attached
+  F-->>U: "Send 5 USDT to Fonbnk?" with the address and amount
+  U->>F: Send with Nimiq Pay
+  F->>W: eth_sendTransaction (Ferry's own transfer, one approval)
+  W->>P: transfer USDT → Fonbnk deposit address
+  F-->>FB: the transaction hash
+```
+
+- Ferry never forwards Fonbnk's transaction object. It reads the recipient and amount, then sends through the same path as the pasted address: network check, gas top-up, uncertain-send lock and the handoff record.
+- Any other request (another contract, `approve`, POL attached, a second payment while one is open) is refused, and the user is pointed to "Pay manually instead".
+- If Fonbnk can't be told the hash (the connection dropped), the screen falls back to copying the hash, as in the pasted flow.
+
 ### 4.3 M-Pesa Direct
 
 Kenya only. Every Kenyan phone number has a Lightning address at Tando (`2547…@bitcoin.co.ke`) that pays M-Pesa when it receives a Lightning payment.
@@ -311,7 +337,7 @@ sequenceDiagram
 
 - Sharing the address needs one tap and no wallet prompt, because Nimiq Pay shared it when the user connected.
 - Sign-in requests are shown on Ferry's own screen first; Nimiq Pay asks only after that tap.
-- Any request to send or sign a transaction is refused: through the bridge, nothing can leave the wallet.
+- On this screen any request to send or sign a transaction is refused: through the bridge, nothing can leave the wallet. Only the cash-out screen accepts a payment request, as described in [4.2](#42-fonbnk-cash-out).
 - The WalletConnect SDK loads only on this screen. The Reown project ID is public and limited to Ferry's domains.
 
 Six countries (Nigeria, Kenya, Ghana, South Africa, Uganda, Tanzania). Fonbnk's buy form runs in an iframe; the user pays Fonbnk by bank or mobile money, and Fonbnk sends USDT to the user's Polygon address. Ferry doesn't receive a callback; it watches the wallet's USDT balance and shows the new amount when it rises. When Fonbnk's form finishes, it redirects to `/fonbnk/return` inside the iframe, which posts a same-origin message so the parent screen can move on.
