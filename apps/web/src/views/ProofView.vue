@@ -37,7 +37,10 @@ const tiles = computed(() => {
       tone: 'tangerine',
     },
     { v: s.confirmedPaid.toLocaleString('en'), k: t('proof.confirmed'), tone: 'tangerine' },
-  ]
+  ].map((tile) => ({
+    ...tile,
+    n: Math.max(4, tile.v.length - 0.5 * (tile.v.match(/[.,\s]/g)?.length ?? 0)),
+  }))
 })
 
 const maxCountry = computed(() =>
@@ -88,7 +91,7 @@ const maxCountry = computed(() =>
         <p class="fy-caption">{{ t('proof.method') }}</p>
         <div class="s-grid">
           <div v-for="s in tiles" :key="s.k" class="s-tile" :class="`s-tile--${s.tone}`">
-            <span class="s-tile__v">{{ s.v }}</span>
+            <span class="s-tile__v" :style="{ '--n': s.n }">{{ s.v }}</span>
             <span class="s-tile__k">{{ s.k }}</span>
           </div>
         </div>
@@ -201,6 +204,7 @@ const maxCountry = computed(() =>
   gap: 4px;
   color: var(--fy-card-ink);
   min-width: 0;
+  container-type: inline-size;
 }
 .s-tile--cream {
   background: var(--fy-card-cream);
@@ -213,6 +217,9 @@ const maxCountry = computed(() =>
 }
 .s-tile__v {
   font: 800 28px/1 var(--fy-font-display);
+  /* Syne is wide (about 1em a character; --n counts dots, commas and spaces as half): shrink long
+     values like "$1,234.56" to fit the tile. */
+  font-size: min(28px, calc(92cqi / var(--n)));
   letter-spacing: -0.04em;
   white-space: nowrap;
 }
