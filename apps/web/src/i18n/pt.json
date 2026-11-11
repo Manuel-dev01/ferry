@@ -600,6 +600,7 @@
     "title": "Conecte sua carteira",
     "steps": "No Fonbnk, escolha WalletConnect → ícone QR → Copiar link. Mantenha o painel QR aberto. Toque em Colar link acima e depois em Compartilhar endereço no Ferry. Volte ao mesmo formulário sem recarregar.",
     "paste": "Colar link",
+    "otherNetwork": "A Fonbnk pediu para trocar de rede. O Ferry paga só em USDT na Polygon; na Fonbnk, mantenha USDT na Polygon.",
     "where": "Na lista de carteiras da Fonbnk, toque no ícone QR (canto superior direito) → Copiar link.",
     "pasteTitle": "Cole o link da Fonbnk",
     "pasteBody": "Use o link que você acabou de copiar no ícone QR da Fonbnk. Um link antigo não conecta.",
@@ -628,6 +629,7 @@
     "connectLink": "Conectar link colado",
     "pasteHint": "Toque e segure no campo abaixo e escolha Colar.",
     "pay": {
+      "refusedTx": "A Fonbnk pediu algo que o Ferry não faz num saque, então ele recusou. Nada foi enviado.",
       "title": "Pagar com WalletConnect",
       "steps": "Na Fonbnk, depois dos seus dados, escolha Pay with WalletConnect → ícone de QR → Copy link. Mantenha o QR aberto. Toque em Colar link acima do formulário e depois em Compartilhar meu endereço. Quando a Fonbnk pedir o pagamento, o Ferry mostra primeiro.",
       "connected": "Endereço compartilhado: {address}. Continue na Fonbnk; quando ela pedir o pagamento, o Ferry mostra aqui.",

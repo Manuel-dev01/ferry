@@ -136,6 +136,18 @@ export async function refuse(request: WalletKitTypes.SessionRequest) {
   })
 }
 
+/**
+ * Answers with an error that doesn't mean "the user said no". Fonbnk shows a refusal as "transaction
+ * cancelled", so requests Ferry can't serve get the standard code for why (4902: unknown chain).
+ */
+export async function fail(request: WalletKitTypes.SessionRequest, code: number, message: string) {
+  const kit = await walletKit()
+  await kit.respondSessionRequest({
+    topic: request.topic,
+    response: { id: request.id, jsonrpc: '2.0', error: { code, message } },
+  })
+}
+
 export const isSignMethod = (method: string): method is SignMethod =>
   (SIGN_METHODS as readonly string[]).includes(method)
 

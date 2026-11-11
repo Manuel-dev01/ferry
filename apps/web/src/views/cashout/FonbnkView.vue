@@ -516,10 +516,13 @@ const wcGroups = computed(() =>
 )
 
 function onWcPay(p: WcPayment) {
-  if (wcPayment.value || txHash.value || sendUncertain.value || busy.value) {
+  if (txHash.value || sendUncertain.value || busy.value) {
     void p.settle(null)
     return
   }
+  // A newer request replaces one still waiting for a tap: Fonbnk may ask again with a fresh quote.
+  // The sheet shows the new amount and address before anything is sent.
+  if (wcPayment.value) void wcPayment.value.settle(null)
   problem.value = ''
   wcPayment.value = p
   void checkNetwork()

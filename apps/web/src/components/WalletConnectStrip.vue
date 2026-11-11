@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n'
 import {
   answer,
   approve,
+  fail,
   fromFonbnk,
   isSignMethod,
   parseUsdtPayment,
@@ -41,8 +42,14 @@ const problem = ref('')
 const busy = ref(false)
 const proposal = ref<WalletKitTypes.SessionProposal | null>(null)
 const request = ref<WalletKitTypes.SessionRequest | null>(null)
-/** Fonbnk's payment request while the page shows it; answered once through settle(). */
-let payment: WalletKitTypes.SessionRequest | null = null
+/**
+ * Fonbnk's payment requests while the page shows them, keyed by the first request's id. Fonbnk can
+ * ask again for the same payment; repeats join the first and get the same answer, never a refusal.
+ */
+type PendingPayment = { to: Address; units: bigint; requests: WalletKitTypes.SessionRequest[] }
+const payments = new Map<number, PendingPayment>()
+/** Requests that can arrive while the address is being shared; more than this are refused. */
+const EARLY_MAX = 16
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
 const reason = (err: unknown) => (err instanceof Error ? err.message : String(err))
@@ -78,7 +85,7 @@ function onProposal(p: WalletKitTypes.SessionProposal) {
 }
 
 function onRequest(r: WalletKitTypes.SessionRequest) {
-  if (!sessionTopic.value && busy.value && proposal.value && earlyRequests.length < 4) {
+  if (!sessionTopic.value && busy.value && proposal.value && earlyRequests.length < EARLY_MAX) {
     earlyRequests.push(r)
     return
   }
@@ -96,14 +103,20 @@ function onRequest(r: WalletKitTypes.SessionRequest) {
     return
   }
   const target = (params as { chainId?: string }[] | undefined)?.[0]?.chainId
-  if (method === 'wallet_switchEthereumChain' && target?.toLowerCase() === '0x89') {
-    void answer(r, null).catch(() => undefined) // already on Polygon
+  if (method === 'wallet_switchEthereumChain') {
+    if (target?.toLowerCase() === '0x89') {
+      void answer(r, null).catch(() => undefined) // already on Polygon
+    } else {
+      // Ferry pays on Polygon only. 4902 (unknown chain) rather than "user rejected"
+      void fail(r, 4902, 'Ferry pays on Polygon only').catch(() => undefined)
+      notice.value = `${t('wc.otherNetwork')} [${method} ${target ?? '?'}]`
+    }
     return
   }
   if (props.pay && method === 'eth_sendTransaction') return onPayment(r)
   if (r.params.chainId !== 'eip155:137' || request.value || !isSignMethod(method)) {
     void refuse(r).catch(() => undefined)
-    notice.value = t('wc.refusedTx')
+    notice.value = `${wt('refusedTx')} [${method} ${r.params.chainId}]`
     return
   }
   request.value = r
@@ -112,34 +125,38 @@ function onRequest(r: WalletKitTypes.SessionRequest) {
 function onPayment(r: WalletKitTypes.SessionRequest) {
   const asked = (r.params.request.params as unknown[] | undefined)?.[0]
   const parsed =
-    r.params.chainId === 'eip155:137' && !payment && !request.value
+    r.params.chainId === 'eip155:137' && !request.value
       ? parseUsdtPayment(asked, props.address)
       : null
   if (!parsed) {
     void refuse(r).catch(() => undefined)
-    notice.value = t('wc.pay.unsupported')
+    notice.value = `${t('wc.pay.unsupported')} [${r.params.chainId}]`
     return
   }
-  payment = r
-  emit('pay', { ...parsed, settle: (hash) => settle(r, hash) })
+  for (const p of payments.values()) {
+    if (p.to === parsed.to && p.units === parsed.units) {
+      p.requests.push(r)
+      return
+    }
+  }
+  payments.set(r.id, { ...parsed, requests: [r] })
+  emit('pay', { ...parsed, settle: (hash) => settle(r.id, hash) })
 }
 
-async function settle(r: WalletKitTypes.SessionRequest, hash: Hex | null): Promise<boolean> {
-  if (payment?.id !== r.id) return false
-  payment = null
-  try {
-    await (hash ? answer(r, hash) : refuse(r))
-    return true
-  } catch {
-    return false
-  }
+/** Answers every request for one payment: the hash, or a refusal. False if Fonbnk wasn't told. */
+async function settle(id: number, hash: Hex | null): Promise<boolean> {
+  const p = payments.get(id)
+  if (!p) return false
+  payments.delete(id)
+  const told = await Promise.allSettled(p.requests.map((r) => (hash ? answer(r, hash) : refuse(r))))
+  return told.some((x) => x.status === 'fulfilled')
 }
 
 function onDelete(event: { topic: string }) {
   if (event.topic !== sessionTopic.value) return
   sessionTopic.value = null
   request.value = null
-  payment = null
+  refusePayments()
   state.value = 'idle'
   notice.value = t('wc.disconnected')
 }
@@ -164,6 +181,12 @@ onUnmounted(() => {
   kit?.off('session_delete', onDelete)
 })
 
+function refusePayments() {
+  const pending = [...payments.values()].flatMap((p) => p.requests)
+  payments.clear()
+  for (const r of pending) void refuse(r).catch(() => undefined)
+}
+
 async function resetConnection() {
   pairGeneration++
   pairingTopic = null
@@ -174,13 +197,11 @@ async function resetConnection() {
   state.value = 'idle'
   const pendingProposal = proposal.value
   const pendingRequest = request.value
-  const pendingPayment = payment
   proposal.value = null
   request.value = null
-  payment = null
+  refusePayments()
   if (pendingProposal) void reject(pendingProposal).catch(() => undefined)
   if (pendingRequest) void refuse(pendingRequest).catch(() => undefined)
-  if (pendingPayment) void refuse(pendingPayment).catch(() => undefined)
   if (topic && kit) {
     await kit
       .disconnectSession({ topic, reason: { code: 6000, message: 'User disconnected' } })

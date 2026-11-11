@@ -600,6 +600,7 @@
     "title": "Unganisha pochi yako",
     "steps": "Katika Fonbnk, chagua WalletConnect → ikoni ya QR → Nakili kiungo. Acha paneli ya QR wazi. Gusa Bandika kiungo hapo juu, kisha Shiriki anwani katika Ferry. Rudi kwenye fomu ileile bila kuipakia upya.",
     "paste": "Bandika kiungo",
+    "otherNetwork": "Fonbnk iliomba kubadilisha mtandao. Ferry hulipa USDT kwenye Polygon pekee, kwa hiyo kwenye Fonbnk baki na USDT kwenye Polygon.",
     "where": "Kwenye orodha ya pochi za Fonbnk, gusa ikoni ya QR (juu kulia) → Nakili kiungo.",
     "pasteTitle": "Bandika kiungo cha Fonbnk",
     "pasteBody": "Tumia kiungo ulichonakili sasa hivi kutoka ikoni ya QR ya Fonbnk. Kiungo cha zamani hakitaunganisha.",
@@ -628,6 +629,7 @@
     "connectLink": "Unganisha kiungo kilichobandikwa",
     "pasteHint": "Bonyeza na ushikilie kisanduku hapa chini, kisha uchague Bandika.",
     "pay": {
+      "refusedTx": "Fonbnk iliomba kitu ambacho Ferry haifanyi wakati wa kutoa pesa, kwa hiyo ilikataa. Hakuna kilichotumwa.",
       "title": "Lipa kwa WalletConnect",
       "steps": "Kwenye Fonbnk, baada ya taarifa zako, chagua Pay with WalletConnect → aikoni ya QR → Copy link. Acha QR wazi. Bonyeza Bandika kiungo juu ya fomu, kisha Shiriki anwani yangu. Fonbnk ikiomba malipo, Ferry inayaonyesha kwanza.",
       "connected": "Anwani imeshirikiwa: {address}. Endelea kwenye Fonbnk; ikiomba malipo, Ferry inayaonyesha hapa.",

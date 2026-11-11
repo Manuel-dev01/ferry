@@ -18,6 +18,7 @@ const bridge = vi.hoisted(() => {
     approve: vi.fn().mockResolvedValue({ topic: 'current' }),
     refuse: vi.fn().mockResolvedValue(undefined),
     answer: vi.fn().mockResolvedValue(undefined),
+    fail: vi.fn().mockResolvedValue(undefined),
   }
 })
 vi.mock('../src/lib/wcBridge', async () => ({
@@ -29,6 +30,7 @@ vi.mock('../src/lib/wcBridge', async () => ({
   reject: vi.fn().mockResolvedValue(undefined),
   refuse: bridge.refuse,
   answer: bridge.answer,
+  fail: bridge.fail,
   fromFonbnk: () => true,
   parseWcLink: (text: string) => (text.startsWith('wc:') ? text : null),
   wcLinkExpired: () => false,
@@ -235,17 +237,49 @@ describe('Fonbnk connection lifecycle', () => {
       expect(onPay).not.toHaveBeenCalled()
     })
 
-    it('takes one payment at a time and refuses a pending one on exit', async () => {
+    it('answers a repeated payment request with the first, never refusing it', async () => {
+      // A refusal shows in Fonbnk as "transaction cancelled" while Ferry's sheet is still open
       const onPay = vi.fn()
       await connected(onPay)
       const first = payRequest(3, { to: USDT, data: transferData(FONBNK, 5_000_000n) })
-      const second = payRequest(4, { to: USDT, data: transferData(FONBNK, 5_000_000n) })
+      const again = payRequest(4, { to: USDT, data: transferData(FONBNK, 5_000_000n) })
       bridge.handlers.session_request!(first)
-      bridge.handlers.session_request!(second)
+      bridge.handlers.session_request!(again)
       expect(onPay).toHaveBeenCalledTimes(1)
-      expect(bridge.refuse).toHaveBeenCalledWith(second)
+      expect(bridge.refuse).not.toHaveBeenCalled()
+      const hash = '0x' + 'cd'.repeat(32)
+      expect(await onPay.mock.calls[0]![0].settle(hash)).toBe(true)
+      expect(bridge.answer).toHaveBeenCalledWith(first, hash)
+      expect(bridge.answer).toHaveBeenCalledWith(again, hash)
+    })
+
+    it('hands a different payment to the page and refuses pending ones on exit', async () => {
+      const onPay = vi.fn()
+      await connected(onPay)
+      const first = payRequest(5, { to: USDT, data: transferData(FONBNK, 5_000_000n) })
+      const fresh = payRequest(6, { to: USDT, data: transferData(FONBNK, 4_900_000n) })
+      bridge.handlers.session_request!(first)
+      bridge.handlers.session_request!(fresh)
+      expect(onPay).toHaveBeenCalledTimes(2)
+      expect(onPay).toHaveBeenLastCalledWith(expect.objectContaining({ units: 4_900_000n }))
       app.unmount()
       expect(bridge.refuse).toHaveBeenCalledWith(first)
+      expect(bridge.refuse).toHaveBeenCalledWith(fresh)
+    })
+
+    it('answers a switch to another network with 4902, not a user refusal', async () => {
+      await connected(vi.fn())
+      const r = {
+        id: 7,
+        topic: 'current',
+        params: {
+          chainId: 'eip155:137',
+          request: { method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] },
+        },
+      }
+      bridge.handlers.session_request!(r)
+      expect(bridge.fail).toHaveBeenCalledWith(r, 4902, expect.any(String))
+      expect(bridge.refuse).not.toHaveBeenCalledWith(r)
     })
 
     it('still refuses transfers when not on a cash-out', async () => {
