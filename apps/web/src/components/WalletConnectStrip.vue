@@ -34,6 +34,7 @@ const PAIR_TIMEOUT_MS = 45_000
 const state = ref<'idle' | 'pairing' | 'connected'>('idle')
 const linkInput = ref('')
 const showInput = ref(false)
+const pasteOpen = computed(() => showInput.value && state.value === 'idle')
 const linkEl = ref<HTMLInputElement | null>(null)
 const notice = ref('')
 const problem = ref('')
@@ -187,16 +188,23 @@ async function resetConnection() {
   }
 }
 
-async function reconnect() {
+/** `openPaste` only when the user tapped Reconnect; otherwise the notice says what to do. */
+async function reconnect(openPaste = true) {
   await resetConnection()
-  showInput.value = true
+  showInput.value = openPaste
   notice.value = t('wc.disconnected')
+}
+
+function closePaste() {
+  showInput.value = false
+  linkInput.value = ''
+  problem.value = ''
 }
 
 watch(
   () => props.address,
   () => {
-    void reconnect()
+    void reconnect(false)
   },
 )
 
@@ -219,6 +227,7 @@ async function pairWith(text: string) {
   const generation = ++pairGeneration
   pairingTopic = link.slice(3, link.indexOf('@'))
   state.value = 'pairing'
+  showInput.value = false
   linkInput.value = ''
   try {
     kit = await ensureKit()
@@ -368,20 +377,21 @@ async function declineSign() {
         type="button"
         class="fy-btn fy-btn--secondary fy-btn--sm"
         :disabled="busy"
-        @click="reconnect"
+        @click="reconnect()"
       >
         {{ t('wc.reconnect') }}
       </button>
     </template>
     <template v-else-if="state === 'pairing'">
       <span class="s-wc__text">{{ t('wc.connecting') }}</span>
-      <button type="button" class="fy-btn fy-btn--secondary fy-btn--sm" @click="reconnect">
+      <button type="button" class="fy-btn fy-btn--secondary fy-btn--sm" @click="reconnect(false)">
         {{ t('wc.notNow') }}
       </button>
     </template>
     <template v-else>
       <span class="s-wc__text">
         <strong>{{ wt('title') }}</strong>
+        <span>{{ t('wc.where') }}</span>
       </span>
       <button type="button" class="fy-btn fy-btn--primary fy-btn--sm" @click="pasteLink">
         <Icon name="copy" :size="16" />{{ t('wc.paste') }}
@@ -392,33 +402,44 @@ async function declineSign() {
     <summary>{{ t('wc.help') }}</summary>
     <p>{{ wt('steps') }}</p>
   </details>
-  <div v-if="showInput && state === 'idle'" class="s-wc__input">
-    <span class="fy-help">{{ t('wc.pasteHint') }}</span>
-    <input
-      ref="linkEl"
-      v-model="linkInput"
-      :aria-label="t('wc.paste')"
-      placeholder="wc:…"
-      autocomplete="off"
-      autocapitalize="off"
-      spellcheck="false"
-      @input="onInput"
-      @keydown.enter="pairWith(linkInput)"
-    />
-    <button
-      type="button"
-      class="fy-btn fy-btn--primary fy-btn--sm"
-      style="margin-top: 8px"
-      :disabled="!linkInput.trim() || busy"
-      @click="pairWith(linkInput)"
-    >
-      {{ t('wc.connectLink') }}
-    </button>
-  </div>
-  <p v-if="problem" class="s-wc__msg s-wc__msg--bad" role="alert">{{ problem }}</p>
-  <p v-else-if="notice" class="s-wc__msg">{{ notice }}</p>
+  <p v-if="problem && !pasteOpen" class="s-wc__msg s-wc__msg--bad" role="alert">{{ problem }}</p>
+  <p v-else-if="notice && !pasteOpen" class="s-wc__msg">{{ notice }}</p>
 
   <Teleport to="body">
+    <!-- A sheet, not an inline box: growing the strip pushed Fonbnk's frame down and clipped the
+         top of its wallet list, where the QR icon is (seen on a phone 2026-11-11) -->
+    <div v-if="pasteOpen" class="sheet-backdrop" role="presentation">
+      <section class="sheet s-wcsheet" role="dialog" aria-modal="true" aria-labelledby="wc-paste">
+        <h2 id="wc-paste" class="s-wcsheet__title">{{ t('wc.pasteTitle') }}</h2>
+        <p class="s-wcsheet__body">{{ t('wc.pasteBody') }}</p>
+        <div class="s-wc__input">
+          <span class="fy-help">{{ t('wc.pasteHint') }}</span>
+          <input
+            ref="linkEl"
+            v-model="linkInput"
+            :aria-label="t('wc.paste')"
+            placeholder="wc:…"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            @input="onInput"
+            @keydown.enter="pairWith(linkInput)"
+          />
+        </div>
+        <p v-if="problem" class="s-wc__msg s-wc__msg--bad" role="alert">{{ problem }}</p>
+        <button
+          type="button"
+          class="fy-btn fy-btn--primary"
+          :disabled="!linkInput.trim() || busy"
+          @click="pairWith(linkInput)"
+        >
+          {{ t('wc.connectLink') }}
+        </button>
+        <button type="button" class="fy-btn fy-btn--secondary" @click="closePaste">
+          {{ t('wc.cancel') }}
+        </button>
+      </section>
+    </div>
     <div v-if="proposal" class="sheet-backdrop" role="presentation">
       <section class="sheet s-wcsheet" role="dialog" aria-modal="true" aria-labelledby="wc-share">
         <h2 id="wc-share" class="s-wcsheet__title">{{ t('wc.proposalTitle') }}</h2>
@@ -518,7 +539,12 @@ async function declineSign() {
   line-height: 1.5;
 }
 .s-wc__input {
-  margin: 0 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.s-wcsheet .s-wc__msg {
+  margin: 0;
 }
 .s-wc__input input {
   width: 100%;

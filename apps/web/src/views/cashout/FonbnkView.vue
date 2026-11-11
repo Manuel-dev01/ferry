@@ -1398,8 +1398,10 @@ function onBack() {
 .s-widget iframe {
   flex: 1;
   width: 100%;
-  height: calc(100svh - 250px);
-  min-height: 400px;
+  /* Fonbnk's wallet list is a sheet anchored to the frame's bottom; a shorter frame cuts off its
+     top, where the QR icon is. Same size as Add money's frame. */
+  height: max(720px, calc(100svh - 180px));
+  min-height: 720px;
   border: 0;
   background: #fff;
 }

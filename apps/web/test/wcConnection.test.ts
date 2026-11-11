@@ -82,7 +82,8 @@ async function mount(extra: Record<string, unknown> = {}) {
         request: unknown
         pairWith: (link: string) => Promise<void>
         share: () => Promise<void>
-        reconnect: () => Promise<void>
+        reconnect: (openPaste?: boolean) => Promise<void>
+        pasteLink: () => Promise<void>
       }
     }
   ).setupState
@@ -156,6 +157,18 @@ describe('Fonbnk connection lifecycle', () => {
     expect(bridge.kit.disconnectSession).toHaveBeenCalledWith(
       expect.objectContaining({ topic: 'current' }),
     )
+  })
+
+  it('opens the paste sheet only on a tap, and closes it once a link is pasted', async () => {
+    // 2026-11-11: the inline paste box pushed Fonbnk's frame down and clipped its QR icon
+    const state = await mount()
+    await state.reconnect(false) // Fonbnk or the address changed: a notice, no sheet
+    expect(state.showInput).toBe(false)
+    await state.pasteLink() // the clipboard is blocked, so the sheet opens for a long-press paste
+    expect(state.showInput).toBe(true)
+    await state.pairWith('wc:fresh')
+    expect(state.showInput).toBe(false)
+    expect(state.state).toBe('pairing')
   })
 
   it('refuses requests from old sessions and disconnects the current session on exit', async () => {
