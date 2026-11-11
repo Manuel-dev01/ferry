@@ -320,7 +320,7 @@
     "gasReverted": "la recharge de gaz a échoué sur le réseau",
     "startAgain": "Commencer un nouveau retrait",
     "previousUncertain": "Le résultat d’un transfert précédent depuis ce portefeuille est inconnu.",
-    "feeRose": "Les frais du réseau Polygon ont augmenté avant l’envoi. Rien n’a été envoyé. Touchez à nouveau Envoyer : Ferry couvre d’abord les frais.",
+    "feeRose": "Nimiq Pay n’a pas pu fixer les frais de réseau, donc rien n’a été envoyé. Touchez à nouveau Envoyer : Ferry ajoute du gas et fixe les frais pour votre portefeuille.",
     "pasteHint": "Appuyez longuement sur le champ, puis sur Coller.",
     "detailsHelpWcSent": "Fonbnk a reçu la transaction de Ferry. Quand l’argent est sur votre compte, touchez « J’ai reçu mon argent ».",
     "step2Wc": "Fonbnk a reçu le hash",
@@ -329,7 +329,8 @@
     "wcPayBody": "Fonbnk a demandé ce paiement via WalletConnect. Il part vers l’adresse de dépôt de Fonbnk ci-dessous. Ferry paie les frais de réseau, puis Nimiq Pay vous demande d’approuver.",
     "wcPayTo": "Adresse de dépôt de Fonbnk",
     "wcPayDiffers": "C’est différent des {amount} USDT saisis. Vérifiez le montant dans le formulaire de Fonbnk.",
-    "wcPaySend": "Envoyer avec Nimiq Pay"
+    "wcPaySend": "Envoyer avec Nimiq Pay",
+    "walletSaid": "Nimiq Pay indique : {reason}"
   },
   "topup": {
     "header": "Ajouter de l’argent",

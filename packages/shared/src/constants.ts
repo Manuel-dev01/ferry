@@ -13,6 +13,12 @@ export const USDT0 = {
   chainId: POLYGON_CHAIN_ID,
 } as const
 
+/**
+ * Gas limit for one USDT0 transfer. The real cost is 62–80k (estimated 2026-11-11), so this leaves
+ * room; Ferry passes it to the wallet when the wallet's own estimate fails, and tops up gas for it.
+ */
+export const USDT_TRANSFER_GAS = 120_000n
+
 export const POLYGONSCAN_TX = (hash: string): string => `https://polygonscan.com/tx/${hash}`
 
 export const CORRIDORS = [

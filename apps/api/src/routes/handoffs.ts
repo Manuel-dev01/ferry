@@ -6,6 +6,7 @@ import {
   handoffRequestSchema,
   hexSchema,
   USDT0_ADDRESS,
+  USDT_TRANSFER_GAS,
   type GasTopupResponse,
   type HandoffResponse,
 } from '@ferry/shared'
@@ -27,9 +28,11 @@ import { HttpError } from '../errors'
 import { polygonFees } from '../polygon'
 import { parseJson, parseValue } from './validate'
 
-/** Gas limit Nimiq Pay sets for one USDT transfer: its estimate plus padding. */
-export const TRANSFER_GAS = 120_000n
+/** Gas limit for one USDT transfer; the web passes the same limit when the wallet's estimate fails. */
+export const TRANSFER_GAS = USDT_TRANSFER_GAS
 const DAY_MS = 24 * 60 * 60_000
+/** A wallet asking again this soon after a top-up couldn't send with it, so it gets more. */
+const RETRY_WINDOW_MS = 15 * 60_000
 const RECEIPT_TIMEOUT_MS = 60_000
 const RECEIVED_WINDOW_MS = 7 * DAY_MS
 const HANDOFF_MAX_AGE_S = 3 * 24 * 60 * 60
@@ -41,9 +44,14 @@ const HANDOFF_MAX_AGE_S = 3 * 24 * 60 * 60
  */
 export const transferGasNeedWei = (maxFeePerGas: bigint) => TRANSFER_GAS * maxFeePerGas * 2n
 
-/** What a top-up fills the wallet to: the need, at least the floor, never above the cap. */
-export function gasTopupTarget(need: bigint, floorWei: bigint, capWei: bigint): bigint {
-  const wanted = need > floorWei ? need : floorWei
+/**
+ * What a top-up fills the wallet to: the need, at least the floor, never above the cap. Each recent
+ * top-up to the same wallet adds another step, so a wallet that still couldn't send isn't stuck
+ * receiving tiny top-ups (seen 2026-11-11: three in three minutes, each to the same target).
+ */
+export function gasTopupTarget(need: bigint, floorWei: bigint, capWei: bigint, recent = 0): bigint {
+  const base = need > floorWei ? need : floorWei
+  const wanted = base * BigInt(1 + recent)
   return wanted > capWei ? capWei : wanted
 }
 
@@ -89,9 +97,26 @@ export function handoffRoutes(deps: Deps) {
     }
     const address = getAddress((await parseJson(c, gasTopupRequestSchema)).address)
 
-    const fees = await polygonFees(polygon)
+    const since = new Date(Date.now() - DAY_MS)
+    const [fees, [mine], [all], [recent]] = await Promise.all([
+      polygonFees(polygon),
+      db
+        .select({ n: count() })
+        .from(gasTopups)
+        .where(and(eq(gasTopups.address, address), gte(gasTopups.createdAt, since))),
+      db.select({ n: count() }).from(gasTopups).where(gte(gasTopups.createdAt, since)),
+      db
+        .select({ n: count() })
+        .from(gasTopups)
+        .where(
+          and(
+            eq(gasTopups.address, address),
+            gte(gasTopups.createdAt, new Date(Date.now() - RETRY_WINDOW_MS)),
+          ),
+        ),
+    ])
     const need = transferGasNeedWei(fees.maxFeePerGas)
-    const target = gasTopupTarget(need, env.gasTopupFloorWei, env.gasTopupCapWei)
+    const target = gasTopupTarget(need, env.gasTopupFloorWei, env.gasTopupCapWei, recent?.n ?? 0)
     const [pol, usdt] = await Promise.all([
       polygon.getBalance({ address }),
       polygon.readContract({
@@ -110,14 +135,6 @@ export function handoffRoutes(deps: Deps) {
       throw new HttpError(400, 'NOTHING_TO_SEND', 'Gas is only for wallets with USDT to cash out')
     }
 
-    const since = new Date(Date.now() - DAY_MS)
-    const [[mine], [all]] = await Promise.all([
-      db
-        .select({ n: count() })
-        .from(gasTopups)
-        .where(and(eq(gasTopups.address, address), gte(gasTopups.createdAt, since))),
-      db.select({ n: count() }).from(gasTopups).where(gte(gasTopups.createdAt, since)),
-    ])
     // 0 turns a cap off. Without caps, a wallet still gets gas only while it holds USDT and too
     // little POL, so a top-up happens only when a cash-out actually needs one.
     if (env.GAS_TOPUP_PER_ADDRESS_DAY > 0 && (mine?.n ?? 0) >= env.GAS_TOPUP_PER_ADDRESS_DAY) {

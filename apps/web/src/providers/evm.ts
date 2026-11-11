@@ -53,7 +53,7 @@ export async function switchToPolygon(): Promise<void> {
           chainId: POLYGON_CHAIN_ID_HEX,
           chainName: 'Polygon',
           nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
-          rpcUrls: ['https://polygon-rpc.com'],
+          rpcUrls: ['https://polygon-bor-rpc.publicnode.com'],
           blockExplorerUrls: ['https://polygonscan.com'],
         },
       ],
@@ -77,8 +77,13 @@ export async function personalSign(address: Address, message: Hex): Promise<Hex>
   return provider().request({ method: 'personal_sign', params: [message, address] })
 }
 
-/** Approval: a normal transaction the user pays gas for. */
-export async function sendTransaction(tx: { from: Address; to: Address; data: Hex }): Promise<Hex> {
+/** Approval: a normal transaction the user pays gas for. `gas` skips the wallet's own estimate. */
+export async function sendTransaction(tx: {
+  from: Address
+  to: Address
+  data: Hex
+  gas?: Hex
+}): Promise<Hex> {
   return provider().request({ method: 'eth_sendTransaction', params: [tx] })
 }
 

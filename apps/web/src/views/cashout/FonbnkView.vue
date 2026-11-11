@@ -8,6 +8,7 @@ import {
   parseUsdt,
   POLYGON_CHAIN_ID_HEX,
   USDT0_ADDRESS,
+  USDT_TRANSFER_GAS,
   recordCountry,
   type FonbnkChannel,
   type FonbnkCountry,
@@ -18,7 +19,15 @@ import {
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { encodeFunctionData, erc20Abi, getAddress, isAddress, type Address, type Hex } from 'viem'
+import {
+  encodeFunctionData,
+  erc20Abi,
+  getAddress,
+  isAddress,
+  toHex,
+  type Address,
+  type Hex,
+} from 'viem'
 import AppHeader from '../../components/AppHeader.vue'
 import Banner from '../../components/Banner.vue'
 import Icon from '../../components/Icon.vue'
@@ -326,6 +335,12 @@ watch(
   },
   { immediate: true },
 )
+/**
+ * Set once the wallet refuses over gas before signing. Its own gas estimate is the usual cause
+ * (2026-11-11: refused three times while holding 0.13 POL, enough for any transfer), so the next
+ * Send passes Ferry's gas limit instead.
+ */
+const gasRefused = ref(false)
 function retryAfterCheck() {
   if (session.evmAddress) clearUncertainTransfer(session.evmAddress)
   sendUncertain.value = false
@@ -430,6 +445,7 @@ async function send(wc?: { to: Address; units: bigint; onHash: (hash: Hex) => vo
         from: from as Address,
         to: USDT0_ADDRESS,
         data: encodeFunctionData({ abi: erc20Abi, functionName: 'transfer', args: [to, units] }),
+        ...(gasRefused.value ? { gas: toHex(USDT_TRANSFER_GAS) } : {}),
       })
     } catch (err) {
       if (classifyEvmError(err) === 'rejected') {
@@ -441,9 +457,10 @@ async function send(wc?: { to: Address; units: bigint; onHash: (hash: Hex) => vo
       if (
         /not enough (gas|pol|balance)|insufficient (funds|balance)|gas (fee|limit)/i.test(reason)
       ) {
-        // The wallet refused before signing: Polygon's fee rose past the POL it holds. Sending
-        // again asks Ferry for a fresh top-up first.
-        problem.value = t('fonbnk.feeRose')
+        // The wallet refused before signing, so nothing went out. Sending again asks Ferry for
+        // more gas first and passes Ferry's gas limit, skipping the wallet's own estimate.
+        gasRefused.value = true
+        problem.value = `${t('fonbnk.feeRose')} ${t('fonbnk.walletSaid', { reason })}`
       } else if (/execution reverted/i.test(reason)) {
         problem.value = t('fonbnk.sendFailed', { reason })
       } else {

@@ -67,6 +67,14 @@ describe('gasTopupTarget', () => {
     expect(gasTopupTarget(high, floor, cap)).toBe(high)
     expect(gasTopupTarget(10n ** 18n, floor, cap)).toBe(cap)
   })
+
+  it('gives more to a wallet asking again soon after a top-up, up to the cap', () => {
+    // 2026-11-11: three top-ups in three minutes, each to ~0.13 POL, and the wallet never sent
+    const need = transferGasNeedWei(526_000_000_000n) // 0.126 POL
+    expect(gasTopupTarget(need, floor, cap, 1)).toBe(need * 2n)
+    expect(gasTopupTarget(need, floor, cap, 2)).toBe(cap)
+    expect(gasTopupTarget(need, floor, 500_000_000_000_000_000n, 2)).toBe(need * 3n)
+  })
 })
 
 describe('POST /v1/handoffs', () => {

@@ -593,7 +593,7 @@
     "gasReverted": "the gas top-up failed on the network",
     "startAgain": "Start a new cash-out",
     "previousUncertain": "A previous transfer from this wallet has an unknown outcome.",
-    "feeRose": "Polygon's network fee went up before your wallet could send. Nothing was sent. Tap Send again: Ferry tops up the fee first.",
+    "feeRose": "Nimiq Pay couldn't set the network fee, so nothing was sent. Tap Send again: Ferry adds gas and sets the fee for your wallet.",
     "pasteHint": "Long-press the box and tap Paste.",
     "detailsHelpWcSent": "Fonbnk got the transaction from Ferry. Once the money is in your account, tap “I’ve got my money”.",
     "step2Wc": "Fonbnk got the hash",
@@ -602,7 +602,8 @@
     "wcPayBody": "Fonbnk asked for this payment over WalletConnect. It goes to Fonbnk’s deposit address below. Ferry covers the network fee, then Nimiq Pay asks you to approve.",
     "wcPayTo": "Fonbnk’s deposit address",
     "wcPayDiffers": "This differs from the {amount} USDT you entered. Check the amount in Fonbnk’s form.",
-    "wcPaySend": "Send with Nimiq Pay"
+    "wcPaySend": "Send with Nimiq Pay",
+    "walletSaid": "Nimiq Pay said: {reason}"
   },
   "topup": {
     "header": "Add money",

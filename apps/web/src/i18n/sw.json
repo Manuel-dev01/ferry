@@ -320,7 +320,7 @@
     "gasReverted": "uongezaji wa gesi umeshindwa kwenye mtandao",
     "startAgain": "Anza utoaji mpya wa pesa",
     "previousUncertain": "Matokeo ya muamala wa awali kutoka pochi hii hayajulikani.",
-    "feeRose": "Ada ya mtandao wa Polygon imepanda kabla pochi yako haijatuma. Hakuna kilichotumwa. Bonyeza Tuma tena: Ferry inalipia ada kwanza.",
+    "feeRose": "Nimiq Pay haikuweza kuweka ada ya mtandao, kwa hiyo hakuna kilichotumwa. Bonyeza Tuma tena: Ferry inaongeza gesi na kuweka ada kwa pochi yako.",
     "pasteHint": "Bonyeza na ushikilie kisanduku, kisha uchague Bandika.",
     "detailsHelpWcSent": "Fonbnk imepokea muamala kutoka Ferry. Pesa zikifika kwenye akaunti yako, bonyeza “Nimepokea pesa zangu”.",
     "step2Wc": "Fonbnk imepokea hash",
@@ -329,7 +329,8 @@
     "wcPayBody": "Fonbnk imeomba malipo haya kupitia WalletConnect. Yanaenda kwenye anwani ya amana ya Fonbnk hapa chini. Ferry inalipia ada ya mtandao, kisha Nimiq Pay inakuomba uidhinishe.",
     "wcPayTo": "Anwani ya amana ya Fonbnk",
     "wcPayDiffers": "Hii ni tofauti na USDT {amount} uliyoweka. Angalia kiasi kwenye fomu ya Fonbnk.",
-    "wcPaySend": "Tuma kwa Nimiq Pay"
+    "wcPaySend": "Tuma kwa Nimiq Pay",
+    "walletSaid": "Nimiq Pay imesema: {reason}"
   },
   "topup": {
     "header": "Ongeza pesa",
