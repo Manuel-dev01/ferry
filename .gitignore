@@ -5,10 +5,11 @@ coverage/
 .vite/
 .turbo/
 
-# env files: only the .example versions are committed
+# env files: only the .example versions and the public web production defaults are committed
 .env
 .env.*
 !.env.example
+!apps/web/.env.production
 
 # logs
 *.log

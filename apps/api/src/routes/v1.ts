@@ -203,7 +203,7 @@ export function v1Routes(deps: Deps) {
     if (!identifier) throw new HttpError(400, 'INVALID_ACCOUNT', 'That account number looks wrong')
     const { rate, amounts } = await quote(body.currency, body.amount, body.amountIn)
     checkLimits(amounts)
-    // TODO(M1): daily cap per wallet and device, inside the order-creation transaction.
+    // Dormant path: a per-wallet daily cap would go here, inside the order-creation transaction.
     const created = await deps.orders.create({
       currency: body.currency,
       institution: institution.code,

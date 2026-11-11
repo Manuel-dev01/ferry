@@ -3,7 +3,6 @@
 interface ImportMetaEnv {
   readonly VITE_API_URL?: string
   readonly VITE_PUBLIC_ORIGIN?: string
-  readonly VITE_SENTRY_DSN?: string
   readonly VITE_WC_PROJECT_ID?: string
 }
 

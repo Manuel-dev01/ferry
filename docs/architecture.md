@@ -346,7 +346,9 @@ Six countries (Nigeria, Kenya, Ghana, South Africa, Uganda, Tanzania). Fonbnk's 
 
 A wallet holding USDT but no POL can't pay Polygon's gas fee. `POST /v1/gas` sends just enough POL from Ferry's relayer:
 
-- The amount is the gas limit Nimiq Pay sets for one USDT transfer × the current max fee, plus 25%, capped by `GAS_TOPUP_CAP_POL`.
+- The wallet is filled to the gas limit for one USDT transfer (`USDT_TRANSFER_GAS`, 120k; a real transfer uses 62–80k) × the current max fee × 2, because Polygon's base fee can jump before the user taps Send. It is never filled below `GAS_TOPUP_FLOOR_POL` and never above `GAS_TOPUP_CAP_POL`.
+- A wallet that asks again within 15 minutes of a top-up gets one more step for each recent top-up (up to the cap), so a wallet that still couldn't send isn't stuck receiving tiny amounts.
+- If the wallet refuses the send over gas (for example, its own gas estimate fails), the cash-out screen shows the wallet's reason and the next tap on Send passes the 120k gas limit explicitly. Nothing is sent without that tap.
 - Only wallets holding at least the minimum cash-out in USDT qualify.
 - Optional caps: `GAS_TOPUP_PER_ADDRESS_DAY` per wallet and `GAS_TOPUP_DAILY_MAX` overall, counted in the database. Both are off (`0`) in production so testers are never blocked; the rules above already limit top-ups to wallets that need one for a cash-out.
 - One relayer transaction at a time keeps nonces in order.

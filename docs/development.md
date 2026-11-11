@@ -64,35 +64,35 @@ This uses real wallets and real money. Start with the smallest amounts each part
 
 Every variable is validated at startup by [`apps/api/src/env.ts`](../apps/api/src/env.ts). An invalid value stops the server with a message naming the variable, never its value.
 
-| Variable                                                                    | Default                   | Purpose                                                                           |
-| --------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------- |
-| `NODE_ENV`                                                                  | `development`             | `production` requires `DATABASE_URL`                                              |
-| `PORT`, `HOST`, `LOG_LEVEL`                                                 | `3000`, `0.0.0.0`, `info` | Server basics                                                                     |
-| `DATABASE_URL`                                                              | none                      | Postgres connection string. Without it, endpoints that need storage answer `503`. |
-| `DATABASE_URL_UNPOOLED`                                                     | none                      | Optional direct connection for migrations (useful with Neon's pooler)             |
-| `CORS_ORIGINS`                                                              | none                      | Comma-separated web origins allowed to call the API                               |
-| `PUBLIC_WEB_ORIGIN`                                                         | none                      | The web app's public origin                                                       |
-| `POLYGON_RPC_URLS`                                                          | two public RPCs           | Comma-separated, tried in order                                                   |
-| `USDT0_ADDRESS`                                                             | Polygon USDT0             | Token contract                                                                    |
-| `RELAYER_PRIVATE_KEY`                                                       | none                      | **Secret.** Hot wallet that pays POL for gas top-ups. Keep its balance small.     |
-| `PAYOUT_ROUTE`                                                              | `fonbnk`                  | `fonbnk` in production; `paycrest` enables the dormant path                       |
-| `GAS_TOPUP_ENABLED`                                                         | `false`                   | Turn on gas top-ups (needs the relayer key and a database)                        |
-| `GAS_TOPUP_CAP_POL`                                                         | `0.3`                     | Most POL a wallet can be topped up to                                             |
-| `GAS_TOPUP_PER_ADDRESS_DAY`, `GAS_TOPUP_DAILY_MAX`                          | `0`, `0`                  | Optional caps per wallet and in total per 24 hours; `0` means no cap              |
-| `PROOF_EXCLUDE_ADDRESSES`                                                   | none                      | Wallets left out of Proof of Ferry (for example, test wallets)                    |
-| `LIMIT_MIN_USD`, `LIMIT_MAX_USD`, `LIMIT_DAILY_USD`                         | `1`, `200`, `500`         | Amount limits; the minimum also decides who qualifies for gas                     |
-| `PAYCREST_*`, `FERRY_FEE_PERCENT`, `CORRIDORS_ENABLED`, `ALLOW_MOCK_ORDERS` | see `.env.example`        | Dormant Paycrest path only                                                        |
+| Variable                                                                    | Default                   | Purpose                                                                                     |
+| --------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                                                  | `development`             | `production` requires `DATABASE_URL`                                                        |
+| `PORT`, `HOST`, `LOG_LEVEL`                                                 | `3000`, `0.0.0.0`, `info` | Server basics                                                                               |
+| `DATABASE_URL`                                                              | none                      | Postgres connection string. Without it, endpoints that need storage answer `503`.           |
+| `DATABASE_URL_UNPOOLED`                                                     | none                      | Optional direct connection for migrations (useful with Neon's pooler)                       |
+| `CORS_ORIGINS`                                                              | none                      | Comma-separated web origins allowed to call the API                                         |
+| `PUBLIC_WEB_ORIGIN`                                                         | none                      | The web app's public origin                                                                 |
+| `POLYGON_RPC_URLS`                                                          | two public RPCs           | Comma-separated, tried in order                                                             |
+| `USDT0_ADDRESS`                                                             | Polygon USDT0             | Token contract                                                                              |
+| `RELAYER_PRIVATE_KEY`                                                       | none                      | **Secret.** Hot wallet that pays POL for gas top-ups. Keep its balance small.               |
+| `PAYOUT_ROUTE`                                                              | `fonbnk`                  | `fonbnk` in production; `paycrest` enables the dormant path                                 |
+| `GAS_TOPUP_ENABLED`                                                         | `false`                   | Turn on gas top-ups (needs the relayer key and a database)                                  |
+| `GAS_TOPUP_CAP_POL`                                                         | `0.3`                     | Most POL a wallet can be topped up to                                                       |
+| `GAS_TOPUP_FLOOR_POL`                                                       | `0.12`                    | Least POL a top-up fills a wallet to, so a fee spike before the send doesn't leave it short |
+| `GAS_TOPUP_PER_ADDRESS_DAY`, `GAS_TOPUP_DAILY_MAX`                          | `0`, `0`                  | Optional caps per wallet and in total per 24 hours; `0` means no cap                        |
+| `PROOF_EXCLUDE_ADDRESSES`                                                   | none                      | Wallets left out of Proof of Ferry (for example, test wallets)                              |
+| `LIMIT_MIN_USD`, `LIMIT_MAX_USD`, `LIMIT_DAILY_USD`                         | `1`, `200`, `500`         | Amount limits; the minimum also decides who qualifies for gas                               |
+| `PAYCREST_*`, `FERRY_FEE_PERCENT`, `CORRIDORS_ENABLED`, `ALLOW_MOCK_ORDERS` | see `.env.example`        | Dormant Paycrest path only                                                                  |
 
 ### Web (`apps/web/.env.local`)
 
 Everything here is compiled into the public bundle. **Never put a secret in a `VITE_` variable.**
 
-| Variable             | Purpose                                                                                                                                                       |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_API_URL`       | API base URL. Empty in development uses the page's host on port 3000. Required public HTTPS URL for production builds; missing configuration fails the build. |
-| `VITE_PUBLIC_ORIGIN` | Public origin, used for "Open in Nimiq Pay" links                                                                                                             |
-| `VITE_MOCK_WALLET`   | `true` for the desktop mock wallet (development builds only)                                                                                                  |
-| `VITE_SENTRY_DSN`    | Optional error reporting                                                                                                                                      |
+| Variable             | Purpose                                                                                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_URL`       | API base URL. Empty in development uses the page's host on port 3000. Production builds take it from `apps/web/.env.production` (the live API) unless set; a build with no HTTPS URL fails. |
+| `VITE_PUBLIC_ORIGIN` | Public origin, used for "Open in Nimiq Pay" links                                                                                                                                           |
+| `VITE_MOCK_WALLET`   | `true` for the desktop mock wallet (development builds only)                                                                                                                                |
 
 ## Database and migrations
 
@@ -112,7 +112,7 @@ Migrations are additive and run automatically when the production container star
 pnpm test         # all Vitest suites
 pnpm lint         # ESLint + Prettier check (pnpm format fixes formatting)
 pnpm typecheck    # tsc and vue-tsc
-VITE_API_URL=https://api-production-5835.up.railway.app pnpm build # production builds (bash)
+pnpm build        # production builds (the web build points at the live API)
 ```
 
 | Package           | What the tests cover                                                                                                                                                                                            |

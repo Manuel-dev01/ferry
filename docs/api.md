@@ -194,7 +194,7 @@ Sends just enough POL for one USDT transfer to a wallet that holds USDT but not 
 | `reverted`       | Mined but failed                                                             |
 | `unknown`        | The broadcast outcome is unclear (`202`). Ferry never re-sends in this case. |
 
-Errors: `404 GAS_TOPUP_DISABLED`, `400 NOTHING_TO_SEND` (no USDT to cash out), `429 GAS_LIMIT` (per-wallet or daily cap), `429 GAS_BUSY` (another top-up in flight), `503 GAS_UNAVAILABLE`.
+Errors: `404 GAS_TOPUP_DISABLED`, `400 NOTHING_TO_SEND` (no USDT to cash out), `429 GAS_LIMIT` (per-wallet or daily cap, when set), `429 GAS_BUSY` (another top-up in flight), `503 GAS_UNAVAILABLE`.
 
 ## Wallet and app data
 
