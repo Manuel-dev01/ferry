@@ -228,6 +228,17 @@ const countdown = computed(() => {
 /** Once the wallet may have paid, this invoice is never offered again. */
 const payLocked = ref(false)
 const uncertain = ref(false)
+/** Nimiq Pay's own words behind an unclear answer, shown under the checking notice. */
+const uncertainSaid = ref('')
+
+/** True only when LendaSwap answers that its invoice is still unpaid. A failed read is not proof. */
+async function nothingArrived(id: string) {
+  try {
+    return (await nimSwapState(id)).stage === 'waiting_payment'
+  } catch {
+    return false
+  }
+}
 
 function remember(status: string) {
   const s = swap.value
@@ -293,8 +304,24 @@ async function pay() {
         history.setStatus(s.id, 'failed')
         problem.value = withReason(t(`nimSwap.${e.kind}`), e.said)
         break
+      case 'notSent':
+        // Nimiq Pay raises these before sending. Confirm with LendaSwap that nothing arrived, then
+        // let the user tap again on the same invoice (Nimiq Pay refuses a real duplicate itself).
+        if (await nothingArrived(s.id)) {
+          history.setStatus(s.id, 'failed')
+          problem.value = withReason(t('nimSwap.notSent'), e.said)
+          break
+        }
+        payLocked.value = true
+        uncertain.value = true
+        uncertainSaid.value = e.said
+        remember('awaiting')
+        phase.value = 'progress'
+        void follow()
+        break
       case 'uncertain':
         // It may have gone through: never pay again; read the swap's own status instead.
+        uncertainSaid.value = e.said
         payLocked.value = true
         uncertain.value = true
         remember('awaiting')
@@ -307,6 +334,7 @@ async function pay() {
         break
       default:
         // wallet or unknown errors: it may still have gone out, so follow the swap instead
+        uncertainSaid.value = e.said
         payLocked.value = true
         uncertain.value = true
         remember('awaiting')
@@ -650,6 +678,12 @@ function cashOut() {
           icon="clock"
           :body="uncertain ? t('ln.uncertain') : slow ? t('nimSwap.slow') : t('nimSwap.waiting')"
         />
+        <p v-if="uncertain && uncertainSaid && !problem" class="fy-caption" style="margin: 0">
+          {{ t('fonbnk.walletSaid', { reason: uncertainSaid }) }}
+        </p>
+        <p v-if="uncertain && !problem" class="fy-caption" style="margin: 0">
+          {{ t('nimSwap.canLeave') }}
+        </p>
         <Banner
           v-if="stoppedChecking && !problem"
           tone="warning"

@@ -419,6 +419,8 @@
     "invalid": "A Nimiq Pay não conseguiu iniciar este pagamento. Confira o saldo e os dados e tente novamente.",
     "insufficient": "A Nimiq Pay informa saldo insuficiente. Reduza o valor ou adicione fundos antes de tentar novamente.",
     "swapDown": "O serviço de troca da Nimiq Pay não respondeu, então nada foi enviado. O problema é do lado da Nimiq Pay: tente de novo daqui a pouco.",
+    "notSent": "A Nimiq Pay não conseguiu iniciar o pagamento, então nada foi enviado. Toque em Pagar com NIM para tentar de novo.",
+    "canLeave": "Não precisa deixar esta tela aberta. Abra este saque pelo Histórico dentro de uma hora e o Ferry conclui. Se não der, a troca se desfaz sozinha e seus NIM voltam.",
     "nimEstimate": "≈ {nim} NIM antes das taxas.",
     "estimateUnavailable": "Estimativa em NIM indisponível. A Nimiq Pay mostra o total com taxas antes da aprovação.",
     "refreshQuote": "Obter nova cotação",

@@ -6,6 +6,14 @@ import { classifyNimiqError, lightningIdsFrom } from '../providers/nimiq'
  */
 const SWAP_DOWN = /cannot create swap/i
 
+/**
+ * Error types Nimiq Pay's payLightningInvoice raises only before anything is sent ("could not be
+ * prepared in time", "NIM wallet is not ready", "Could not save Lightning payment attempt"). Every
+ * outcome that may have sent money is TRANSACTION_OUTCOME_UNKNOWN with the swap id (nimiq-pay-app
+ * useMiniAppHost.ts, read 2026-11-19). Callers still check the payee's status before saying so.
+ */
+const PRE_SEND = ['NETWORK_ERROR', 'INTERNAL_ERROR']
+
 /** Known payment identifiers always require reconciliation, even alongside a validation error. */
 export function lightningFailure(err: unknown, expiresAt: number, now = Date.now() / 1000) {
   const error = classifyNimiqError(err)
@@ -14,7 +22,9 @@ export function lightningFailure(err: unknown, expiresAt: number, now = Date.now
     !!(ids.hash || ids.swapId) ||
     !['rejected', 'unsupported', 'invalid', 'insufficient'].includes(error.kind)
   const kind = uncertain
-    ? 'uncertain'
+    ? !(ids.hash || ids.swapId) && PRE_SEND.includes(error.type)
+      ? 'notSent'
+      : 'uncertain'
     : (error.kind === 'invalid' || error.kind === 'insufficient') &&
         expiresAt > 0 &&
         expiresAt <= now

@@ -47,7 +47,7 @@ describe('Lightning payment failures', () => {
       'invalid',
     )
   })
-  it.each(['DUPLICATE_PAYMENT', 'TRANSACTION_OUTCOME_UNKNOWN', 'NETWORK_ERROR', 'INTERNAL_ERROR'])(
+  it.each(['DUPLICATE_PAYMENT', 'TRANSACTION_OUTCOME_UNKNOWN'])(
     'keeps %s ambiguous even with a balance-like message or expired invoice',
     (type) => {
       expect(lightningFailure(error(type, 'Insufficient NIM balance'), 100, 4600).kind).toBe(
@@ -55,6 +55,24 @@ describe('Lightning payment failures', () => {
       )
     },
   )
+  it.each(['NETWORK_ERROR', 'INTERNAL_ERROR'])(
+    'reads %s without payment ids as raised before sending, and with ids as uncertain',
+    (type) => {
+      expect(
+        lightningFailure(
+          error(type, 'The Lightning payment could not be prepared in time. Please try again.'),
+          10000,
+          4600,
+        ).kind,
+      ).toBe('notSent')
+      expect(lightningFailure(error(type, 'x', { swapId: 'fs-1' }), 10000, 4600).kind).toBe(
+        'uncertain',
+      )
+    },
+  )
+  it('keeps an untyped exception uncertain', () => {
+    expect(lightningFailure(new Error('bridge timeout'), 10000, 4600).kind).toBe('uncertain')
+  })
   it('reconciles any attached payment identifiers before another attempt', () => {
     const result = lightningFailure(
       error('INVALID_TRANSACTION', 'Insufficient NIM balance', { hash: 'known', swapId: 'swap' }),
