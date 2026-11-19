@@ -418,6 +418,7 @@
     "checkAgain": "Verificar de novo",
     "invalid": "A Nimiq Pay não conseguiu iniciar este pagamento. Confira o saldo e os dados e tente novamente.",
     "insufficient": "A Nimiq Pay informa saldo insuficiente. Reduza o valor ou adicione fundos antes de tentar novamente.",
+    "swapDown": "O serviço de troca da Nimiq Pay não respondeu, então nada foi enviado. O problema é do lado da Nimiq Pay: tente de novo daqui a pouco.",
     "nimEstimate": "≈ {nim} NIM antes das taxas.",
     "estimateUnavailable": "Estimativa em NIM indisponível. A Nimiq Pay mostra o total com taxas antes da aprovação.",
     "refreshQuote": "Obter nova cotação",

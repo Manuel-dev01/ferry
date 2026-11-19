@@ -717,6 +717,7 @@
     "checkAgain": "Check again",
     "invalid": "Nimiq Pay could not start this payment. Check your balance and payment details, then try again.",
     "insufficient": "Nimiq Pay reports insufficient balance. Reduce the amount or add funds before trying again.",
+    "swapDown": "Nimiq Pay's swap service didn't respond, so nothing was sent. This is on Nimiq Pay's side: please try again in a little while.",
     "nimEstimate": "≈ {nim} NIM before fees.",
     "estimateUnavailable": "NIM estimate unavailable. Nimiq Pay shows the total, including fees, before approval.",
     "refreshQuote": "Get a new quote",

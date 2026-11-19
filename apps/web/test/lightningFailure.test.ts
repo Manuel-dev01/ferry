@@ -16,6 +16,19 @@ describe('Lightning payment failures', () => {
     expect(said).not.toContain('\n')
     expect(said.length).toBeLessThanOrEqual(180)
   })
+  it('tells a swap-service outage apart from a bad payment', () => {
+    expect(
+      lightningFailure(error('INVALID_TRANSACTION', 'Cannot create swap'), 10000, 4600).kind,
+    ).toBe('swapDown')
+    // a known payment id still means it may have gone out
+    expect(
+      lightningFailure(
+        error('INVALID_TRANSACTION', 'Cannot create swap', { hash: 'h' }),
+        10000,
+        4600,
+      ).kind,
+    ).toBe('uncertain')
+  })
   it('keeps a valid invoice after the Samsung balance rejection', () => {
     expect(
       lightningFailure(error('INVALID_TRANSACTION', 'Insufficient NIM balance'), 10000, 4600).kind,

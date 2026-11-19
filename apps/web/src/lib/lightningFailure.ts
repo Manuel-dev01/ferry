@@ -1,5 +1,11 @@
 import { classifyNimiqError, lightningIdsFrom } from '../providers/nimiq'
 
+/**
+ * Nimiq Pay's words when its swap partner (Fastspot) would not set up the swap. Seen 2026-11-19 while
+ * every Fastspot swap request timed out: nothing was sent, and the invoice is fine to try again later.
+ */
+const SWAP_DOWN = /cannot create swap/i
+
 /** Known payment identifiers always require reconciliation, even alongside a validation error. */
 export function lightningFailure(err: unknown, expiresAt: number, now = Date.now() / 1000) {
   const error = classifyNimiqError(err)
@@ -13,7 +19,9 @@ export function lightningFailure(err: unknown, expiresAt: number, now = Date.now
         expiresAt > 0 &&
         expiresAt <= now
       ? 'expired'
-      : error.kind
+      : error.kind === 'invalid' && SWAP_DOWN.test(error.message)
+        ? 'swapDown'
+        : error.kind
   return { kind, ids, said: walletReason(error.type, error.message) }
 }
 

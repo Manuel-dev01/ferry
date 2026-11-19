@@ -221,6 +221,7 @@ async function send() {
       }
       if (e.kind === 'rejected') return settled(t('ln.cancelled'))
       if (e.kind === 'invalid') return settled(t('ln.invalid'))
+      if (e.kind === 'swapDown') return settled(t('nimSwap.swapDown'))
       if (e.kind === 'insufficient') return settled(t('nimSwap.insufficient'))
       if (e.kind === 'expired') return settled(t('ln.expired'))
       if (e.kind === 'unsupported') return settled(t('ln.unsupported'))

@@ -418,6 +418,7 @@
     "checkAgain": "Kagua tena",
     "invalid": "Nimiq Pay haikuweza kuanza malipo haya. Angalia salio na maelezo ya malipo, kisha ujaribu tena.",
     "insufficient": "Nimiq Pay inaripoti salio halitoshi. Punguza kiasi au ongeza fedha kabla ya kujaribu tena.",
+    "swapDown": "Huduma ya kubadilisha ya Nimiq Pay haikujibu, kwa hiyo hakuna kilichotumwa. Tatizo liko upande wa Nimiq Pay: jaribu tena baada ya muda mfupi.",
     "nimEstimate": "Takriban NIM {nim} kabla ya ada.",
     "estimateUnavailable": "Makadirio ya NIM hayapatikani. Nimiq Pay inaonyesha jumla pamoja na ada kabla ya idhini.",
     "refreshQuote": "Pata bei mpya",

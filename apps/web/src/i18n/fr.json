@@ -418,6 +418,7 @@
     "checkAgain": "Vérifier à nouveau",
     "invalid": "Nimiq Pay n’a pas pu démarrer ce paiement. Vérifiez votre solde et les détails, puis réessayez.",
     "insufficient": "Nimiq Pay indique un solde insuffisant. Réduisez le montant ou ajoutez des fonds avant de réessayer.",
+    "swapDown": "Le service d'échange de Nimiq Pay n'a pas répondu, donc rien n'a été envoyé. Le problème vient de Nimiq Pay : réessayez un peu plus tard.",
     "nimEstimate": "≈ {nim} NIM hors frais.",
     "estimateUnavailable": "Estimation en NIM indisponible. Nimiq Pay affiche le total, frais inclus, avant approbation.",
     "refreshQuote": "Obtenir un nouveau devis",

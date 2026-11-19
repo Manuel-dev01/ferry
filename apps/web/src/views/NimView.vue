@@ -289,6 +289,7 @@ async function pay() {
       case 'invalid':
       case 'insufficient':
       case 'expired':
+      case 'swapDown':
         history.setStatus(s.id, 'failed')
         problem.value = withReason(t(`nimSwap.${e.kind}`), e.said)
         break
