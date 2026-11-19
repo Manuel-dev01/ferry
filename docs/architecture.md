@@ -301,7 +301,7 @@ sequenceDiagram
   App-->>U: USDT arrived → continue to cash out
 ```
 
-- **Atomic:** the Lightning payment is a hold invoice. It settles only when the user's device reveals the secret that also releases the USDT. If the claim never happens, the Lightning payment fails back and the NIM returns.
+- **Atomic:** the Lightning payment is a hold invoice. It settles only when the user's device reveals the secret that also releases the USDT. If the claim never happens, the Lightning payment fails back, but the NIM itself sits in Nimiq Pay's swap contract with Fastspot until that contract times out (about 2.5 days on the first real swap); then Nimiq Pay refunds it. The same wait applies if Fastspot never pays the invoice, as happened on 2026-11-19.
 - **Ferry's server is not involved in the swap.** Keys and secrets live only in the browser's IndexedDB. The LendaSwap SDK is loaded on first use, so the rest of the app stays small.
 - **Counted afterwards.** Once the swap completes, the app asks the API to record it (`POST /v1/nim-swaps`). The API reads the swap back from LendaSwap and its claim from Polygon before counting it on Proof of Ferry (§5).
 - **NIM shown up front.** Lightning screens show "≈ N NIM" next to the USDT amount, from a cached NIM price (`GET /v1/prices/nim`). Nimiq Pay shows the exact amount at approval.
