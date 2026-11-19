@@ -62,6 +62,8 @@ export interface NimSwap {
   sats: number
   /** Unix seconds after which the invoice can no longer be paid. */
   invoiceExpiresAt: number
+  /** Unix seconds by which this device must release the USDT, or LendaSwap takes it back. */
+  claimBy: number | null
 }
 
 /** Creates the swap and its invoice. Nothing is paid until the user approves in Nimiq Pay. */
@@ -79,6 +81,7 @@ export async function createNimSwap(usdtUnits: bigint, to: Address): Promise<Nim
     bolt11_invoice?: string
     source_amount?: string | number
     invoice_expires_at?: number
+    evm_refund_locktime?: number
   }
   if (!r.bolt11_invoice) throw new Error('The swap came back without an invoice')
   return {
@@ -86,6 +89,7 @@ export async function createNimSwap(usdtUnits: bigint, to: Address): Promise<Nim
     invoice: r.bolt11_invoice,
     sats: Number(r.source_amount ?? 0),
     invoiceExpiresAt: r.invoice_expires_at ?? 0,
+    claimBy: r.evm_refund_locktime ?? null,
   }
 }
 
@@ -102,6 +106,8 @@ export interface NimSwapState {
   stage: NimSwapStage
   status: string
   claimTx: string | null
+  /** As NimSwap.claimBy; null when LendaSwap doesn't say. */
+  claimBy: number | null
 }
 
 const STAGES: Record<string, NimSwapStage> = {
@@ -129,11 +135,13 @@ export async function nimSwapState(id: string): Promise<NimSwapState> {
   const s = (await client.getSwap(id, { updateStorage: true })) as {
     status: string
     evm_claim_txid?: string | null
+    evm_refund_locktime?: number | null
   }
   return {
     stage: nimSwapStage(s.status),
     status: s.status,
     claimTx: s.evm_claim_txid ?? null,
+    claimBy: s.evm_refund_locktime ?? null,
   }
 }
 

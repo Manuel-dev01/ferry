@@ -371,6 +371,7 @@ async function follow() {
       try {
         const state = await nimSwapState(s.id)
         stage.value = state.stage
+        if (state.claimBy) s.claimBy = state.claimBy
         if (['paid', 'ready', 'claiming', 'done'].includes(state.stage)) uncertain.value = false
         claimTx.value = state.claimTx
         if (state.stage === 'ready' && !claimAsked) {
@@ -414,6 +415,29 @@ async function reportSwap(id: string) {
   }
 }
 
+/** "Reopen before 17:32": LendaSwap's deadline for this device to release the USDT. */
+const leaveNote = computed(() => {
+  const by = swap.value?.claimBy
+  return by
+    ? t('nimSwap.canLeaveBy', {
+        time: new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(
+          by * 1000,
+        ),
+      })
+    : t('nimSwap.canLeave')
+})
+const idCopied = ref(false)
+async function copySwapId() {
+  if (!swap.value) return
+  try {
+    await navigator.clipboard.writeText(swap.value.id)
+    idCopied.value = true
+    setTimeout(() => (idCopied.value = false), 1500)
+  } catch {
+    // clipboard unavailable (plain http on LAN): the ID stays visible
+  }
+}
+
 const stoppedChecking = ref(false)
 function checkAgain() {
   stoppedChecking.value = false
@@ -437,7 +461,7 @@ onMounted(() => {
   if (typeof id !== 'string') return
   const entry = history.find(id)
   if (entry?.kind !== 'nim') return
-  swap.value = { id, invoice: '', sats: 0, invoiceExpiresAt: 0 }
+  swap.value = { id, invoice: '', sats: 0, invoiceExpiresAt: 0, claimBy: null }
   swapUnits.value = BigInt(entry.amountUnits ?? '0')
   payLocked.value = true
   uncertain.value = entry.status === 'awaiting'
@@ -681,9 +705,23 @@ function cashOut() {
         <p v-if="uncertain && uncertainSaid && !problem" class="fy-caption" style="margin: 0">
           {{ t('fonbnk.walletSaid', { reason: uncertainSaid }) }}
         </p>
-        <p v-if="uncertain && !problem" class="fy-caption" style="margin: 0">
-          {{ t('nimSwap.canLeave') }}
+        <p v-if="!problem" class="fy-caption" style="margin: 0" data-testid="nim-leave">
+          {{ leaveNote }}
         </p>
+        <div v-if="swap" class="fy-caption flex items-center gap-1" style="margin: 0">
+          <span class="min-w-0" style="overflow-wrap: anywhere" data-testid="nim-swap-id"
+            >{{ t('nimSwap.swapId') }} · {{ idCopied ? t('common.copied') : swap.id }}</span
+          >
+          <button
+            type="button"
+            class="fy-iconbtn"
+            style="flex: none; width: 44px; height: 44px; color: var(--fy-brand-text)"
+            :aria-label="t('common.copy')"
+            @click="copySwapId"
+          >
+            <Icon name="copy" :size="17" />
+          </button>
+        </div>
         <Banner
           v-if="stoppedChecking && !problem"
           tone="warning"
