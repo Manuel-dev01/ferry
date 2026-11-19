@@ -6,6 +6,16 @@ const error = (type: string, message: string, data?: unknown) =>
   new NimiqProviderError(type, message, undefined, data)
 
 describe('Lightning payment failures', () => {
+  it("keeps Nimiq Pay's own reason for the screen, on one short line", () => {
+    const said = lightningFailure(
+      error('INVALID_REQUEST', `Cannot create swap:\n  ${'x'.repeat(300)}`),
+      10000,
+      4600,
+    ).said
+    expect(said.startsWith('INVALID_REQUEST · Cannot create swap: x')).toBe(true)
+    expect(said).not.toContain('\n')
+    expect(said.length).toBeLessThanOrEqual(180)
+  })
   it('keeps a valid invoice after the Samsung balance rejection', () => {
     expect(
       lightningFailure(error('INVALID_TRANSACTION', 'Insufficient NIM balance'), 10000, 4600).kind,
@@ -38,7 +48,7 @@ describe('Lightning payment failures', () => {
       10000,
       4600,
     )
-    expect(result).toEqual({ kind: 'uncertain', ids: { hash: 'known', swapId: 'swap' } })
+    expect(result).toMatchObject({ kind: 'uncertain', ids: { hash: 'known', swapId: 'swap' } })
   })
   it('does not treat an untyped exception or liquidity shortage as proof of insufficient wallet funds', () => {
     expect(lightningFailure(new Error('Insufficient NIM balance'), 10000, 4600).kind).toBe(

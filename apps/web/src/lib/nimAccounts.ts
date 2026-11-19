@@ -1,6 +1,6 @@
-// A Nimiq Pay wallet can share several NIM addresses, and getBalance reads one address at a time.
-// Reading them all needs no approval, so the cash-out screen can start on the address that holds
-// the NIM instead of whichever one the wallet happened to list first.
+// Nimiq Pay shares more than one NIM address: the wallet address, then the HTLC it shares with its
+// cosigner, which holds the spendable NIM (the wallet address usually reads 0). getBalance reads one
+// address at a time and needs no approval, so Ferry reads them all and adds them up.
 import { lunaFromNumber } from '@ferry/shared'
 
 /** Balances in Luna for the addresses that could be read. A failed read is left out, not zero. */
@@ -12,22 +12,4 @@ export async function readNimBalances(
     accounts.map(async (a) => [a, lunaFromNumber(await getBalance(a))] as const),
   )
   return new Map(reads.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : [])))
-}
-
-/**
- * The address with the most NIM. On a tie the current choice stays, then the wallet's own order.
- * Null when no balance could be read, so the caller keeps its usual choice.
- */
-export function fullestNimAddress(
-  accounts: readonly string[],
-  balances: ReadonlyMap<string, bigint>,
-  current: string | null,
-): string | null {
-  let best: string | null = null
-  for (const a of current && accounts.includes(current) ? [current, ...accounts] : accounts) {
-    const balance = balances.get(a)
-    if (balance === undefined) continue
-    if (best === null || balance > (balances.get(best) ?? 0n)) best = a
-  }
-  return best
 }

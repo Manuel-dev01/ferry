@@ -215,7 +215,9 @@ async function send() {
       }
       const settled = (message: string) => {
         history.setStatus(inv.paymentHash, 'failed')
-        problem.value = message
+        problem.value = e.said
+          ? `${message} ${t('fonbnk.walletSaid', { reason: e.said })}`
+          : message
       }
       if (e.kind === 'rejected') return settled(t('ln.cancelled'))
       if (e.kind === 'invalid') return settled(t('ln.invalid'))

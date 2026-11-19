@@ -421,12 +421,11 @@
     "nimEstimate": "≈ {nim} NIM hors frais.",
     "estimateUnavailable": "Estimation en NIM indisponible. Nimiq Pay affiche le total, frais inclus, avant approbation.",
     "refreshQuote": "Obtenir un nouveau devis",
-    "balance": "Vous avez {nim} NIM à cette adresse.",
-    "balanceAddress": "Adresse NIM",
+    "balance": "Vous avez {nim} NIM dans Nimiq Pay.",
     "checkBalance": "Vérifier le solde NIM",
     "checkingBalance": "Vérification du solde NIM…",
     "balanceUnavailable": "Solde NIM indisponible. Vous pouvez continuer ; Nimiq Pay vérifie le total final. Une mise à jour peut être nécessaire.",
-    "shortfall": "Il manque environ {nim} NIM à cette adresse, hors frais. Ajoutez des fonds ou vérifiez une autre adresse."
+    "shortfall": "Il vous manque environ {nim} NIM, hors frais. Ajoutez des NIM dans Nimiq Pay, puis vérifiez à nouveau."
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",

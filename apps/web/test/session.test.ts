@@ -27,21 +27,44 @@ describe('balance request isolation', () => {
     session.nimiq = {
       getBalance: () => new Promise<number>((r) => (complete = r)),
     } as unknown as NimiqProvider
-    session.nimAddress = 'NQ-test-address'
+    session.nimAccounts = ['NQ-test-address']
     const request = session.loadNimBalance()
     session.disconnectEvm()
     complete(12900000)
     await request
     expect(session.nimBalance).toBeNull()
-    expect(session.nimAddress).toBeNull()
+    expect(session.nimAccounts).toEqual([])
   })
   it('keeps zero distinct from an unavailable NIM balance', async () => {
     const session = useSessionStore()
     session.nimiq = { getBalance: async () => 0 } as unknown as NimiqProvider
-    session.nimAddress = 'NQ-test-address'
+    session.nimAccounts = ['NQ-test-address']
     await session.loadNimBalance()
     expect(session.nimBalance).toBe(0n)
     session.nimiq = {} as NimiqProvider
+    await session.loadNimBalance()
+    expect(session.nimBalance).toBeNull()
+  })
+  it('adds up the wallet address and the HTLC that holds the spendable NIM', async () => {
+    const session = useSessionStore()
+    const luna: Record<string, number> = { 'NQ84 WALLET': 0, 'NQ74 HTLC': 1_796_994_000 }
+    session.nimiq = { getBalance: async (a: string) => luna[a] } as unknown as NimiqProvider
+    session.nimAccounts = ['NQ84 WALLET', 'NQ74 HTLC']
+    await session.loadNimBalance()
+    expect(session.nimBalance).toBe(1_796_994_000n)
+    luna['NQ84 WALLET'] = 500_000 // incoming NIM not yet moved into the HTLC still counts
+    await session.loadNimBalance()
+    expect(session.nimBalance).toBe(1_797_494_000n)
+  })
+  it('calls the total unavailable, not low, when one address cannot be read', async () => {
+    const session = useSessionStore()
+    session.nimiq = {
+      getBalance: async (a: string) => {
+        if (a === 'NQ74 HTLC') throw new Error('network')
+        return 0
+      },
+    } as unknown as NimiqProvider
+    session.nimAccounts = ['NQ84 WALLET', 'NQ74 HTLC']
     await session.loadNimBalance()
     expect(session.nimBalance).toBeNull()
   })

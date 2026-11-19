@@ -1,9 +1,9 @@
 import type { BalancesResponse, MetaResponse } from '@ferry/shared'
-import { lunaFromNumber } from '@ferry/shared'
 import { defineStore } from 'pinia'
 import { ref, shallowRef } from 'vue'
 import type { Address } from 'viem'
 import { api } from '../lib/api'
+import { readNimBalances } from '../lib/nimAccounts'
 import {
   classifyEvmError,
   currentAccount,
@@ -26,7 +26,11 @@ export const useSessionStore = defineStore('session', () => {
   const balances = ref<{ usdt: bigint; pol: bigint } | null>(null)
   const balancesError = ref(false)
 
-  const nimAddress = ref<string | null>(null)
+  /**
+   * The NIM addresses Nimiq Pay shared: the wallet address, then the HTLC that holds the spendable
+   * NIM (the wallet address usually reads 0). The balance is their total, null until every one reads.
+   */
+  const nimAccounts = ref<string[]>([])
   const nimBalance = ref<bigint | null>(null)
 
   /**
@@ -118,7 +122,7 @@ export const useSessionStore = defineStore('session', () => {
     balances.value = null
     balancesError.value = false
     nimBalanceSequence++
-    nimAddress.value = null
+    nimAccounts.value = []
     nimBalance.value = null
   }
 
@@ -126,11 +130,14 @@ export const useSessionStore = defineStore('session', () => {
   async function loadNimBalance() {
     const sequence = ++nimBalanceSequence
     const provider = nimiq.value
-    const address = nimAddress.value
+    const accounts = nimAccounts.value
     nimBalance.value = null
-    if (!provider || !address || typeof provider.getBalance !== 'function') return
-    const balance = lunaFromNumber(await provider.getBalance(address))
-    if (sequence === nimBalanceSequence && nimAddress.value === address) nimBalance.value = balance
+    if (!provider || !accounts.length || typeof provider.getBalance !== 'function') return
+    const balances = await readNimBalances(accounts, (a) => provider.getBalance(a))
+    if (sequence !== nimBalanceSequence || nimAccounts.value !== accounts) return
+    // A missing read would understate the total and wrongly block the payment: unavailable instead
+    if (balances.size === accounts.length)
+      nimBalance.value = [...balances.values()].reduce((a, b) => a + b, 0n)
   }
 
   const canReadNimBalance = () => typeof nimiq.value?.getBalance === 'function'
@@ -143,7 +150,7 @@ export const useSessionStore = defineStore('session', () => {
     evmAddress,
     balances,
     balancesError,
-    nimAddress,
+    nimAccounts,
     nimBalance,
     start,
     loadBalances,

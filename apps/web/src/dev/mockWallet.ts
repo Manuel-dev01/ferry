@@ -17,7 +17,10 @@ import { askApproval } from './mockApproval'
 const KEY_STORAGE = 'ferry.dev.mockKey'
 export const MOCK_NIM_ADDRESS = 'NQ07 FERR YDEV MOCK 0000 0000 0000 0000'
 export const MOCK_BALANCES = { usdt: 125_500_000n, pol: 0n, nimLuna: 4_200_000_00000 }
-/** With sessionStorage ferry.dev.emptyNimFirst=1, the wallet lists an empty address first. */
+/**
+ * With sessionStorage ferry.dev.emptyNimFirst=1, the wallet shares two addresses as Nimiq Pay does:
+ * the wallet address (0 NIM), then the HTLC holding the spendable NIM.
+ */
 const MOCK_EMPTY_NIM_ADDRESS = 'NQ84 FERR YDEV EMPT Y000 0000 0000 0000'
 function emptyNimFirst() {
   try {

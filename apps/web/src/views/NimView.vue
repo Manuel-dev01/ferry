@@ -21,8 +21,6 @@ import {
 } from '../lib/nimSwap'
 import { initNimiq } from '../providers/nimiq'
 import { lightningFailure } from '../lib/lightningFailure'
-import { tinyAddress } from '../lib/names'
-import { fullestNimAddress, readNimBalances } from '../lib/nimAccounts'
 import { useCashoutStore } from '../stores/cashout'
 import { useHistoryStore } from '../stores/history'
 import { useSessionStore } from '../stores/session'
@@ -116,9 +114,6 @@ function estimatedNim(units: bigint | null) {
   const luna = lunaForUsdt(units, nimUsd.value)
   return luna === null ? null : nimWholeDisplay(luna)
 }
-const nimAccounts = ref<string[]>([])
-/** Every shared address's balance, for the picker. Missing means the read failed, not zero. */
-const nimBalances = ref<Map<string, bigint>>(new Map())
 const checkingNim = ref(false)
 const nimBalanceProblem = ref('')
 const estimatedLuna = computed(() =>
@@ -137,8 +132,6 @@ async function refreshNimBalance() {
   try {
     await session.loadNimBalance()
     if (session.nimBalance === null) nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
-    else if (session.nimAddress)
-      nimBalances.value = new Map(nimBalances.value).set(session.nimAddress, session.nimBalance)
   } catch {
     nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
   } finally {
@@ -148,6 +141,7 @@ async function refreshNimBalance() {
 /** Account access only follows this explicit button; EVM permission does not grant NIM access. */
 async function checkNimBalance() {
   if (checkingNim.value || busy.value) return
+  if (session.nimAccounts.length) return refreshNimBalance()
   checkingNim.value = true
   nimBalanceProblem.value = ''
   try {
@@ -156,38 +150,23 @@ async function checkNimBalance() {
       nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
       return
     }
-    const known = nimAccounts.value.length > 0 && session.nimAddress
-    const accounts = known ? nimAccounts.value : await provider.listAccounts()
+    const accounts = await provider.listAccounts()
     if (stopped) return
-    // No approval: getBalance reads any address. Nimiq Pay may list an empty address first
-    const balances = await readNimBalances(accounts, (a) => provider.getBalance(a))
-    if (stopped) return
-    nimAccounts.value = accounts
-    nimBalances.value = balances
-    // A later check keeps the user's pick; the first one starts on the address holding the NIM
-    if (!known) {
-      session.nimAddress =
-        fullestNimAddress(accounts, balances, session.nimAddress) ??
-        (accounts.includes(session.nimAddress ?? '') ? session.nimAddress : (accounts[0] ?? null))
-    }
-    await refreshNimBalance()
+    session.nimAccounts = accounts
   } catch {
     nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
+    return
   } finally {
     checkingNim.value = false
   }
+  await refreshNimBalance()
 }
 onMounted(() => {
-  if (session.nimAddress) void refreshNimBalance()
+  if (session.nimAccounts.length) void refreshNimBalance()
 })
-/** "NQ74…EG · 17,970 NIM", or just the address when its balance couldn't be read. */
-function addressOption(address: string) {
-  const luna = nimBalances.value.get(address)
-  const short = tinyAddress(address)
-  return luna === undefined
-    ? short
-    : `${short} · ${t('home.nimBalance', { amount: nimWholeDisplay(luna) })}`
-}
+/** Adds Nimiq Pay's own reason, so a screenshot shows why it refused. */
+const withReason = (message: string, said: string) =>
+  said ? `${message} ${t('fonbnk.walletSaid', { reason: said })}` : message
 function refreshQuote() {
   swap.value = null
   phase.value = 'amount'
@@ -311,7 +290,7 @@ async function pay() {
       case 'insufficient':
       case 'expired':
         history.setStatus(s.id, 'failed')
-        problem.value = t(`nimSwap.${e.kind}`)
+        problem.value = withReason(t(`nimSwap.${e.kind}`), e.said)
         break
       case 'uncertain':
         // It may have gone through: never pay again; read the swap's own status instead.
@@ -323,7 +302,7 @@ async function pay() {
         break
       case 'unsupported':
         history.setStatus(s.id, 'failed')
-        problem.value = t('nimSwap.unsupported')
+        problem.value = withReason(t('nimSwap.unsupported'), e.said)
         break
       default:
         // wallet or unknown errors: it may still have gone out, so follow the swap instead
@@ -478,17 +457,6 @@ function cashOut() {
           <span v-if="session.nimBalance !== null" class="fy-caption" data-testid="nim-balance">
             {{ t('nimSwap.balance', { nim: nimDisplay(session.nimBalance) }) }}
           </span>
-          <label v-if="nimAccounts.length > 1" class="fy-caption">
-            {{ t('nimSwap.balanceAddress') }}
-            <select v-model="session.nimAddress" class="fy-field" @change="refreshNimBalance">
-              <option v-for="address in nimAccounts" :key="address" :value="address">
-                {{ addressOption(address) }}
-              </option>
-            </select>
-          </label>
-          <span v-else-if="session.nimAddress" class="fy-caption"
-            >{{ t('nimSwap.balanceAddress') }} · {{ tinyAddress(session.nimAddress) }}</span
-          >
           <button
             type="button"
             class="fy-btn fy-btn--text fy-btn--sm self-start"

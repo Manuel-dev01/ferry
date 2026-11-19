@@ -421,12 +421,11 @@
     "nimEstimate": "Takriban NIM {nim} kabla ya ada.",
     "estimateUnavailable": "Makadirio ya NIM hayapatikani. Nimiq Pay inaonyesha jumla pamoja na ada kabla ya idhini.",
     "refreshQuote": "Pata bei mpya",
-    "balance": "Una NIM {nim} kwenye anwani hii.",
-    "balanceAddress": "Anwani ya NIM",
+    "balance": "Una NIM {nim} kwenye Nimiq Pay.",
     "checkBalance": "Angalia salio la NIM",
     "checkingBalance": "Inaangalia salio la NIM…",
     "balanceUnavailable": "Salio la NIM halipatikani. Unaweza kuendelea; Nimiq Pay hukagua jumla ya mwisho. Huenda ukahitaji kusasisha programu.",
-    "shortfall": "Anwani hii inahitaji takriban NIM {nim} zaidi kabla ya ada. Ongeza fedha au angalia anwani nyingine."
+    "shortfall": "Unahitaji takriban NIM {nim} zaidi kabla ya ada. Ongeza NIM kwenye Nimiq Pay, kisha uangalie tena."
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",

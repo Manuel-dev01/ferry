@@ -720,12 +720,11 @@
     "nimEstimate": "≈ {nim} NIM before fees.",
     "estimateUnavailable": "NIM estimate unavailable. Nimiq Pay shows the total, including fees, before approval.",
     "refreshQuote": "Get a new quote",
-    "balance": "You have {nim} NIM at this address.",
-    "balanceAddress": "NIM address",
+    "balance": "You have {nim} NIM in Nimiq Pay.",
     "checkBalance": "Check NIM balance",
     "checkingBalance": "Checking NIM balance…",
     "balanceUnavailable": "Could not check NIM balance. You can continue; Nimiq Pay checks the final total. Older hosts may need an update.",
-    "shortfall": "This address needs about {nim} more NIM before fees. Add funds or check another address."
+    "shortfall": "You need about {nim} more NIM before fees. Add NIM in Nimiq Pay, then check again."
   },
   "offers": {
     "loading": "Finding the best rate…",
