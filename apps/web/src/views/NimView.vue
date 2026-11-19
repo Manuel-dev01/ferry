@@ -21,6 +21,7 @@ import {
 } from '../lib/nimSwap'
 import { initNimiq } from '../providers/nimiq'
 import { lightningFailure } from '../lib/lightningFailure'
+import { canStartNimPayment, nimPayDeadline, NIM_POLL_MAX_MS } from '../lib/nimSafety'
 import { useCashoutStore } from '../stores/cashout'
 import { useHistoryStore } from '../stores/history'
 import { useSessionStore } from '../stores/session'
@@ -34,7 +35,7 @@ const draft = useCashoutStore()
 
 const MIN_USDT = '1'
 const POLL_MS = 4_000
-const POLL_MAX_MS = 45 * 60_000 // past the invoice and HTLC timeouts
+const POLL_MAX_MS = NIM_POLL_MAX_MS // covers the current 60-minute claim / 90-minute invoice window
 
 type Phase = 'amount' | 'pay' | 'progress' | 'done'
 const phase = ref<Phase>('amount')
@@ -213,11 +214,14 @@ async function prepare() {
 
 const now = ref(Math.floor(Date.now() / 1000))
 const clock = setInterval(() => (now.value = Math.floor(Date.now() / 1000)), 1000)
-/** null when LendaSwap gave no expiry: Pay stays available and no countdown is shown. */
+/** Use the earlier deadline. Missing timing is not permission to start a payment. */
 const secondsLeft = computed(() =>
-  swap.value && swap.value.invoiceExpiresAt > 0
-    ? Math.max(0, swap.value.invoiceExpiresAt - now.value)
+  swap.value && nimPayDeadline(swap.value) !== null
+    ? Math.max(0, nimPayDeadline(swap.value)! - now.value)
     : null,
+)
+const paymentWindowClosed = computed(
+  () => !swap.value || !canStartNimPayment(swap.value, now.value),
 )
 const countdown = computed(() => {
   const s = secondsLeft.value
@@ -267,8 +271,8 @@ async function pay() {
   const s = swap.value
   if (!s || payLocked.value || busy.value || checkingNim.value || nimShortfall.value !== null)
     return
-  if (s.invoiceExpiresAt > 0 && s.invoiceExpiresAt <= Date.now() / 1000) {
-    problem.value = t('nimSwap.expired')
+  if (!canStartNimPayment(s, Date.now() / 1000)) {
+    problem.value = t('nimSwap.shortWindow')
     return
   }
   busy.value = true
@@ -278,6 +282,11 @@ async function pay() {
     const nimiq = await initNimiq()
     if (stopped) {
       history.setStatus(s.id, 'failed')
+      return
+    }
+    if (!canStartNimPayment(s, Date.now() / 1000)) {
+      history.setStatus(s.id, 'failed')
+      problem.value = t('nimSwap.shortWindow')
       return
     }
     const paid = await nimiq.payLightningInvoice({ invoice: s.invoice })
@@ -370,6 +379,7 @@ async function follow() {
     while (!stopped && Date.now() - started < POLL_MAX_MS) {
       try {
         const state = await nimSwapState(s.id)
+        if (stopped) return
         stage.value = state.stage
         if (state.claimBy) s.claimBy = state.claimBy
         if (['paid', 'ready', 'claiming', 'done'].includes(state.stage)) uncertain.value = false
@@ -427,6 +437,9 @@ const leaveNote = computed(() => {
     : t('nimSwap.canLeave')
 })
 const idCopied = ref(false)
+const nativeSwapId = computed(() =>
+  swap.value ? history.find(swap.value.id)?.walletSwapId : undefined,
+)
 async function copySwapId() {
   if (!swap.value) return
   try {
@@ -654,9 +667,9 @@ function cashOut() {
       </div>
       <div class="fy-bottom">
         <PaymentError v-if="problem" :body="problem" />
-        <Banner v-else-if="secondsLeft === 0" tone="warning" :body="t('nimSwap.expired')" />
+        <Banner v-else-if="paymentWindowClosed" tone="warning" :body="t('nimSwap.shortWindow')" />
         <button
-          v-if="secondsLeft === 0 && !busy && !payLocked"
+          v-if="paymentWindowClosed && !busy && !payLocked"
           type="button"
           class="fy-btn fy-btn--secondary"
           @click="refreshQuote"
@@ -667,7 +680,9 @@ function cashOut() {
           type="button"
           class="fy-btn fy-btn--primary"
           :class="{ 'fy-btn--busy': busy }"
-          :disabled="busy || checkingNim || nimShortfall !== null || payLocked || secondsLeft === 0"
+          :disabled="
+            busy || checkingNim || nimShortfall !== null || payLocked || paymentWindowClosed
+          "
           @click="pay"
         >
           {{ busy ? t('nimSwap.confirmInWallet') : t('nimSwap.pay') }}
@@ -730,6 +745,14 @@ function cashOut() {
           :action="t('nimSwap.checkAgain')"
           @action="checkAgain"
         />
+        <p
+          v-if="nativeSwapId"
+          class="fy-caption"
+          style="overflow-wrap: anywhere"
+          data-testid="nim-native-swap-id"
+        >
+          {{ t('nimSwap.nativeSwapId') }} · {{ nativeSwapId }}
+        </p>
       </div>
     </template>
 

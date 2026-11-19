@@ -73,6 +73,12 @@ describe('Lightning payment failures', () => {
   it('keeps an untyped exception uncertain', () => {
     expect(lightningFailure(new Error('bridge timeout'), 10000, 4600).kind).toBe('uncertain')
   })
+  it.each(['NETWORK_ERROR', 'INTERNAL_ERROR'])(
+    'does not infer non-payment from a generic %s',
+    (type) => {
+      expect(lightningFailure(error(type, 'request timed out'), 10000, 4600).kind).toBe('uncertain')
+    },
+  )
   it('reconciles any attached payment identifiers before another attempt', () => {
     const result = lightningFailure(
       error('INVALID_TRANSACTION', 'Insufficient NIM balance', { hash: 'known', swapId: 'swap' }),

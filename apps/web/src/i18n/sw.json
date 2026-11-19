@@ -386,7 +386,7 @@
     "how1": "Nimiq Pay inalipa ankara ya Lightning kwa NIM zako. Idhini moja.",
     "how2": "LendaSwap inakufungia USDT kwenye Polygon.",
     "how3": "Ferry inaziachilia kwenda pochi yako, bila kuhitaji gesi. Kisha uzitoe.",
-    "safety": "Ni ubadilishaji wa atomiki: usipokamilika, malipo ya Lightning yanashindwa na NIM zako zinarudi.",
+    "safety": "Ubadilishaji ukishindwa baada ya kutuma NIM, huenda marejesho yahitaji kusubiri muda wa mkataba. Angalia Nimiq Pay; inaweza kuchukua siku.",
     "connect": "Unganisha pochi yako",
     "continue": "Endelea",
     "preparing": "Inaandaa ubadilishaji…",
@@ -409,7 +409,7 @@
     "step3": "USDT zimeachiliwa kwenda pochi yako",
     "waiting": "Kwa kawaida inachukua chini ya dakika moja.",
     "slow": "Inachukua muda kuliko kawaida.",
-    "failed": "Ubadilishaji haukukamilika, kwa hiyo hakuna USDT zilizotumwa. Nimiq Pay inakurudishia NIM zako kiotomatiki, jambo linaloweza kuchukua siku kadhaa.",
+    "failed": "Ubadilishaji haujakamilika. Ikiwa NIM ilitumwa, angalia hali ya kurejeshwa katika Nimiq Pay. Fedha zinaweza kubaki zimefungwa hadi muda wa mkataba uishe; muamala wa kurejesha bado unahitajika.",
     "doneTitle": "USDT zimefika",
     "doneNote": "Ziko kwenye pochi yako ya Nimiq Pay. Zitoe sasa, au uzihifadhi kama USDT.",
     "cashOutNow": "Toa pesa sasa",
@@ -430,7 +430,9 @@
     "checkBalance": "Angalia salio la NIM",
     "checkingBalance": "Inaangalia salio la NIM…",
     "balanceUnavailable": "Salio la NIM halipatikani. Unaweza kuendelea; Nimiq Pay hukagua jumla ya mwisho. Huenda ukahitaji kusasisha programu.",
-    "shortfall": "Unahitaji takriban NIM {nim} zaidi kabla ya ada. Ongeza NIM kwenye Nimiq Pay, kisha uangalie tena."
+    "shortfall": "Unahitaji takriban NIM {nim} zaidi kabla ya ada. Ongeza NIM kwenye Nimiq Pay, kisha uangalie tena.",
+    "shortWindow": "Muda wa kubadilisha unakaribia kuisha au haupatikani. Pata bei mpya kabla ya kulipa.",
+    "nativeSwapId": "Kitambulisho cha ubadilishaji Nimiq Pay (msaada)"
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",

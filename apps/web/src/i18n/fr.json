@@ -386,7 +386,7 @@
     "how1": "Nimiq Pay paie une facture Lightning avec vos NIM. Une seule approbation.",
     "how2": "LendaSwap bloque les USDT pour vous sur Polygon.",
     "how3": "Ferry les libère vers votre portefeuille, sans gaz. Retirez-les ensuite.",
-    "safety": "C’est un échange atomique : s’il n’aboutit pas, le paiement Lightning échoue et vos NIM reviennent.",
+    "safety": "Si l’échange échoue après l’envoi des NIM, un remboursement après expiration peut être nécessaire. Consultez Nimiq Pay ; cela peut prendre plusieurs jours.",
     "connect": "Connectez votre portefeuille",
     "continue": "Continuer",
     "preparing": "Préparation de l’échange…",
@@ -409,7 +409,7 @@
     "step3": "USDT libérés vers votre portefeuille",
     "waiting": "Cela prend en général moins d'une minute.",
     "slow": "Plus long que d'habitude.",
-    "failed": "L'échange n'a pas abouti, donc aucun USDT n'a été envoyé. Nimiq Pay vous rembourse vos NIM automatiquement, ce qui peut prendre quelques jours.",
+    "failed": "L’échange n’a pas abouti. Si des NIM ont été envoyés, vérifiez leur remboursement dans Nimiq Pay. Les fonds peuvent rester bloqués jusqu’au délai du contrat ; une transaction de remboursement reste nécessaire.",
     "doneTitle": "USDT arrivés",
     "doneNote": "Ils sont dans votre portefeuille Nimiq Pay. Retirez-les maintenant ou gardez-les en USDT.",
     "cashOutNow": "Retirer maintenant",
@@ -430,7 +430,9 @@
     "checkBalance": "Vérifier le solde NIM",
     "checkingBalance": "Vérification du solde NIM…",
     "balanceUnavailable": "Solde NIM indisponible. Vous pouvez continuer ; Nimiq Pay vérifie le total final. Une mise à jour peut être nécessaire.",
-    "shortfall": "Il vous manque environ {nim} NIM, hors frais. Ajoutez des NIM dans Nimiq Pay, puis vérifiez à nouveau."
+    "shortfall": "Il vous manque environ {nim} NIM, hors frais. Ajoutez des NIM dans Nimiq Pay, puis vérifiez à nouveau.",
+    "shortWindow": "Le délai est trop proche ou indisponible. Demandez un nouveau devis avant de payer.",
+    "nativeSwapId": "Identifiant Nimiq Pay (assistance)"
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",

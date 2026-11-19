@@ -685,7 +685,7 @@
     "how1": "Nimiq Pay pays a Lightning invoice from your NIM. One approval.",
     "how2": "LendaSwap locks the USDT for you on Polygon.",
     "how3": "Ferry releases it to your wallet, with no gas needed. Then cash it out.",
-    "safety": "It's an atomic swap: if it doesn't complete, the Lightning payment fails and your NIM comes back.",
+    "safety": "If the swap fails after NIM is sent, a timeout refund may be needed. Check Nimiq Pay for recovery; it can take days.",
     "connect": "Connect your wallet",
     "continue": "Continue",
     "preparing": "Preparing the swap…",
@@ -708,7 +708,7 @@
     "step3": "USDT released to your wallet",
     "waiting": "This usually takes under a minute.",
     "slow": "Taking longer than usual.",
-    "failed": "The swap didn't complete, so no USDT was sent. Nimiq Pay refunds your NIM automatically, which can take a few days.",
+    "failed": "The swap did not complete. If NIM was sent, check its refund status in Nimiq Pay. A refund may remain locked until the contract timeout and still requires a refund transaction.",
     "doneTitle": "USDT arrived",
     "doneNote": "It's in your Nimiq Pay wallet. Cash it out now, or keep it as USDT.",
     "cashOutNow": "Cash out now",
@@ -729,7 +729,9 @@
     "checkBalance": "Check NIM balance",
     "checkingBalance": "Checking NIM balance…",
     "balanceUnavailable": "Could not check NIM balance. You can continue; Nimiq Pay checks the final total. Older hosts may need an update.",
-    "shortfall": "You need about {nim} more NIM before fees. Add NIM in Nimiq Pay, then check again."
+    "shortfall": "You need about {nim} more NIM before fees. Add NIM in Nimiq Pay, then check again.",
+    "shortWindow": "This swap is too close to its deadline, or its deadline is unavailable. Get a fresh quote before paying.",
+    "nativeSwapId": "Nimiq Pay swap ID (for support)"
   },
   "offers": {
     "loading": "Finding the best rate…",

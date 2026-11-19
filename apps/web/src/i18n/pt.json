@@ -386,7 +386,7 @@
     "how1": "O Nimiq Pay paga uma fatura Lightning com seus NIM. Uma aprovação.",
     "how2": "A LendaSwap reserva os USDT para você na Polygon.",
     "how3": "O Ferry libera os USDT para sua carteira, sem precisar de gas. Depois é só sacar.",
-    "safety": "É uma troca atômica: se não for concluída, o pagamento Lightning falha e seus NIM voltam.",
+    "safety": "Se a troca falhar após enviar NIM, pode ser necessário um reembolso após o prazo. Consulte o Nimiq Pay; pode levar dias.",
     "connect": "Conecte sua carteira",
     "continue": "Continuar",
     "preparing": "Preparando a troca…",
@@ -409,7 +409,7 @@
     "step3": "USDT liberados para sua carteira",
     "waiting": "Normalmente leva menos de um minuto.",
     "slow": "Está demorando mais que o normal.",
-    "failed": "A troca não foi concluída, então nenhum USDT foi enviado. A Nimiq Pay devolve seus NIM automaticamente, o que pode levar alguns dias.",
+    "failed": "A troca não foi concluída. Se NIM foi enviado, verifique o reembolso no Nimiq Pay. Os fundos podem ficar bloqueados até o prazo do contrato; ainda é necessária uma transação de reembolso.",
     "doneTitle": "USDT chegaram",
     "doneNote": "Estão na sua carteira Nimiq Pay. Saque agora ou mantenha em USDT.",
     "cashOutNow": "Sacar agora",
@@ -430,7 +430,9 @@
     "checkBalance": "Verificar saldo NIM",
     "checkingBalance": "Verificando saldo NIM…",
     "balanceUnavailable": "Saldo NIM indisponível. Você pode continuar; Nimiq Pay verifica o total final. Pode ser necessário atualizar o aplicativo.",
-    "shortfall": "Faltam cerca de {nim} NIM, antes das taxas. Adicione NIM na Nimiq Pay e verifique de novo."
+    "shortfall": "Faltam cerca de {nim} NIM, antes das taxas. Adicione NIM na Nimiq Pay e verifique de novo.",
+    "shortWindow": "O prazo está muito próximo ou indisponível. Solicite uma nova cotação antes de pagar.",
+    "nativeSwapId": "ID da troca no Nimiq Pay (suporte)"
   },
   "ln": {
     "mpesaHeader": "M-Pesa Direct",

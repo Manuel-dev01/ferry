@@ -13,6 +13,10 @@ const SWAP_DOWN = /cannot create swap/i
  * useMiniAppHost.ts, read 2026-11-19). Callers still check the payee's status before saying so.
  */
 const PRE_SEND = ['NETWORK_ERROR', 'INTERNAL_ERROR']
+// A generic network/internal error and an unpaid invoice do not prove NIM was never funded.
+// Only explicit host preparation failures may take the no-payment recovery path.
+const PRE_SEND_REASON =
+  /^(?:The Lightning payment could not be prepared in time\. Please try again\.|NIM wallet is not ready|Wallet changed before Lightning payment approval|Could not save Lightning payment attempt)$/i
 
 /** Known payment identifiers always require reconciliation, even alongside a validation error. */
 export function lightningFailure(err: unknown, expiresAt: number, now = Date.now() / 1000) {
@@ -22,7 +26,9 @@ export function lightningFailure(err: unknown, expiresAt: number, now = Date.now
     !!(ids.hash || ids.swapId) ||
     !['rejected', 'unsupported', 'invalid', 'insufficient'].includes(error.kind)
   const kind = uncertain
-    ? !(ids.hash || ids.swapId) && PRE_SEND.includes(error.type)
+    ? !(ids.hash || ids.swapId) &&
+      PRE_SEND.includes(error.type) &&
+      PRE_SEND_REASON.test(error.message.trim())
       ? 'notSent'
       : 'uncertain'
     : (error.kind === 'invalid' || error.kind === 'insufficient') &&
