@@ -17,6 +17,15 @@ import { askApproval } from './mockApproval'
 const KEY_STORAGE = 'ferry.dev.mockKey'
 export const MOCK_NIM_ADDRESS = 'NQ07 FERR YDEV MOCK 0000 0000 0000 0000'
 export const MOCK_BALANCES = { usdt: 125_500_000n, pol: 0n, nimLuna: 4_200_000_00000 }
+/** With sessionStorage ferry.dev.emptyNimFirst=1, the wallet lists an empty address first. */
+const MOCK_EMPTY_NIM_ADDRESS = 'NQ84 FERR YDEV EMPT Y000 0000 0000 0000'
+function emptyNimFirst() {
+  try {
+    return sessionStorage.getItem('ferry.dev.emptyNimFirst') === '1'
+  } catch {
+    return false
+  }
+}
 
 function devKey(): Hex {
   try {
@@ -155,10 +164,10 @@ const nimiq = {
     ) {
       throw permissionDenied()
     }
-    return [MOCK_NIM_ADDRESS]
+    return emptyNimFirst() ? [MOCK_EMPTY_NIM_ADDRESS, MOCK_NIM_ADDRESS] : [MOCK_NIM_ADDRESS]
   },
-  async getBalance() {
-    return MOCK_BALANCES.nimLuna
+  async getBalance(address: string) {
+    return address === MOCK_EMPTY_NIM_ADDRESS ? 0 : MOCK_BALANCES.nimLuna
   },
   async isConsensusEstablished() {
     return true

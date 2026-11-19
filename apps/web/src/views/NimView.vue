@@ -22,6 +22,7 @@ import {
 import { initNimiq } from '../providers/nimiq'
 import { lightningFailure } from '../lib/lightningFailure'
 import { tinyAddress } from '../lib/names'
+import { fullestNimAddress, readNimBalances } from '../lib/nimAccounts'
 import { useCashoutStore } from '../stores/cashout'
 import { useHistoryStore } from '../stores/history'
 import { useSessionStore } from '../stores/session'
@@ -116,6 +117,8 @@ function estimatedNim(units: bigint | null) {
   return luna === null ? null : nimWholeDisplay(luna)
 }
 const nimAccounts = ref<string[]>([])
+/** Every shared address's balance, for the picker. Missing means the read failed, not zero. */
+const nimBalances = ref<Map<string, bigint>>(new Map())
 const checkingNim = ref(false)
 const nimBalanceProblem = ref('')
 const estimatedLuna = computed(() =>
@@ -134,6 +137,8 @@ async function refreshNimBalance() {
   try {
     await session.loadNimBalance()
     if (session.nimBalance === null) nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
+    else if (session.nimAddress)
+      nimBalances.value = new Map(nimBalances.value).set(session.nimAddress, session.nimBalance)
   } catch {
     nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
   } finally {
@@ -143,10 +148,6 @@ async function refreshNimBalance() {
 /** Account access only follows this explicit button; EVM permission does not grant NIM access. */
 async function checkNimBalance() {
   if (checkingNim.value || busy.value) return
-  if (nimAccounts.value.length && session.nimAddress) {
-    await refreshNimBalance()
-    return
-  }
   checkingNim.value = true
   nimBalanceProblem.value = ''
   try {
@@ -155,12 +156,20 @@ async function checkNimBalance() {
       nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
       return
     }
-    const accounts = await provider.listAccounts()
+    const known = nimAccounts.value.length > 0 && session.nimAddress
+    const accounts = known ? nimAccounts.value : await provider.listAccounts()
+    if (stopped) return
+    // No approval: getBalance reads any address. Nimiq Pay may list an empty address first
+    const balances = await readNimBalances(accounts, (a) => provider.getBalance(a))
     if (stopped) return
     nimAccounts.value = accounts
-    session.nimAddress = accounts.includes(session.nimAddress ?? '')
-      ? session.nimAddress
-      : (accounts[0] ?? null)
+    nimBalances.value = balances
+    // A later check keeps the user's pick; the first one starts on the address holding the NIM
+    if (!known) {
+      session.nimAddress =
+        fullestNimAddress(accounts, balances, session.nimAddress) ??
+        (accounts.includes(session.nimAddress ?? '') ? session.nimAddress : (accounts[0] ?? null))
+    }
     await refreshNimBalance()
   } catch {
     nimBalanceProblem.value = t('nimSwap.balanceUnavailable')
@@ -171,6 +180,14 @@ async function checkNimBalance() {
 onMounted(() => {
   if (session.nimAddress) void refreshNimBalance()
 })
+/** "NQ74…EG · 17,970 NIM", or just the address when its balance couldn't be read. */
+function addressOption(address: string) {
+  const luna = nimBalances.value.get(address)
+  const short = tinyAddress(address)
+  return luna === undefined
+    ? short
+    : `${short} · ${t('home.nimBalance', { amount: nimWholeDisplay(luna) })}`
+}
 function refreshQuote() {
   swap.value = null
   phase.value = 'amount'
@@ -465,7 +482,7 @@ function cashOut() {
             {{ t('nimSwap.balanceAddress') }}
             <select v-model="session.nimAddress" class="fy-field" @change="refreshNimBalance">
               <option v-for="address in nimAccounts" :key="address" :value="address">
-                {{ tinyAddress(address) }}
+                {{ addressOption(address) }}
               </option>
             </select>
           </label>
