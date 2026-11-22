@@ -146,7 +146,23 @@ export async function nimSwapState(id: string): Promise<NimSwapState> {
 }
 
 /** Reveals the secret so the USDT goes to the address fixed at creation. Gasless; no approval. */
-export async function claimNimSwap(id: string): Promise<string | null> {
+const claimRequests = new Map<string, Promise<string | null>>()
+
+/** Share one claim between the progress screen and app-wide tracking. Never retries a payment. */
+export function claimNimSwap(id: string): Promise<string | null> {
+  const existing = claimRequests.get(id)
+  if (existing) return existing
+  const request = performClaim(id)
+  claimRequests.set(id, request)
+  return request
+}
+
+/** Only an explicit user status-check action permits another claim attempt. */
+export function allowNimClaimRetry(id: string) {
+  claimRequests.delete(id)
+}
+
+async function performClaim(id: string): Promise<string | null> {
   const client = await swapClient()
   const result = await client.claim(id)
   if (!result.success && !/already claimed/i.test(result.message)) {

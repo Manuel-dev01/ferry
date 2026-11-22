@@ -12,6 +12,7 @@ import { ferryApi } from '../lib/ferryApi'
 import { lunaForUsdt, nimDisplay, nimWholeDisplay, usdtDisplay } from '../lib/format'
 import {
   claimNimSwap,
+  allowNimClaimRetry,
   createNimSwap,
   nimSwapState,
   quoteNimSwap,
@@ -402,8 +403,12 @@ async function follow() {
           return
         }
       } catch {
-        // a failed read or claim is retried on the next round; the claim is idempotent
-        claimAsked = stage.value === 'done'
+        // A lost relayer response can mean the claim was submitted. Require a deliberate
+        // status check before another attempt; never treat it as a new payment.
+        if (claimAsked) {
+          stoppedChecking.value = true
+          return
+        }
       }
       slow.value = Date.now() - started > 5 * 60_000
       await new Promise((r) => setTimeout(r, POLL_MS))
@@ -453,6 +458,7 @@ async function copySwapId() {
 
 const stoppedChecking = ref(false)
 function checkAgain() {
+  if (swap.value) allowNimClaimRetry(swap.value.id)
   stoppedChecking.value = false
   void follow()
 }
