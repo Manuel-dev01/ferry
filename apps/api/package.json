@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json",
+    "check:nim-direct": "tsx --env-file-if-exists=.env src/check-nim-direct.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env src/db/migrate.ts"
   },
