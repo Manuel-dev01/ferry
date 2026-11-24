@@ -36,6 +36,43 @@ export interface NimSwapQuote {
   maxSats: number
 }
 
+/** The SDK accepts numbers; convert only exact base units at that boundary. */
+export function nimSwapSdkAmount(units: bigint): number {
+  if (units <= 0n || units > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error('Swap amount is outside the exact SDK range')
+  }
+  return Number(units)
+}
+
+/** `source_amount` is pre-fee; `net_source_amount` is the invoice estimate including fees. */
+export function nimQuoteAmounts(q: {
+  source_amount: string
+  net_source_amount: string
+  min_amount: number
+  max_amount: number
+}): NimSwapQuote {
+  const unsigned = (s: string) => {
+    if (!/^\d{1,16}$/.test(s)) throw new Error('Invalid quote amount')
+    return BigInt(s)
+  }
+  const base = unsigned(q.source_amount)
+  const net = unsigned(q.net_source_amount)
+  if (base <= 0n || net < base) throw new Error('Invalid quote fee total')
+  if (
+    !Number.isSafeInteger(q.min_amount) ||
+    !Number.isSafeInteger(q.max_amount) ||
+    q.min_amount <= 0 ||
+    q.max_amount < q.min_amount
+  )
+    throw new Error('Invalid quote limits')
+  return {
+    sats: nimSwapSdkAmount(net),
+    feeSats: Number(net - base), // bounded above by the validated, exact net amount
+    minSats: q.min_amount,
+    maxSats: q.max_amount,
+  }
+}
+
 /** What a USDT amount costs in sats. No approval, nothing created. */
 export async function quoteNimSwap(usdtUnits: bigint): Promise<NimSwapQuote> {
   const client = await swapClient()
@@ -46,14 +83,9 @@ export async function quoteNimSwap(usdtUnits: bigint): Promise<NimSwapQuote> {
     sourceToken: source.tokenId,
     targetChain: target.chain as Chain,
     targetToken: target.tokenId,
-    targetAmount: Number(usdtUnits),
+    targetAmount: nimSwapSdkAmount(usdtUnits),
   })
-  return {
-    sats: Number(q.source_amount),
-    feeSats: q.protocol_fee + q.network_fee,
-    minSats: q.min_amount,
-    maxSats: q.max_amount,
-  }
+  return nimQuoteAmounts(q)
 }
 
 export interface NimSwap {
@@ -73,7 +105,7 @@ export async function createNimSwap(usdtUnits: bigint, to: Address): Promise<Nim
   const { response } = await client.createSwap({
     source,
     target,
-    targetAmount: Number(usdtUnits),
+    targetAmount: nimSwapSdkAmount(usdtUnits),
     targetAddress: to,
   })
   const r = response as {
