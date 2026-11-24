@@ -3,8 +3,13 @@ import { z } from 'zod'
 import type { FetchLike } from './lightning'
 
 // Research adapter: read-only methods only. No exchange orders or wallet payments.
-type Method = 'getCurrenciesFull' | 'getMinAmount' | 'getExchangeAmount'
-const READ_METHODS = new Set<Method>(['getCurrenciesFull', 'getMinAmount', 'getExchangeAmount'])
+type Method = 'getCurrenciesFull' | 'getPairs' | 'getMinAmount' | 'getExchangeAmount'
+const READ_METHODS = new Set<Method>([
+  'getCurrenciesFull',
+  'getPairs',
+  'getMinAmount',
+  'getExchangeAmount',
+])
 const assetSchema = z.object({
   name: z.string().min(1),
   enabled: z.boolean(),
@@ -106,6 +111,20 @@ export async function verifyDirectNimQuote(
     return parsed.data.result
   }
   const pair = selectDirectPair(await read('getCurrenciesFull', {}))
+  // Asset support alone does not mean this partner is allowed to trade the pair.
+  const pairs = z
+    .array(z.object({ from: z.string(), to: z.string() }))
+    .safeParse(await read('getPairs', {}))
+  if (!pairs.success) throw new DirectQuoteError('INVALID_PAIR_METADATA')
+  if (
+    !pairs.data.some(
+      (p) =>
+        p.from.toLowerCase() === pair.from.toLowerCase() &&
+        p.to.toLowerCase() === pair.to.toLowerCase(),
+    )
+  ) {
+    throw new DirectQuoteError('PAIR_NOT_ENABLED')
+  }
   const minimumLuna = decimalUnits(await read('getMinAmount', pair), 5, true)
   if (minimumLuna <= 0n) throw new DirectQuoteError('INVALID_MINIMUM')
   if (luna < minimumLuna) return { available: false as const, pair, minimumLuna }

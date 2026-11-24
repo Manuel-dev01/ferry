@@ -14,12 +14,13 @@ pnpm --filter api check:nim-direct 6000
 ```
 
 The argument is the proposed NIM amount, with at most five decimal places. The checker reads
-enabled asset metadata, verifies the Polygon token contract and six decimals, reads the current
+enabled asset metadata, verifies the Polygon token contract and six decimals, confirms the forward
+pair is enabled for this partner with `getPairs`, reads the current
 minimum, and requests an estimated payout only when the amount meets that minimum. Minimums
 round up to Luna; estimates round down to USDT base units. Missing or contradictory metadata
 fails closed. Provider numbers must be decimal strings.
 
-The checker can call only `getCurrenciesFull`, `getMinAmount` and `getExchangeAmount`. It never
+The checker can call only `getCurrenciesFull`, `getPairs`, `getMinAmount` and `getExchangeAmount`. It never
 creates an order, obtains a deposit address, connects a wallet or submits a transaction. A passing
 quote establishes neither successful settlement nor a guaranteed final payout. It does not
 enable a route in Ferry.

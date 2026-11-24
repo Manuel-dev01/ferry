@@ -12,6 +12,7 @@ const usdt = {
   contractAddress: USDT0_ADDRESS,
 }
 const assets = [nim, usdt]
+const pairs = [{ from: 'NIM', to: 'USDTMRC20' }]
 const response = (result: unknown) =>
   Response.json({ jsonrpc: '2.0', id: 'ferry-quote-check', result })
 
@@ -58,15 +59,17 @@ describe('direct NIM swap quote verification', () => {
     const fetch = vi
       .fn()
       .mockResolvedValueOnce(response(assets))
+      .mockResolvedValueOnce(response(pairs))
       .mockResolvedValueOnce(response('1.000001'))
     const q = await verifyDirectNimQuote('fixture-key', 100000n, fetch)
     expect(q).toMatchObject({ available: false, minimumLuna: 100001n })
-    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(fetch).toHaveBeenCalledTimes(3)
   })
   it('sends exact decimal strings, reads only, and rounds the received estimate down', async () => {
     const fetch = vi
       .fn()
       .mockResolvedValueOnce(response(assets))
+      .mockResolvedValueOnce(response(pairs))
       .mockResolvedValueOnce(response('1.000001'))
       .mockResolvedValueOnce(response('1.23456789'))
     const q = await verifyDirectNimQuote('fixture-key', 9007199254740991n, fetch)
@@ -74,10 +77,11 @@ describe('direct NIM swap quote verification', () => {
     const requests = fetch.mock.calls.map(([, init]) => JSON.parse(init.body))
     expect(requests.map((r) => r.method)).toEqual([
       'getCurrenciesFull',
+      'getPairs',
       'getMinAmount',
       'getExchangeAmount',
     ])
-    expect(requests[2].params.amount).toBe('90071992547.40991')
+    expect(requests[3].params.amount).toBe('90071992547.40991')
     expect(fetch.mock.calls[0]?.[0]).toBe('https://api.changehero.io/')
     expect(fetch.mock.calls[0]?.[1].redirect).toBe('error')
   })
@@ -87,6 +91,7 @@ describe('direct NIM swap quote verification', () => {
       const fetch = vi
         .fn()
         .mockResolvedValueOnce(response(assets))
+        .mockResolvedValueOnce(response(pairs))
         .mockResolvedValueOnce(response(amount))
       await expect(verifyDirectNimQuote('fixture-key', 1000000n, fetch)).rejects.toThrow(
         'INVALID_DECIMAL_AMOUNT',
@@ -114,5 +119,27 @@ describe('direct NIM swap quote verification', () => {
       'INVALID_NIM_AMOUNT',
     )
     expect(fetch).not.toHaveBeenCalled()
+  })
+  it.each([{ allowed: [] }, { allowed: [{ from: 'usdtmrc20', to: 'nim' }] }])(
+    'does not treat two enabled assets as an enabled forward pair',
+    async ({ allowed }) => {
+      const fetch = vi
+        .fn()
+        .mockResolvedValueOnce(response(assets))
+        .mockResolvedValueOnce(response(allowed))
+      await expect(verifyDirectNimQuote('fixture-key', 1000000n, fetch)).rejects.toThrow(
+        'PAIR_NOT_ENABLED',
+      )
+      expect(fetch).toHaveBeenCalledTimes(2)
+    },
+  )
+  it('rejects missing pair permissions rather than guessing', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(response(assets))
+      .mockResolvedValueOnce(response(null))
+    await expect(verifyDirectNimQuote('fixture-key', 1000000n, fetch)).rejects.toThrow(
+      'INVALID_PAIR_METADATA',
+    )
   })
 })
