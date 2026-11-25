@@ -17,6 +17,7 @@ const history = useHistoryStore()
 const tracker = createNimTracker({
   entries: () => history.entries,
   read: async (id) => (await import('./lib/nimSwap')).nimSwapState(id),
+  refundStatus: async (nativeSwapId) => (await ferryApi.nimSwapRefundStatus(nativeSwapId)).refunded,
   claim: async (id) => (await import('./lib/nimSwap')).claimNimSwap(id),
   status: (id, status) => history.setStatus(id, status),
   report: (id) => ferryApi.recordNimSwap(id),

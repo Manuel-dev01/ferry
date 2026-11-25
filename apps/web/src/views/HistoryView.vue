@@ -36,7 +36,7 @@ const filtered = computed(() =>
 )
 
 /** Partner flows end in their own statuses: received (top-up, NIM swap) or failed. */
-const PARTNER_FINAL = new Set(['received', 'settled', 'failed', 'expired'])
+const PARTNER_FINAL = new Set(['received', 'settled', 'failed', 'expired', 'refunded'])
 const isFinished = (status: string) =>
   PARTNER_FINAL.has(status) || (isOfframpStatus(status) && isTerminal(status))
 

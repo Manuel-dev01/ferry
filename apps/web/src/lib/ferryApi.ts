@@ -69,6 +69,10 @@ export const ferryApi = {
   recordNimSwap: (swapId: string) =>
     api<NimSwapResponse>('/v1/nim-swaps', { method: 'POST', body: { swapId } }),
 
+  /** Fastspot's terminal NIM refund status; its Lightning leg may remain PENDING forever. */
+  nimSwapRefundStatus: (nativeSwapId: string) =>
+    api<{ refunded: boolean }>(`/v1/nim-swaps/native/${encodeURIComponent(nativeSwapId)}`),
+
   /** USD per NIM, for "≈ NIM" hints next to USDT amounts. */
   nimPrice: () => api<NimPriceResponse>('/v1/prices/nim'),
 

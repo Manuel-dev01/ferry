@@ -13,6 +13,7 @@ function setup() {
   const deps = {
     entries: () => [entry],
     read: vi.fn(async () => state('waiting_payment')),
+    refundStatus: vi.fn(async () => false),
     claim: vi.fn(async () => 'claim-tx'),
     status: vi.fn(),
     report: vi.fn(async () => undefined),
@@ -99,6 +100,34 @@ describe('app-wide NIM reconciliation', () => {
     ]
     await createNimTracker(deps).tick()
     expect(deps.read).not.toHaveBeenCalled()
+  })
+  it('checks a failed swap later and records Fastspot-confirmed NIM refund', async () => {
+    const { deps, tracker } = setup()
+    const failed = {
+      ...entry,
+      status: 'failed',
+      walletSwapId: 'aba69545-ac87-4206-9e78-3793cf4dbd12',
+    }
+    deps.entries = () => [failed]
+    deps.refundStatus.mockResolvedValue(true)
+
+    await tracker.tick()
+
+    expect(deps.read).not.toHaveBeenCalled()
+    expect(deps.refundStatus).toHaveBeenCalledExactlyOnceWith(failed.walletSwapId)
+    expect(deps.status).toHaveBeenCalledExactlyOnceWith(failed.id, 'refunded')
+  })
+  it('checks Fastspot as soon as LendaSwap reports failure', async () => {
+    const { deps, tracker } = setup()
+    const funded = { ...entry, walletSwapId: 'aba69545-ac87-4206-9e78-3793cf4dbd12' }
+    deps.entries = () => [funded]
+    deps.read.mockResolvedValue(state('failed'))
+    deps.refundStatus.mockResolvedValue(true)
+
+    await tracker.tick()
+
+    expect(deps.status).toHaveBeenNthCalledWith(1, funded.id, 'failed')
+    expect(deps.status).toHaveBeenNthCalledWith(2, funded.id, 'refunded')
   })
   it('does not claim after teardown while a read is in flight', async () => {
     const { deps, tracker } = setup()

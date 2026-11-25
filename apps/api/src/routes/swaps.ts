@@ -18,6 +18,7 @@ import { parseJson } from './validate'
 
 /** LendaSwap's API, as its SDK uses it. */
 const SWAP_API = 'https://api.satora.io/swap/'
+const FASTSPOT_API = 'https://api.go.fastspot.io/swap/'
 const TIMEOUT_MS = 8_000
 const SWAP_MAX_AGE_S = 3 * 24 * 60 * 60
 const POLYGON = 137
@@ -31,6 +32,10 @@ const swapSchema = z.object({
   evm_htlc_address: z.string(),
   evm_coordinator_address: z.string().nullish(),
   target_evm_address: z.string().nullish(),
+})
+
+const fastspotSwapSchema = z.object({
+  contracts: z.array(z.object({ asset: z.string(), status: z.string() })),
 })
 
 type Swap = z.infer<typeof swapSchema>
@@ -66,6 +71,31 @@ export function swapRoutes(deps: Deps) {
   const { polygon, fetch: fetchImpl } = deps
   const db = deps.db?.db ?? null
   const r = new Hono<AppEnv>()
+
+  // Fastspot leaves failed Lightning legs marked pending. Its NIM contract becomes REFUNDED
+  // only after the refund transaction has been processed on-chain, so expose that terminal fact
+  // separately for Ferry's local History tracker. This endpoint is read-only.
+  r.get('/nim-swaps/native/:swapId', async (c) => {
+    const swapId = c.req.param('swapId')
+    if (!z.string().uuid().safeParse(swapId).success) {
+      throw new HttpError(400, 'INVALID_SWAP_ID', 'That Nimiq Pay swap ID is invalid')
+    }
+    const res = await fetchImpl(FASTSPOT_API + encodeURIComponent(swapId), {
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      redirect: 'error',
+    }).catch(() => null)
+    if (!res) throw new HttpError(502, 'PARTNER_HTTP_ERROR', "Fastspot isn't answering")
+    if (res.status === 404) throw new HttpError(404, 'NOT_FOUND', 'No Fastspot swap with that ID')
+    if (!res.ok) throw new HttpError(502, 'PARTNER_HTTP_ERROR', `Fastspot replied ${res.status}`)
+    const parsed = fastspotSwapSchema.safeParse(await res.json().catch(() => null))
+    if (!parsed.success) {
+      throw new HttpError(502, 'PARTNER_BAD_RESPONSE', 'Fastspot sent an unexpected swap status')
+    }
+    const nim = parsed.data.contracts.find((contract) => contract.asset.toUpperCase() === 'NIM')
+    if (!nim)
+      throw new HttpError(502, 'PARTNER_BAD_RESPONSE', 'Fastspot has no NIM contract for this swap')
+    return c.json({ refunded: nim.status.toUpperCase() === 'REFUNDED' })
+  })
 
   r.post('/nim-swaps', async (c) => {
     if (!db) throw new HttpError(503, 'DB_UNAVAILABLE', "Ferry can't record this right now")

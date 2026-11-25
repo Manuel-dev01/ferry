@@ -213,6 +213,8 @@ export const useHistoryStore = defineStore('history', () => {
     const entry = entries.value.find((e) => e.id === id)
     // A late poll must not undo "I've got my money" or a confirmed arrival.
     if (entry && (entry.status === 'settled' || entry.status === 'received')) return
+    // A later generic LendaSwap failure must not hide Fastspot's confirmed NIM refund.
+    if (entry?.status === 'refunded' && status !== 'received') return
     if (entry && entry.status !== status) {
       entry.status = status
       persist()

@@ -1,9 +1,10 @@
 import { USDT0_ADDRESS } from '@ferry/shared'
 import { encodeAbiParameters, encodeEventTopics, erc20Abi, type Address, type Log } from 'viem'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { computeStats } from '../src/proof'
 import { swapPayout } from '../src/routes/swaps'
-import { makeApp } from './helpers'
+import { json, jsonResponse, makeApp } from './helpers'
+import type { FetchLike } from '../src/lightning'
 
 const USER: Address = '0x358bC84A34Df878A5497DFc01D14D6AaFe7E8A76'
 const OTHER: Address = '0x1111111254EEB25477B68fb85Ed929f73A960582'
@@ -72,6 +73,35 @@ describe('swapPayout', () => {
 })
 
 describe('NIM swaps on Proof of Ferry', () => {
+  it('returns only Fastspot’s confirmed NIM refund state for a native swap ID', async () => {
+    const fetch = vi.fn(async () =>
+      jsonResponse({
+        contracts: [
+          { asset: 'NIM', status: 'REFUNDED' },
+          { asset: 'BTC_LN', status: 'PENDING' },
+        ],
+      }),
+    )
+    const res = await makeApp({}, {}, fetch as unknown as FetchLike).request(
+      '/v1/nim-swaps/native/aba69545-ac87-4206-9e78-3793cf4dbd12',
+    )
+    expect(res.status).toBe(200)
+    expect(await json(res)).toEqual({ refunded: true })
+    expect(fetch).toHaveBeenCalledExactlyOnceWith(
+      'https://api.go.fastspot.io/swap/aba69545-ac87-4206-9e78-3793cf4dbd12',
+      expect.objectContaining({ redirect: 'error' }),
+    )
+  })
+
+  it('does not query Fastspot for an invalid native swap ID', async () => {
+    const fetch = vi.fn()
+    const res = await makeApp({}, {}, fetch as unknown as FetchLike).request(
+      '/v1/nim-swaps/native/not-a-uuid',
+    )
+    expect(res.status).toBe(400)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   it('counts swaps and their USDT, leaving out excluded wallets', () => {
     const s = computeStats(
       [],

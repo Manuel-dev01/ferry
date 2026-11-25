@@ -180,6 +180,15 @@ function refreshQuote() {
 
 const swap = ref<NimSwap | null>(null)
 const swapUnits = ref<bigint | null>(null)
+watch(
+  () => (swap.value ? history.find(swap.value.id)?.status : undefined),
+  (status) => {
+    if (status === 'refunded') {
+      problem.value = t('nimSwap.refundComplete')
+      phase.value = 'progress'
+    }
+  },
+)
 
 async function prepare() {
   const units = amountUnits.value
@@ -399,7 +408,15 @@ async function follow() {
         }
         if (state.stage === 'failed') {
           history.setStatus(s.id, 'failed')
-          problem.value = t('nimSwap.failed')
+          const nativeId = history.find(s.id)?.walletSwapId
+          const refunded = nativeId
+            ? await ferryApi
+                .nimSwapRefundStatus(nativeId)
+                .then((result) => result.refunded)
+                .catch(() => false)
+            : false
+          if (refunded) history.setStatus(s.id, 'refunded')
+          else problem.value = t('nimSwap.failed')
           return
         }
       } catch {
@@ -484,6 +501,11 @@ onMounted(() => {
   swapUnits.value = BigInt(entry.amountUnits ?? '0')
   payLocked.value = true
   uncertain.value = entry.status === 'awaiting'
+  if (entry.status === 'refunded') {
+    phase.value = 'progress'
+    problem.value = t('nimSwap.refundComplete')
+    return
+  }
   if (entry.status === 'received') {
     phase.value = 'done'
     void reportSwap(id) // idempotent: covers a swap that finished while Ferry was closed
